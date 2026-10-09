@@ -1,0 +1,28 @@
+{
+  "name": "vocal-gym",
+  "version": "0.2.0",
+  "description": "Vocal Gym: a Carnatic practice system built on a raga–tala constraint engine. Alankaras across the 35 talas, kalpana swaras with a creativity dial, and a jathi creator, notation (JathiScript) and judge for dance.",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "src/engine/index.js",
+  "exports": {
+    ".": "./src/engine/index.js"
+  },
+  "bin": {
+    "vocal-gym": "bin/vocal-gym.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node scripts/build.js",
+    "smoke": "node scripts/smoke.js",
+    "check": "npm test && npm run build && npm run smoke"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "jsdom": "24.1.3"
+  }
+}

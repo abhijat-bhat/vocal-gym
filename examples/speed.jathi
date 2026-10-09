@@ -1,0 +1,9 @@
+# Rupaka (chatusra jati: dhrutam + laghu = 6 aksharas), 2 avartanams.
+# The second avartanam opens at double speed (@8), then returns to @4.
+tala: rupaka
+nadai: 4
+avartanams: 2
+land: sam
+
+tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
+@8 (tha-ka-dhi-mi-tha-ka-jho-nu)x2 | @4 {tha-dhi-gi-na-thom}/1

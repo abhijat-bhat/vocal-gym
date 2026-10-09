@@ -1,0 +1,599 @@
+<title>Vocal Gym Research &amp; Build Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* @include ../shared/theme.css */
+/* @include ../shared/components.css */
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#verdict">Verdict</a></li>
+    <li><a href="#novelty">Novelty assessment</a></li>
+    <li><a href="#engine">Constraint engine and demo</a></li>
+    <li><a href="#alankara">35 tala alankaras</a></li>
+    <li><a href="#jathi">Jathi creator and judge</a></li>
+    <li><a href="#kalpana">Kalpana swara tutor</a></li>
+    <li><a href="#strain">Survey: vocal strain</a></li>
+    <li><a href="#raga">Survey: raga conformance</a></li>
+    <li><a href="#directions">Novel directions</a></li>
+    <li><a href="#papers">Research programme</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#plan">Project plan</a></li>
+    <li><a href="#startup">Startup assessment</a></li>
+    <li><a href="#corrections">Corrections</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <p class="kicker">Vocal Gym · research and build plan · October 2026</p>
+  <h1>Vocal Gym, assessed and specified</h1>
+  <p class="lede">An in-depth review of the idea: where it is new, the literature it stands on, three working generators and a jathi judge you can try on this page, two research programmes (personal vocal-strain modelling and raga conformance), a phased build plan and a startup case. It replaces the Phase 1 plan and corrects errors in the earlier pitch material.</p>
+  <div class="meta"><span>86 ragas encoded (72 melakartas, 14 janyas)</span><span>35 talas and 3 chapu talas</span><span>35 sheet alankaras verified</span><span>449,886 automated checks</span><span>4 papers and 1 dataset proposed</span><span>77 references</span></div>
+</header>
+
+<section id="verdict">
+  <h2>Verdict at a glance</h2>
+  <p class="sub">The practice-routine shell is familiar. The parts that make Vocal Gym publishable and defensible are the generators that cannot break raga or tala rules, the conformance coach and the personal voice model.</p>
+  <div class="grid3">
+    <div class="verdict"><h3>Novelty</h3><span class="rating r-high">High in four modules</span>
+      <p>Guaranteed-valid exercise, jathi and kalpana swara generation with a creativity dial; a kalpana swara tutor; phone-only personal strain baselines tied to warm-up choice. Raga conformance is medium-high: recognition is crowded, coaching-grade conformance is not.</p></div>
+    <div class="verdict"><h3>Research value</h3><span class="rating r-high">Four papers, one dataset</span>
+      <p>Targets TISMIR/ISMIR, IEEE/ACM TASLP, Journal of Voice or JASA, and the TISMIR Education Track. The longitudinal practice corpus with strain labels would be the first of its kind for Carnatic singers.</p></div>
+    <div class="verdict"><h3>Startup potential</h3><span class="rating r-med">Strong wedge, narrow core market</span>
+      <p>Comparable Indian practice apps convert under 1% of downloads to paid. A venture-scale outcome needs teacher and dance-school B2B plus a universal "vocal fitness" layer for all singers, with Carnatic depth as the credibility wedge.</p></div>
+  </div>
+</section>
+
+<section id="novelty">
+  <h2>Novelty assessment</h2>
+  <p class="sub">Each capability compared with the closest research or product found in this review. "Novelty" rates what Vocal Gym adds, not the importance of the capability.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Capability</th><th>Closest prior work or product</th><th>What Vocal Gym adds</th><th>Novelty</th></tr></thead>
+    <tbody>
+      <tr><td>Daily routine, timers, logs</td><td>Riyaz offers warm-ups, challenges and a vocal monitor [53]; fitness-app patterns</td><td>A four-phase Carnatic session with time allocation and streaks</td><td><span class="rating r-low">Low</span></td></tr>
+      <tr><td>Tanpura, tala keeping</td><td>NaadSadhana (406 ragas, 110 taals) [56]; ShruthiLaya [57]; Tala Shruti [58]; Tala Keeper</td><td>The app-generated drone becomes a known reference for cancelling it from the microphone signal</td><td><span class="rating r-low">Low</span> / <span class="rating r-med">Medium</span></td></tr>
+      <tr><td>Alankaras in other ragas</td><td>ShruthiLaya plays varisai in melakarta ragas [57]</td><td>All 35 talas, starting from the 35 tala alankara sheet and verified against it note for note; new patterns that never repeat the sheet or an earlier variation; janya ragas whose arohana and avarohana differ; every output provably obeys direction rules; temperature as creativity</td><td><span class="rating r-mh">Medium-high</span></td></tr>
+      <tr><td>Jathi and korvai generation</td><td>CAMeL n-gram percussion generation [14]; knowledge constraints on a data-driven model [15]; arithmetic korvai paradigm [13]; KonakolSwaraLLM [16]</td><td>Hard guarantees on span, eduppu, landing, the 3 × phrase + 2 × gap teermanam and yati shape at any temperature; JathiScript, an exact text format students write in; a judge with a correctness gate, six craft scores and computed fixes</td><td><span class="rating r-high">High</span></td></tr>
+      <tr><td>Kalpana swara tutoring</td><td>Hobby LLM generators [16]; no tutoring system found</td><td>Rounds built from named devices with temperature as the singer's creativity (recognisable devices at low T, unconventional but legal ones at high T); mora endings; graded landing drills; a check that the sung swara name matches the sung pitch</td><td><span class="rating r-high">High</span></td></tr>
+      <tr><td>Raga feedback</td><td>Raga recognition is crowded [40][42]; raga verification [37]; ungrammaticality in Hindustani allied pairs [39]; learner mistake detection by imitation in Hindustani [51]</td><td>Open-set, phrase-level conformance for Carnatic learners: where the singer left the raga, how, and which allied raga they drifted towards</td><td><span class="rating r-mh">Medium-high</span></td></tr>
+      <tr><td>Vocal fatigue sensing</td><td>Wearable vocal dosimetry with personal thresholds [28]; neural embeddings on lecture speech [20]; neck accelerometers [26][27]; individual response subtypes [29]</td><td>Phone-only daily singing probe, per-singer baseline with uncertainty, and a closed loop to warm-up choice tested with n-of-1 trials</td><td><span class="rating r-high">High</span></td></tr>
+      <tr><td>Katapayadi and the 72 melakartas</td><td>Textbook knowledge [5][6]</td><td>A teaching tool that includes the conjunct-consonant exceptions [7]</td><td><span class="rating r-low">Low</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="engine">
+  <h2>The shared core: a raga–tala constraint engine</h2>
+  <div class="prose">
+  <p>Every Carnatic exercise is a sequence that must satisfy two grammars at once. The tala fixes how long it is and where its boundaries fall. The raga fixes which swaras may appear and in which direction. Vocal Gym treats both as finite-state constraints and asks every generator to sample only inside their intersection. Creativity is a separate dial.</p>
+  <dl class="kv">
+    <dt>Tala</dt><dd>A sequence of angas: laghu |<sub>L</sub> with L ∈ {3, 4, 5, 7, 9} by jati, dhrutam O = 2, anudhrutam U = 1. Seven families × five jatis give 35 talas, from 3 aksharas (Tisra Eka) to 29 (Sankeerna Dhruva) [4]. For dance the engine adds Tisra (1 + 2), Khanda (2 + 3) and Misra (3 + 2 + 2) Chapu. Nadai g sets matras per akshara; speed (kalam) sets swaras per akshara.</dd>
+    <dt>Raga</dt><dd>An arohana list and an avarohana list. A step up must land on an arohana swara and a step down on an avarohana swara. Vakra ragas and anya swaras need explicit allow and deny lists (planned for the full engine).</dd>
+    <dt>Exercise</dt><dd>Notes or syllables x<sub>1…n</sub> with durations, subject to a constraint set C: exact length, karvais that never cross an anga line, fixed start, fixed landing (eduppu or sam).</dd>
+  </dl>
+  <div class="eq">p_T(x) ∝ exp( score(x) / τ ) · 1[ x ∈ C ]
+score(x) = (1 − c) · F(x) + c · N(x)        c = T / 2,   τ = 0.3 + 0.45 T,   T ∈ [0, 2]
+
+reach(t, s) = OR over moves m from state s at time t of reach(t + dur(m), s')   (backward pass, exact)
+sample:     at (t, s) choose among moves with reach(t + dur, s') = true, weights exp(score / τ)</div>
+  <p>Because every partial sequence the sampler builds can still be completed, no output ever violates C, at any temperature, with no rejection and no backtracking. The alankara generator goes one step further and replaces OR with log-sum-exp in the same table, which gives exact samples of whole patterns from p<sub>T</sub> (forward filtering, backward sampling). This is the same family of ideas as Markov constraints (Pachet and Roy, 2011) and grammar-constrained decoding for language models (Geng et al., 2023) [61][62], specialised to raga and tala.</p>
+  <p><b>Temperature is the performer's creativity.</b> Each generator scores a choice twice. F measures familiarity, how much it resembles what a teacher or listener expects: for alankaras, frequencies learned from the 35 lines of the tala alankara sheet [71]; for kalpana swaras and jathis, named conventional devices such as runs, janta, beat-aligned groups and the mora. N measures novelty: named unconventional devices that are still legal, such as leaps, zig-zags, syncopation, off-beat groups and shaped yatis. At T = 0, c = 0 and only familiarity counts; at T = 2, c = 1 and only novelty counts. T also widens sampling through τ, which never reaches zero, so asking for something new always gives something new. The rules are not part of the score, so no temperature can buy a violation.</p>
+  <p><b>Verification.</b> A test suite of 449,886 automated checks: all 35 first lines of the sheet, ascending and descending, reproduced note for note in Mayamalavagowla, plus all ten lines of 1.1 Chaturashra Dhruva; direction rules on every step across 86 ragas × 35 talas (23,992 lines, 217,320 notes); 1,248 new alankara patterns, each legal and different from the sheet and from every earlier variation; 6,165 kalpana rounds that land exactly; 12,417 jathis that sum exactly, 2,452 of which were exported to JathiScript and all passed the judge's correctness gate.</p>
+  </div>
+
+<!-- @include ../demo/demo.html -->
+</section>
+
+<section id="alankara">
+  <h2>Module A · Alankaras across the 35 talas and every raga class</h2>
+  <div class="prose">
+  <p><b>The source.</b> The first pattern for every tala comes from the <i>35 Tāla Alankāra-s</i> sheet [71]. It writes the first ascending and first descending line of each alankara in Mayamalavagowla, for seven tala families × five jatis, and gives four instructions: fill the following lines in sequence up to tara Sa at least, then reverse and descend to madhya Sa; the notation is first speed, one swara per unit of the tala; second speed is two swaras per beat and third speed four, up to the sixth; and the alankaras can be sung in any melakarta. The seven alankaras found in most books are its default-jati members [1][2].</p>
+  </div>
+  <div class="tbl" id="pdf-table" aria-label="First ascending lines of the 35 tala alankaras"></div>
+  <p class="tempnote">First ascending line of each alankara as written on the sheet, with its section number. Select a cell to load it into the demo above.</p>
+  <div class="prose">
+  <h3>Algorithm</h3>
+  <ol class="steps">
+    <li><div><strong>Variation 0 is the sheet.</strong> The sheet's line is read as scale degrees with durations and anga lines. Every melakarta is sampurna in both directions, so the same degrees give the sheet's pattern in all 72. The tests reproduce all 35 first lines, ascending and descending, note for note in Mayamalavagowla, and all ten lines of 1.1 Chaturashra Dhruva, which the sheet writes out in full.</div></li>
+    <li><div><strong>Shift through the raga.</strong> Ascending lines start on successive arohana swaras until a line reaches tara Sa; descending lines mirror them from tara Sa down to Sa [3]. A pattern spanning s swaras gives 9 − s lines each way in a seven-note raga. That matches the row count the sheet prints for every one of the 35 talas, from 2 rows (span 7, as in Sankeerna Dhruva) to 6 rows (span 3, as in Tishra Matya).</div></li>
+    <li><div><strong>Janya ragas get the sheet line, adapted.</strong> Degrees map to arohana swaras on the way up and avarohana swaras on the way down. When a step would break a rule (an upward turn landing on Kambhoji's N₂, which appears only in descent), a dynamic programme over the raga's swaras finds the closest legal line: it minimises distance from the direct mapping plus a penalty for changing the contour, and keeps the line inside its window. Changed swaras are underlined in teal and the page labels the line an adaptation, not the sheet.</div></li>
+    <li><div><strong>New pattern means a pattern not yet shown.</strong> For the same raga and tala, each request samples a fresh motif of the same length (by default with the sheet's span), compares it with the sheet line and with every pattern already shown for that raga and tala, and accepts it only if it differs in at least a quarter of its slots (one slot in talas of five aksharas or fewer). The history is kept per raga and tala, so Previous and Next step back through it. If a small tala runs out of distinct patterns, the demo says so instead of repeating one: Tisra Eka with a span of three has only four.</div></li>
+    <li><div><strong>Creativity.</strong> F is the smoothed log-frequency, over the 35 sheet lines, of three features of each move: the step (by size and direction, or a restart to Sa at an anga line), where a karvai falls (inside an anga or at its end) and whether the contour turns. N rewards leaps of a third or fourth, turns, crossing an anga line without restarting on Sa, and karvais that syncopate inside an anga. Exact sampling draws the whole pattern at once, so the familiar choice early on cannot force an awkward leap at the end. Measured over 1,248 new patterns, a pattern made at T = 0 is on average more conventional than 38% of the sheet's own lines, at T = 1 more conventional than 2%, and at T = 2 less conventional than all of them.</div></li>
+  </ol>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Raga class (arohana–avarohana)</th><th>Examples encoded</th><th>Lines per alankara (span 4)</th><th>Notes adjusted across 35 talas</th><th>Handling</th></tr></thead>
+    <tbody>
+      <tr><td>Sampurna–sampurna</td><td>All 72 melakartas, computed from the mela number</td><td>5 up + 5 down</td><td>0</td><td>Sheet line unchanged</td></tr>
+      <tr><td>Audava–audava</td><td>Mohanam, Hamsadhwani, Hindolam, Madhyamavati, Abhogi, Shuddha Saveri</td><td>3 + 3</td><td>0</td><td>Direct mapping in the raga's own five-note scale</td></tr>
+      <tr><td>Audava–shadava</td><td>Malahari</td><td>3 + 4</td><td>39</td><td>Projection</td></tr>
+      <tr><td>Audava–sampurna</td><td>Bilahari, Arabhi, Saveri, Kedaragowla, Abheri</td><td>3 + 5</td><td>82–133 per raga</td><td>Projection</td></tr>
+      <tr><td>Shadava–shadava</td><td>Sriranjani</td><td>4 + 4</td><td>0</td><td>Direct mapping</td></tr>
+      <tr><td>Shadava–sampurna</td><td>Kambhoji (N₃ anya swara not modelled)</td><td>4 + 5</td><td>65</td><td>Projection</td></tr>
+      <tr><td>Vakra</td><td>Begada, Sahana, Kathanakuthuhalam, Nalinakanti [8]</td><td>Depends on the zig-zag</td><td>–</td><td>Needs explicit transition tables (full engine)</td></tr>
+      <tr><td>Bhashanga (anya swara)</td><td>Bhairavi, Kambhoji with N₃</td><td>–</td><td>–</td><td>Needs phrase-conditional rules learned from compositions</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <p>Overall 0.30% of projected notes needed adjustment (647 of 217,320), all in the seven asymmetric janyas. <b>Evaluation plan:</b> automated validity (100% required); blind ratings by three or more teachers of sheet lines against new patterns at T = 0, 1 and 2; and a learning study measuring intonation gains on practised against unpractised ragas.</p>
+  </div>
+</section>
+
+<section id="jathi">
+  <h2>Module B · Jathi creator, guide and judge</h2>
+  <p class="sub">A jathi is arithmetic that has to dance. This module teaches the rules, lets a student write a jathi in a precise text format, checks the arithmetic exactly, scores the craft and says what to change. It can also generate examples at any level of creativity.</p>
+  <div class="prose">
+  <h3>B1 · Terms</h3>
+  <dl class="kv">
+    <dt>Adavu</dt><dd>The basic unit of Bharatanatyam movement; adavus are combined to form dance sequences [77].</dd>
+    <dt>Sollukattu</dt><dd>A phrase of rhythmic syllables linked to a unit of movement and recited by the nattuvanar, for example tai ya tai ya, tai hat tai hi, tat tai tam [77]. Konnakol names standard groups by length: tha ka (2), tha ki ta (3), tha ka dhi mi (4), tha dhi gi na thom (5), tha ka dhi mi tha ka (6), tha ka dhi mi tha ki ta (7), tha ka dhi mi tha ka jho nu (8), tha ka dhi mi tha dhi gi na thom (9) [73].</dd>
+    <dt>Jathi</dt><dd>A passage of sollukattu set to the tala for pure dance, recited by the nattuvanar and closed by a teermanam.</dd>
+    <dt>Korvai</dt><dd>A string of adavus set to sollukattu that ends with a teermanam [19][77].</dd>
+    <dt>Teermanam</dt><dd>"The final knot" [19]: a closing phrase performed three times [77]. Here the three statements must be identical and separated by equal karvais.</dd>
+    <dt>Karvai</dt><dd>A silent or held matra, written ",". It counts exactly like a syllable.</dd>
+    <dt>Yati</dt><dd>An arrangement of phrases whose lengths draw a shape [74]. Six types: sama, vishama, mridanga, damaru, gopuccha and srotovaha [72].</dd>
+    <dt>Eduppu</dt><dd>Where the passage starts relative to sam [75][76]: sama eduppu on sam, or a few counts (usually 2, 4 or 6) before sam (atita) or after it (anagata) [75].</dd>
+  </dl>
+
+  <h3>B2 · The tala grid and the one equation</h3>
+  <p>An avartanam has A aksharas grouped into angas; nadai g is the number of matras in an akshara (tisra 3, chatusra 4, khanda 5, misra 7, sankeerna 9); kalai k counts each akshara k times. Bharatanatyam draws mostly on Adi (8), Rupaka (6), Misra Chapu (7 = 3 + 2 + 2) and Tisra Triputa (7) [18]; Adi and Rupaka are the usual talas for adavus [77]. Everything a jathi must satisfy reduces to one equation.</p>
+  <div class="eq">matras per avartanam      C = A · k · g
+span from eduppu to sam   M = N · C − e        e &gt; 0: starts e matras after sam (anagata); e &lt; 0: starts |e| before (atita)
+slots to fill             S = M + 1            the last syllable sounds on sam  (S = M if the jathi ends exactly at sam)
+teermanam                 3u + 2q              phrase of u matras, two gaps of q
+the equation              body + yati + 3u + 2q = S</div>
+  <p>Example: Adi, chatusra nadai, two avartanams from sam: C = 8 × 1 × 4 = 32, M = 64, S = 65. A teermanam of tha dhi gi na thom (u = 5) with gaps of 3 takes 21, which leaves 44 for body and yati.</p>
+
+  <h3>B3 · Rules and constraints</h3>
+  <p>Rules 1 to 5 are hard: the judge will not call a jathi correct until they hold. Rules 6 to 9 are craft, and the judge scores them.</p>
+  <ol class="steps">
+    <li><div><strong>Exact span.</strong> Every syllable and karvai between the eduppu and the landing is counted. The total must equal S; one matra too many or too few is an error.</div></li>
+    <li><div><strong>Landing.</strong> By default the final syllable sounds on sam. A jathi may instead end exactly at sam, or land n matras after sam, for example on the eduppu of the song that follows; this is declared, not guessed.</div></li>
+    <li><div><strong>Eduppu.</strong> The first syllable sounds at the eduppu. An atita eduppu begins in the previous cycle, so the span grows by |e|; an anagata eduppu shortens it by e.</div></li>
+    <li><div><strong>Teermanam.</strong> Three identical statements with two equal gaps, ending on the landing. The gaps may be zero.</div></li>
+    <li><div><strong>Bars tell the truth.</strong> Phrases may cross anga lines, which is where cross-rhythm comes from, but every bar a student writes must sit on an anga line (|) or the end of an avartanam (||).</div></li>
+    <li><div><strong>Beat and speed.</strong> Cross-rhythm should resolve within three or four aksharas; a change of speed (for example from 4 to 8 syllables per akshara) should start on a beat and stay within double the nadai.</div></li>
+    <li><div><strong>Idiom.</strong> Use standard sollu groups and their suffixes, and put strong syllables (tha, dhi, tat, tai, thom) or phrase starts on the beats. End the teermanam on a closing syllable such as thom, dhit, tam, nam or jham.</div></li>
+    <li><div><strong>Yati.</strong> Grow or cut each phrase from its neighbour so the shape is audible: tha ka dhi mi tha ki ta / dhi mi tha ki ta / tha ki ta.</div></li>
+    <li><div><strong>Danceability.</strong> Leave karvais where the dancer can settle (60–95% of matras sounding), no unbroken run longer than two avartanams, phrases of at most nine syllables so each maps to an adavu.</div></li>
+  </ol>
+
+  <h3>B4 · Yati shapes</h3>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Yati</th><th>Lengths</th><th>Example</th><th>Image</th></tr></thead>
+    <tbody>
+      <tr><td>Sama</td><td>Equal</td><td>tha ka dhi mi · tha ka dhi mi · tha ka dhi mi</td><td>Even steps; in Adi with chatusra nadai, 4 matras to each akshara [72]</td></tr>
+      <tr><td>Gopuccha</td><td>Decreasing</td><td>tha ka dhi mi tha ki ta · dhi mi tha ki ta · tha ki ta (7, 5, 3)</td><td>A cow's tail, broad at the root and tapering</td></tr>
+      <tr><td>Srotovaha</td><td>Increasing</td><td>tha ki ta · dhi mi tha ki ta · tha ka dhi mi tha ki ta (3, 5, 7)</td><td>A river widening towards its mouth</td></tr>
+      <tr><td>Mridanga</td><td>Up, then down</td><td>4, 5, 7, 7, 5, 4 [72]</td><td>The mridangam's barrel: narrow ends, wide middle</td></tr>
+      <tr><td>Damaru</td><td>Down, then up</td><td>7, 5, 4, 4, 5, 7 [72]</td><td>The hourglass damaru: wide ends, narrow waist</td></tr>
+      <tr><td>Vishama</td><td>Irregular</td><td>5, 4, 7, 9, 3, 4 [72]</td><td>Free arrangement</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <h3>B5 · Guide: write your own jathi in eight steps</h3>
+  <ol class="steps">
+    <li><div><strong>Frame it.</strong> Choose tala, nadai, avartanams, eduppu and landing, then compute C, M and S. Adi, chatusra, 2 avartanams, sama eduppu, landing on sam: S = 65.</div></li>
+    <li><div><strong>Choose the teermanam.</strong> Pick a phrase u and a gap q. With tha dhi gi na thom and q = 3, each statement plus its gap is 8 matras, exactly two aksharas, so all three statements start on beats: 3 × 5 + 2 × 3 = 21.</div></li>
+    <li><div><strong>Subtract.</strong> 65 − 21 = 44 matras for the body and yati.</div></li>
+    <li><div><strong>Lead into it with a yati.</strong> A gopuccha cut from tha ka tha ki ta: tha ka tha ki ta / ka tha ki ta / tha ki ta = 5 + 4 + 3 = 12. The body is then 32 matras, one whole avartanam.</div></li>
+    <li><div><strong>Fill the body anga by anga.</strong> Laghu (16): tha ka dhi mi · tha ka jho nu · tha ka dhi mi · tha ka jho nu. Dhrutam (8): tha , dhi , tha ka dhi mi. Dhrutam (8): tha ka tha ki ta · tha ki ta.</div></li>
+    <li><div><strong>Write it in JathiScript</strong> with bars where you expect anga lines, so the judge can check your counting.</div></li>
+    <li><div><strong>Judge it.</strong> Fix the gate first: the judge names the line and the number of matras. Then raise the craft scores.</div></li>
+    <li><div><strong>Recite, then dance.</strong> Play it with the tala clicks, recite it with the tala in your hands, then dance it slowly before bringing it up to speed.</div></li>
+  </ol>
+  <pre class="eq" id="ex-adi"></pre>
+  <p>The judge gives this jathi 100: correct, with a derived gopuccha yati and teermanam statements that start on beats. The "one matra short" exercise in the demo removes a single karvai from the second line; the judge answers "Start with line 11: the phrases before the bar there are 1 matra short. Fixing that also fixes the span."</p>
+
+  <h3>B6 · JathiScript reference</h3>
+  <p>JathiScript is deterministic: one word is one matra at the current speed, so the same text always gives the same timing, the same arithmetic and the same score. Times are kept in exact integer ticks (2,520 per akshara), so speed changes never round.</p>
+  </div>
+  <div class="tbl"><table class="ref">
+    <thead><tr><th>Write</th><th>Meaning</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><code>tala:</code></td><td>Family and jati in either order, Adi, Tisra / Khanda / Misra Chapu, or a custom count</td><td><code>tala: khanda jati ata</code>, <code>tala: misra chapu</code>, <code>tala: custom 3+2+2</code></td></tr>
+      <tr><td><code>nadai:</code></td><td>Matras per akshara, as a number or a jati name (default 4)</td><td><code>nadai: tisra</code></td></tr>
+      <tr><td><code>kalai:</code></td><td>Counts per akshara (default 1)</td><td><code>kalai: 2</code></td></tr>
+      <tr><td><code>avartanams:</code></td><td>The required span. If left out, the judge infers it and says so</td><td><code>avartanams: 2</code></td></tr>
+      <tr><td><code>eduppu:</code></td><td><code>sam</code>, <code>+n</code> (n matras after sam, anagata) or <code>-n</code> (n matras before sam, atita)</td><td><code>eduppu: -2</code></td></tr>
+      <tr><td><code>land:</code></td><td><code>sam</code> (last syllable on sam), <code>end</code> (ends exactly at sam) or <code>+n</code> (last syllable n matras after sam)</td><td><code>land: +4</code></td></tr>
+      <tr><td><code>tha</code></td><td>One syllable, one matra</td><td><code>tha dhi thom</code></td></tr>
+      <tr><td><code>tha-ka-dhi-mi</code></td><td>Hyphens join syllables into one phrase; a phrase may contain karvais</td><td><code>tha-,-dhi-,-gi-na-thom</code></td></tr>
+      <tr><td><code>,</code> <code>;</code></td><td>Karvai of one matra; of two matras</td><td><code>thom , ,</code></td></tr>
+      <tr><td><code>( … )xN</code></td><td>Group and repeat</td><td><code>(tha-ki-ta)x3</code></td></tr>
+      <tr><td><code>let A = …</code> then <code>$A</code></td><td>Name a phrase once and use it anywhere</td><td><code>let T = tha-dhi-gi-na-thom</code></td></tr>
+      <tr><td><code>{ … }/q</code></td><td>Teermanam: the phrase three times with q matras of karvai between statements (<code>x3</code> optional)</td><td><code>{tha-dhi-gi-na-thom}/2</code></td></tr>
+      <tr><td><code>|</code> <code>||</code></td><td>Bars, checked against anga lines and the end of each avartanam</td><td><code>$A $B | tha , dhi , ||</code></td></tr>
+      <tr><td><code>@n</code></td><td>Speed: n syllables per akshara from here on (n must divide 2,520)</td><td><code>@8 (tha-ka-dhi-mi)x2 @4</code></td></tr>
+      <tr><td><code>#</code></td><td>Comment to the end of the line</td><td><code># laghu: 16 matras</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <p>A word written without hyphens is one matra even if it looks like several syllables; if it can be read as known syllables (takadhimi), the judge warns and suggests the hyphenated form (ta-ka-dhi-mi). If no teermanam is marked with braces, the judge looks for three equal phrases at the end and checks their gaps.</p>
+
+  <h3>B7 · The judge</h3>
+  <p>A correctness gate first, then six craft aspects totalling 100. If any gate check fails the total is capped at 49 and the first suggestion says exactly what to change.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Part</th><th>Weight</th><th>What is measured</th></tr></thead>
+    <tbody>
+      <tr><td>Gate: span and landing</td><td>Pass or fail</td><td>The landing falls where declared after the required avartanams; otherwise the exact shortfall or surplus, in matras or fractions of an akshara</td></tr>
+      <tr><td>Gate: nothing after the landing</td><td>Pass or fail</td><td>No karvai trails a jathi that lands on sam</td></tr>
+      <tr><td>Gate: bars</td><td>Pass or fail</td><td>Each | on an anga line, each || on an avartanam line; the message says how many matras early or late</td></tr>
+      <tr><td>Gate: opens at the eduppu</td><td>Pass or fail</td><td>The first event is a syllable, not a karvai</td></tr>
+      <tr><td>Gate: teermanam</td><td>Pass or fail</td><td>The jathi ends with a teermanam, marked with braces or written out with equal gaps</td></tr>
+      <tr><td>Rhythmic integrity</td><td>20</td><td>Phrases return to a beat within three aksharas (8); karvai placement (4); speed changes on beats and at most double (4); teermanam statements start at the same point in the beat (4)</td></tr>
+      <tr><td>Structure and form</td><td>20</td><td>Ends with a teermanam (8) with nothing after it (3), taking 15–60% of the jathi (5), after a body (2), with the span stated (2)</td></tr>
+      <tr><td>Teermanam quality</td><td>15</td><td>Three equal statements with equal gaps (8), a closing syllable (3), gap no longer than the phrase (2), a phrase of three or more syllables that opens strongly (2)</td></tr>
+      <tr><td>Sollu idiom</td><td>15</td><td>Known syllables (5), standard groups, their suffixes or joins of up to three (5), strong syllables or phrase starts on beats (5)</td></tr>
+      <tr><td>Variety and creativity</td><td>15</td><td>Number of phrase lengths (5), a yati shape, best when each phrase is derived from its neighbour (4), little literal repetition (3), some cross-rhythm, karvai or speed change (3)</td></tr>
+      <tr><td>Danceability</td><td>15</td><td>60–95% of matras sounding (5), no unbroken run over two avartanams (4), phrases of nine syllables or fewer (3), speed at most double the nadai (3)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <p><b>Fix suggestions are computed.</b> A jathi d matras short can take d karvais before the teermanam; if d is even, the teermanam gap can grow by d / 2 (it occurs twice); if d is a multiple of 3, the teermanam phrase can grow by d / 3 syllables (it occurs three times); or the eduppu can move d matras earlier. When a bar is misplaced the judge points to the first one, because that is where the counting went wrong. The weights are a starting point for the teacher panel to calibrate against their own marks.</p>
+
+  <h3>B8 · The generator</h3>
+  <p>The generator enumerates every combination of teermanam phrase, gap (0 to 4) and yati block that fits the equation exactly, chooses one by temperature, and fills the body with sollu groups whose lengths sum to what is left. Familiarity rewards teermanam statements that start on beats, beat-length groups, repetition, no yati or a sama yati, and a teermanam of about a third of the span. Novelty rewards shaped yatis (gopuccha, srotovaha, mridanga, damaru), gapped teermanams, odd-length groups and phrases that cross the beat. Every generated jathi is exported to JathiScript ("Open in editor") and judged by the same rules a student faces.</p>
+  <p><b>Verified.</b> 12,417 generated jathis (35 talas and 3 Chapu talas × nadai 3–5 × 1–2 avartanams × eduppu −2, 0 and +2 × seven yati settings × three temperatures) summed exactly, had the requested yati shape and a threefold teermanam; 1,947 spans that were too short were refused with a message. 2,452 of them were exported to JathiScript and judged: all passed the gate, scoring 71 to 100 (median 88).</p>
+  <p><b>Next.</b> Adavu suggestions for each phrase, a teacher-calibrated judge, a style prior learned from a nattuvanar's corpus, konnakol audio and printable notation. <b>Evaluation:</b> agreement between the judge and teachers' marks on student jathis; blind ratings by dancers of generated against human jathis; a validity comparison against unconstrained generators such as KonakolSwaraLLM [16].</p>
+  </div>
+</section>
+
+<section id="kalpana">
+  <h2>Module C · Kalpana swara tutor</h2>
+  <div class="prose">
+  <p><b>What the tradition asks.</b> Kalpana swaras improvise in swara syllables within the raga and tala and must return to the eduppu, the point in the cycle where the composition line resumes [9]. Rounds grow from simple to complex; strong performers vary their ending notes and finish with a korvai [10]. A common drill, kuraippu, repeats rounds that halve in length around a focal note: one avartanam, half, a quarter [12]. Korvais that return to an offset eduppu depend on simple divisibility arithmetic [11].</p>
+  <h3>Temperature is the singer's creativity</h3>
+  <p>A round is built from named devices. At low temperature the generator sings like a careful student: runs, janta, dattu and sequences that start on beats, held notes on Sa and Pa, and a mora at the end, patterns listeners recognise and can follow. At high temperature it sings like an adventurous performer: leaps, arpeggios, zig-zags, syncopated holds, groups that start off the beat and excursions into the upper and lower octaves. At every temperature each step obeys the raga's direction rules, the round has exactly the requested length, and it lands on the chosen swara just before the eduppu.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Device</th><th>Kind</th><th>Example in Kalyani, continuing from Sa</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Run (3–5 swaras)</td><td>Conventional</td><td>R G M · R G M P</td><td>The commonest connective</td></tr>
+      <tr><td>Janta</td><td>Conventional</td><td>R R G G</td><td>Doubled swaras, as in janta varisai</td></tr>
+      <tr><td>Dattu</td><td>Conventional</td><td>G R M G</td><td>Skip and step back, as in dattu varisai</td></tr>
+      <tr><td>Turn</td><td>Conventional</td><td>R G R</td><td>A neighbour figure</td></tr>
+      <tr><td>Sequence</td><td>Conventional</td><td>R G M · G M P</td><td>A shape repeated one step higher</td></tr>
+      <tr><td>Run into a held swara</td><td>Conventional</td><td>R G M ,</td><td>Scores higher when the held swara is Sa or Pa and the hold ends on a beat</td></tr>
+      <tr><td>Mora ending</td><td>Conventional</td><td>D N Ṡ , D N Ṡ , D N Ṡ</td><td>A phrase three times with equal gaps, landing on the chosen swara</td></tr>
+      <tr><td>Leap, wide leap</td><td>Unconventional</td><td>M · P</td><td>A fourth or fifth in one step</td></tr>
+      <tr><td>Arpeggio</td><td>Unconventional</td><td>G P N</td><td>Three skips</td></tr>
+      <tr><td>Leap and fall back</td><td>Unconventional</td><td>M G R</td><td></td></tr>
+      <tr><td>Zig-zag</td><td>Unconventional</td><td>G Ṇ R</td><td>Wide alternating contour</td></tr>
+      <tr><td>Syncopated hold</td><td>Unconventional</td><td>R , G</td><td>Held off the beat</td></tr>
+      <tr><td>Displaced janta</td><td>Unconventional</td><td>G G R R</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <p>Context adds to both scores. A device that starts on a beat or fills whole beats adds familiarity; one that starts off the beat or has an odd length adds novelty. Repeating the previous device adds familiarity and costs novelty; leaving the octave between Sa and tara Sa adds novelty; a gentle pull keeps the line near the singer's working register.</p>
+  <h3>How a round is built</h3>
+  <ol class="steps">
+    <li><div><strong>Reachability.</strong> From the opening swara, mark every (slot, swara) state that some sequence of legal devices can reach.</div></li>
+    <li><div><strong>Ending.</strong> Either free, or a mora: a phrase of two to four swaras ending on the landing swara, sung three times with equal karvais. A mora is offered only if the body before it can still step legally into its first swara. Low temperature prefers a stepwise mora whose statements start on beats; high temperature allows skips, off-beat statements or a free ending. The demo can force either.</div></li>
+    <li><div><strong>Backward feasibility.</strong> For the body, mark every (slot, swara) from which the ending can still be reached exactly.</div></li>
+    <li><div><strong>Sampling.</strong> Choose devices left to right with weights exp(score / τ), score = (1 − c) F + c N, among devices that keep the round finishable. There is no backtracking and no rejection.</div></li>
+  </ol>
+  <p><b>Measured</b> over 6,165 rounds across all 86 ragas: in rounds of eight slots or more, unconventional devices supply 1.7% of the swaras at T = 0, 24% at T = 1 and 41% at T = 2. Every round has the exact length, ends on its landing swara and obeys the direction rules; 1,282 rounds ended in a mora with three identical statements and equal gaps.</p>
+  <h3>Curriculum</h3>
+  <ol class="steps">
+    <li><div><strong>Echo.</strong> The tutor sings a half-avartanam phrase that lands on the eduppu; the learner repeats it. Scored on swara accuracy and timing.</div></li>
+    <li><div><strong>Fill the slot.</strong> The learner improvises exactly k aksharas and must land. Feedback gives the landing error in matras and any out-of-raga swaras.</div></li>
+    <li><div><strong>Focal-note rounds.</strong> Kuraippu on a nyasa swara: one avartanam, then half, then a quarter.</div></li>
+    <li><div><strong>Devices.</strong> The learner is asked for a specific device (janta, dattu, a sequence, a mora) and the tutor checks that it appears and stays in the raga.</div></li>
+    <li><div><strong>Creativity ladder.</strong> The same slot sung at rising temperatures: first with conventional devices only, then with one unconventional device per round, then freely. The tutor reports the share of unconventional devices, so creativity becomes something a student can practise and measure.</div></li>
+    <li><div><strong>Korvai.</strong> The jathi solver proposes korvai lengths that reach the eduppu; the learner sings one.</div></li>
+    <li><div><strong>Free rounds with critique.</strong> Raga adherence, devices used, variety and landing, summarised in plain language.</div></li>
+  </ol>
+  <h3>Listening pipeline</h3>
+  <p>On-device pitch estimation (PESTO or a small CREPE, fine-tuned on Carnatic data) [63][64][46]; the tonic is known because the app plays the drone; the contour is converted to cents and segmented into constant-pitch notes and stationary points [49][50]; swara tokens are aligned to the app's own tala grid; the scorers then report adherence, landing error, rhythmic evenness, devices used, repetition and korvai validity.</p>
+  <div class="note teal"><b>A small new idea:</b> learners sing swara names, so a seven-word keyword spotter can hear "ga" while the pitch tracker hears R₂. Comparing the two catches a classic beginner error. No prior system in this review checks name against pitch.</div>
+  </div>
+</section>
+
+<section id="strain">
+  <h2>Literature survey A · Personal vocal-strain assessment</h2>
+  <p class="sub">Goal: a model that learns each singer's own voice and estimates today's condition from a short phone recording, so the warm-up can be chosen for the voice in front of it.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Work</th><th>Signal and setting</th><th>Method</th><th>Finding</th><th>Gap for Vocal Gym</th></tr></thead>
+    <tbody>
+      <tr><td>Ghassemi et al., IEEE TBME 2014 [26]</td><td>Neck-surface accelerometer, week-long, vocal-fold nodule patients and matched controls</td><td>SPL and F0 distributions per 5 minutes; SVM and logistic regression</td><td>22 of 24 subjects classified correctly</td><td>Disorder status, not daily fatigue; extra hardware</td></tr>
+      <tr><td>Mehta et al., Front. Bioeng. 2015 [27]</td><td>Ambulatory accelerometer</td><td>Vocal dose, glottal airflow models, ML</td><td>Ambulatory monitoring is feasible for hyperfunction research</td><td>Clinical cohort and device</td></tr>
+      <tr><td>Carroll et al., 2006 [23]</td><td>Classical singers with dosimeters</td><td>F0, SPL, voicing time with self-ratings</td><td>Vocal effort and difficulty singing softly rose after practice</td><td>Small sample, hardware</td></tr>
+      <tr><td>Caraty and Montacié, 2014 [24]</td><td>Three hours of reading aloud</td><td>SVM on 1,582 acoustic features</td><td>Prosody alone is not enough; large feature sets help</td><td>Speech, not singing</td></tr>
+      <tr><td>Gao, Dietrich and DeSouza, 2021 [25]</td><td>Surface EMG</td><td>SVM with VFI labels</td><td>Fatigue is classifiable from muscle activity</td><td>Sensors on the neck</td></tr>
+      <tr><td>Bayerl et al., J. Voice 2023 [20]</td><td>One lecturer, 19 lectures of 67–91 minutes</td><td>x-vector, ECAPA-TDNN and wav2vec 2.0 embeddings with per-recording normalisation and 30–60 s smoothing; SVM</td><td>85% (ECAPA), 82% (wav2vec 2.0) and 81% (x-vector) separating minutes 0–10 from minutes 50–60; 70–76% on an unseen speaker without adaptation; early wav2vec 2.0 layers work best</td><td>One speaker, speech, binary labels; the authors call for regression and speaker-dependent models</td></tr>
+      <tr><td>Northwestern, PNAS 2023 [28]</td><td>Skin-mounted sensor, 16 professional singers</td><td>CNN separates singing from speaking (over 90%); vocal dose; haptic alerts</td><td>Real-time dosimetry; personal thresholds set by a discomfort button</td><td>Needs a device; measures load, not condition</td></tr>
+      <tr><td>Sci. Rep. 2025 [29]</td><td>Prolonged speaking in noise</td><td>Unsupervised subtyping of effort and acoustic change</td><td>People respond to vocal demand in different ways; argues for individual models</td><td>Lab task, speakers</td></tr>
+      <tr><td>VFI [21]; consensus definitions [22]</td><td>Questionnaire; terminology</td><td>19-item index; definitions of effort, load, loading and fatigue</td><td>Validated labels</td><td>Too long to answer daily</td></tr>
+      <tr><td>Titze 2006 [31]; Maxfield et al. [32]</td><td>SOVT physics; intraoral pressure in 13 gestures</td><td>Simulation; manometry</td><td>Semi-occlusion raises supraglottal pressure and can reduce collision; pressures range 0.1–1.0 kPa and vary by gesture and person</td><td>Supports SOVT-first warm-ups when strained, and personal tuning</td></tr>
+      <tr><td>Warm-up studies [33][34][35]</td><td>Systematic review; singer studies (n = 8 and n = 13)</td><td>Acoustic and perceptual comparisons</td><td>Positive changes in reviews; singer's formant, F0 range and closed quotient rose in one study; another found no significant SOVT effect on singing power ratio</td><td>Evidence is mixed and small, which is why each singer's response should be measured</td></tr>
+      <tr><td>Self-supervised models for voice disorders [36]</td><td>Clinical voice databases</td><td>wav2vec 2.0 and HuBERT with glottal features</td><td>Useful representations with little labelled data</td><td>Pathology, not day-to-day condition</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <h3>What the literature says, taken together</h3>
+  <ul>
+    <li>Fatigue shows up differently in different people [29], and models trained on one person lose accuracy on another [20]. A personal baseline is required, not optional.</li>
+    <li>Neural embeddings carry fatigue information once they are normalised per recording and smoothed over time [20].</li>
+    <li>No study found uses a standardised daily singing probe recorded on a phone in an ordinary room.</li>
+    <li>The validated label (VFI) is too long for daily use; a short form needs its own validation.</li>
+    <li>No system closes the loop from a measured condition to a chosen warm-up and then measures whether the choice helped.</li>
+  </ul>
+  <h3>Proposed method: Voice Check</h3>
+  <dl class="kv">
+    <dt>Probe (90 s, sung to the app drone)</dt><dd>Sustained "aa" on Sa twice for 4 s; three soft "oo" onsets on upper Pa; an "ng" siren from lowest to highest comfortable note; a messa di voce on Sa; Sarali Varisai 1 in akaram at a fixed tempo.</dd>
+    <dt>Features</dt><dd>Smoothed cepstral peak prominence, harmonics-to-noise ratio, spectral tilt, pitch stability in cents on sustained notes, time to stable pitch at onset, highest note reached softly (a proxy for rising phonation threshold), range; early-layer WavLM or wav2vec 2.0 embeddings normalised per recording [65][66]; context: hours awake, vocal load and vocal dose since waking [30], sleep, illness flag, room noise, microphone.</dd>
+    <dt>Model</dt><dd>Hierarchical Bayesian: a population prior with person-level effects, giving personal z-scores against rested days; a small head mapping embeddings to self-reported strain with person-specific calibration; conformal prediction intervals so the app says when it is unsure [67]; inference on the device; federated averaging for the population prior [68].</dd>
+    <dt>Labels</dt><dd>A three-item daily short form derived from VFI items (to be validated), a 0–10 effort rating, and monthly ratings by a teacher or speech-language pathologist.</dd>
+    <dt>Warm-up prescriber</dt><dd>A contextual bandit (Thompson sampling) over warm-up protocols with a rule layer that cannot be overridden: high strain allows only SOVT work and a shorter session. Reward is the change in the post-warm-up probe plus self-rated readiness.</dd>
+    <dt>Evaluation</dt><dd>Within-person rank correlation with self-report, leave-days-out validation, calibration of intervals, cross-device robustness, and randomised n-of-1 crossover trials of bandit against fixed warm-ups.</dd>
+    <dt>Safety</dt><dd>Wellness feedback, never a diagnosis. Hoarseness that lasts beyond about four weeks, pain or loss of voice prompts a referral to an ENT or speech-language pathologist, in line with the AAO-HNS hoarseness guideline (Stachler et al., 2018) [69].</dd>
+  </dl>
+  </div>
+</section>
+
+<section id="raga">
+  <h2>Literature survey B · From raga recognition to raga conformance</h2>
+  <p class="sub">A coach does not need to guess the raga; the learner has chosen it. The useful questions are where the singer left the raga, how, and towards what.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Work</th><th>Representation</th><th>Task</th><th>Result or contribution</th><th>Gap for a coach</th></tr></thead>
+    <tbody>
+      <tr><td>Chordia and Rae 2007; Koduri et al. 2012</td><td>Pitch-class and dyad distributions</td><td>Recognition</td><td>Established the distributional baseline</td><td>Ignore phrasing and gamaka shape</td></tr>
+      <tr><td>Gulati et al. 2016 (phrase vector space; time-delayed melody surfaces) [43]</td><td>Melodic phrases; delay-embedded pitch</td><td>Recognition</td><td>Strong results on the CompMusic raga datasets</td><td>Concert audio, closed set</td></tr>
+      <tr><td>Madhusudhan and Chowdhary 2019 (DeepSRGM)</td><td>LSTM over pitch sequences</td><td>Recognition and ranking</td><td>Deep sequence models for raga</td><td>Closed set</td></tr>
+      <tr><td>Dutta, Sekhar PV and Murthy, ISMIR 2015 [37]</td><td>Longest common segment set against composition lines, with cohorts</td><td>Verification ("is this raga X?")</td><td>About 12% error over 17 ragas</td><td>Closest framing to ours; not learner audio, not localised</td></tr>
+      <tr><td>Ganguli and Rao, ISMIR 2017 [39]; TISMIR 2018 [38]</td><td>Distributional representation tuned on allied pairs</td><td>Modelling the ungrammatical</td><td>Formalises the boundary between allied ragas</td><td>Hindustani; offline</td></tr>
+      <tr><td>Singh and Arora, IEEE TASLP 2025 [40]</td><td>Deep models with attribution</td><td>Explainable recognition</td><td>Shows which regions drive a decision</td><td>Recognition only</td></tr>
+      <tr><td>Natesan and Beigi 2024 [42]; many 2024–25 papers</td><td>TDNN, BiLSTM, CNN</td><td>Recognition</td><td>Around 95% on CompMusic subsets</td><td>Closed-set accuracy is saturated</td></tr>
+      <tr><td>Roychowdhury and Rao, TISMIR 2025 [41]</td><td>Multimodal disentanglement, contrastive loss</td><td>Recognition</td><td>Representation ideas for singer-invariant features</td><td>Recognition only</td></tr>
+      <tr><td>Viraraghavan et al., ICASSP 2020; JASA 2020 [49][50]</td><td>Constant-pitch notes and stationary points</td><td>Descriptive transcription</td><td>Precision about 20 cents on held notes against about 60 on turning points</td><td>The right tokens for a conformance model</td></tr>
+      <tr><td>Plaja-Roglans et al. 2023–25 [46][47][48]; Saraga [44][45]</td><td>Carnatic-tuned pitch extraction and separation; open data</td><td>Infrastructure</td><td>State-of-the-art Carnatic vocal pitch and separation; about 96 h (Saraga) plus 60 h with video (Saraga Audiovisual)</td><td>Building blocks, not feedback</td></tr>
+      <tr><td>Kumar et al., arXiv 2026 [51]</td><td>Synchronised teacher–learner pitch and energy; TCN</td><td>Mistake detection in imitation</td><td>Learning models beat rules; teachers' tolerances differ (12 cents for one, about 22 for the other)</td><td>Hindustani, imitation only; timing and improvisation left open</td></tr>
+      <tr><td>Reddy and Rao, EUSIPCO 2017 [52]</td><td>Note segmentation against ideal ratios</td><td>Sargam evaluation</td><td>Flags mis-pitched notes</td><td>Notes only, no raga grammar</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <h3>Proposed method: raga conformance coach</h3>
+  <ol class="steps">
+    <li><div><strong>Clean input.</strong> The app synthesises the tanpura, so it knows the drone signal exactly and can subtract it from the microphone with an adaptive echo canceller before pitch tracking.</div></li>
+    <li><div><strong>Pitch and tokens.</strong> PESTO or CREPE fine-tuned on Saraga-Carnatic-Melody-Synth [46]; cents relative to the known Sa; CPN/STA segmentation into swara tokens with gamaka descriptors [49].</div></li>
+    <li><div><strong>Three scorers.</strong> Note level: per-raga, per-swara intonation distributions flag a swara sung where the raga does not place it. Transition level: the raga automaton plus a small language model over swara tokens flags varjya swaras and vakra violations by surprisal. Phrase level: a likelihood ratio of the chosen raga against its allied cohort (pairs taught together, such as Kalyani and Yamuna Kalyani, Kambhoji and Yadukulakambhoji, Darbar and Nayaki, Arabhi and Devagandhari) reports drift [37][38].</div></li>
+    <li><div><strong>Training data at scale.</strong> Counterfactual violations: take valid phrases and inject controlled errors (a varjya swara, an allied-raga phrase, a flattened gamaka, a swarasthana off by a semitone), then resynthesise with gamaka-aware synthesis [17] or pitch-shift real audio. This yields labelled negatives without thousands of hours of annotated learner mistakes.</div></li>
+    <li><div><strong>Teacher-calibrated tolerance.</strong> Because teachers set different thresholds [51], each student inherits their teacher's tolerance profile, adjustable by bani.</div></li>
+    <li><div><strong>Evaluation.</strong> AUROC and F1 per error type on synthetic and real learner audio; event F1 with a collar for localisation [51]; agreement with teachers; under 150 ms latency on mid-range phones.</div></li>
+  </ol>
+  </div>
+</section>
+
+<section id="directions">
+  <h2>Novel directions</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Why it is new</th><th>Where it lives</th></tr></thead>
+    <tbody>
+      <tr><td>Constraint-guaranteed generators with a temperature dial</td><td>Prior Carnatic generators are data-driven or arithmetic but do not combine sampling diversity with proofs of validity [13][14][15][16]</td><td>Modules A, B, C · Paper 1</td></tr>
+      <tr><td>Contour-preserving projection into asymmetric janya ragas</td><td>Varisai apps transpose into melakartas only [57]</td><td>Module A</td></tr>
+      <tr><td>Reference-aware drone cancellation</td><td>Uses the app's own tanpura as a known echo reference; practice apps treat the drone as noise</td><td>Raga coach, Voice Check</td></tr>
+      <tr><td>Counterfactual raga-violation synthesis</td><td>Creates labelled mistakes for open-set conformance training</td><td>Paper 2</td></tr>
+      <tr><td>Allied-raga drift as the explanation</td><td>Turns verification cohorts [37] into feedback a student understands</td><td>Paper 2</td></tr>
+      <tr><td>Swara-name versus pitch consistency</td><td>No prior system checks the sung syllable against the sung pitch</td><td>Module C</td></tr>
+      <tr><td>Daily singing probe with personal baselines</td><td>Fatigue work uses wearables, lectures or lab tasks [20][28][29]</td><td>Paper 3</td></tr>
+      <tr><td>Closed-loop warm-up prescription with n-of-1 trials</td><td>Warm-up evidence is mixed [33][35]; no system measures each singer's response</td><td>Paper 4</td></tr>
+      <tr><td>Teacher- and bani-calibrated tolerances</td><td>Builds on the finding that "error" is teacher-specific [51]</td><td>Raga coach</td></tr>
+      <tr><td>Federated, on-device voice modelling</td><td>Voice is personal data; keeps raw audio on the phone</td><td>Platform</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="papers">
+  <h2>Research programme</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Paper</th><th>Claim</th><th>Experiments</th><th>Target venues</th></tr></thead>
+    <tbody>
+      <tr><td>P1 · Constraint-guaranteed generation of Carnatic exercises, jathis and kalpana swaras</td><td>One engine produces valid outputs 100% of the time while temperature, read as creativity, moves outputs from conventional to unconventional</td><td>Validity against LLM and n-gram baselines; conventionality and diversity against temperature; blind ratings by teachers and nattuvanars; agreement of the jathi judge with teachers' marks</td><td>TISMIR, ISMIR, JNMR</td></tr>
+      <tr><td>P2 · Raga conformance for learners</td><td>Phrase-level open-set scoring with counterfactual training localises raga errors better than recognition-based scores</td><td>Per-error-type AUROC; event F1; allied-pair drift; teacher agreement; on-device latency</td><td>IEEE/ACM TASLP, TISMIR; ICASSP short version</td></tr>
+      <tr><td>P3 · Personal vocal-strain estimation from daily phone probes</td><td>Personal baselines plus normalised embeddings track self-reported strain within singers</td><td>8-week pilot with about 30 Carnatic singers; within-person correlation; calibration; device robustness</td><td>Journal of Voice, JASA Express Letters, IEEE JBHI, Interspeech</td></tr>
+      <tr><td>P4 · Closed-loop warm-up prescription</td><td>A safe bandit improves next-session readiness compared with a fixed routine</td><td>Randomised n-of-1 crossover trials</td><td>Journal of Voice, JSLHR</td></tr>
+      <tr><td>P5 · Kalpana swara tutoring</td><td>Graded landing drills improve rhythmic landing and raga adherence</td><td>Pre/post study with control group; teacher-rated improvisation</td><td>TISMIR Education Track [70], CHI, NIME</td></tr>
+      <tr><td>D1 · Vocal Gym Practice Corpus</td><td>First longitudinal Carnatic practice corpus with strain labels and teacher annotations</td><td>Consent-based release with benchmarks for P2 and P3</td><td>NeurIPS Datasets and Benchmarks, TISMIR</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+  <h3>Data strategy</h3>
+  <p>Start from open resources: Saraga and Saraga Audiovisual [44][45], Saraga-Carnatic-Melody-Synth [46], the M3 teacher–learner set [51] and the CompMusic corpora. Add a Vocal Gym corpus collected with explicit opt-in: Voice Check probes and practice takes, short daily self-reports and teacher annotations made through an in-app review queue (annotators paid). Raw audio stays on the device unless the singer uploads it. Processing follows India's Digital Personal Data Protection Act, 2023, with deletion on request.</p>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture, in the order a session runs</h2>
+  <ol class="flow">
+    <li class="sym"><span class="tag">Input</span><b>Session start</b><p>Time of day, vocal load since waking, session length, phase weights.</p></li>
+    <li class="ml"><span class="tag">On device</span><b>Voice Check</b><p>90-second probe; drone cancelled; features and embeddings computed locally.</p></li>
+    <li class="ml"><span class="tag">Personal model</span><b>Strain estimate</b><p>Today's deviation from the singer's rested baseline, with an uncertainty interval.</p></li>
+    <li class="ml"><span class="tag">Policy</span><b>Warm-up prescription</b><p>Safe bandit inside voice-science rules; outputs an ordered warm-up with timers.</p></li>
+    <li class="sym"><span class="tag">Practice</span><b>Warm-up, then re-check</b><p>A short probe after warm-up gives the reward that teaches the prescriber.</p></li>
+    <li class="sym"><span class="tag">Engine</span><b>Pattern practice</b><p>Alankaras from the constraint engine in any raga and tala; intonation feedback live.</p></li>
+    <li class="ml"><span class="tag">Coach</span><b>Repertoire</b><p>Spaced repetition picks compositions; the conformance coach marks phrases.</p></li>
+    <li class="ml"><span class="tag">Tutor</span><b>Manodharma</b><p>Kalpana swara rounds that must land on the eduppu; alapana with drift feedback.</p></li>
+    <li class="sym"><span class="tag">Output</span><b>Summary and sync</b><p>Logs, streaks, teacher view; overnight personal-model update and federated aggregation.</p></li>
+  </ol>
+  <div class="legend"><span class="l-sym">Rules and symbolic engine (works offline from day one)</span><span class="l-ml">Learned models (Phases 2–3)</span></div>
+  <div class="prose">
+  <p>The jathi creator and a katapayadi and melakarta explorer sit beside the session as standalone studios for dance teachers and theory students. Everything symbolic runs in the browser or app; learned models run on the device where possible; the cloud holds sync, opt-in data and federated aggregation.</p>
+  </div>
+</section>
+
+<section id="plan">
+  <h2>Project plan</h2>
+  <p class="sub">The main change from the earlier plan: the generators need no machine learning, so they move into Phase 1, and Voice Check starts collecting data on day one so the personal model has history when it ships.</p>
+  <div class="phases">
+    <div class="phase"><h3>Phase 1 · Practice core and engine</h3><p class="when">Months 0–4</p>
+      <ul><li>Session flow, timers, logs, streaks (PWA)</li><li>Drone and all 35 talas with nadai</li><li>All 35 sheet alankaras with new-pattern generation, 72 melakartas plus janyas</li><li>Jathi creator, JathiScript editor and judge</li><li>Kalpana swara generator with the creativity dial; melakarta and katapayadi explorer</li><li>Voice Check recording and daily short form (data only)</li><li>Ethics protocol; teacher panel of 5–8</li></ul>
+      <p class="exit">Exit: 100 weekly users, 3 teachers assigning routines, P1 draft</p></div>
+    <div class="phase"><h3>Phase 2 · Listening</h3><p class="when">Months 4–10</p>
+      <ul><li>On-device pitch, drone cancellation, swara transcription</li><li>Live intonation feedback in pattern practice</li><li>Raga conformance v1: rules plus swara language model</li><li>Kalpana tutor levels 1–3; swara-name check</li><li>Personal baselines from Voice Check (unsupervised)</li><li>Strain pilot: about 30 singers for 8 weeks</li></ul>
+      <p class="exit">Exit: latency under 150 ms, teacher agreement above 0.7, P2 dataset ready</p></div>
+    <div class="phase"><h3>Phase 3 · Personalisation</h3><p class="when">Months 10–18</p>
+      <ul><li>Supervised strain model with conformal intervals</li><li>Safe bandit warm-up prescriber; n-of-1 trials</li><li>Kalpana tutor levels 4–6; korvai coach</li><li>Teacher dashboard (B2B); jathi studio for dance schools</li><li>Papers P2–P5; dataset D1 release</li></ul>
+      <p class="exit">Exit: 2,000 monthly active users, 10% paid, 20 teacher accounts</p></div>
+    <div class="phase"><h3>Phase 4 · Expansion</h3><p class="when">Months 18–24</p>
+      <ul><li>Hindustani raga and tala packs</li><li>Universal Voice Check and warm-ups for all singers</li><li>Institutions: music schools, dance academies, university departments</li><li>Choir and voice-teacher partnerships</li></ul>
+      <p class="exit">Exit: revenue mix with at least 40% B2B</p></div>
+  </div>
+</section>
+
+<section id="startup">
+  <h2>Startup assessment</h2>
+  <div class="prose">
+  <h3>Market evidence</h3>
+  <ul>
+    <li>Riyaz (MusicMuni Labs, Bengaluru) reported 2.7 million downloads, 150,000 monthly active users and 25,000 paid users, with plans priced ₹499–1,999 [53]. That is under 1% of downloads and about 17% of monthly actives paying. If those prices were annual, revenue would be roughly ₹1.2–5 crore a year: a real business, not yet a large one.</li>
+    <li>Artium Academy, which sells live one-to-one classes, reported FY25 operating income of ₹27.74 crore against a net loss of ₹20.30 crore and raised a ₹19.2 crore Series A [54]. Live teaching sells, but it is expensive to deliver; software practice tools have better margins.</li>
+    <li>Chiratae Ventures, Artium's investor, put Indian music-learner households at over 15 million, domestic and expatriate [55]. Treat this as an investor estimate. Music tech has been one of the least funded segments in Indian startups [59], and one investor sized the offline music-learning market at about US$500 million [60].</li>
+    <li>Carnatic tools exist but are static: ShruthiLaya (varisai in melakartas, metronome with nadai) [57], Tala Shruti (shruti box, talam, raga practice with pitch detection) [58], NaadSadhana (accompaniment, Hindustani-leaning) [56].</li>
+  </ul>
+  <h3>Positioning and model</h3>
+  <dl class="kv">
+    <dt>Wedge</dt><dd>Serious Carnatic students and their teachers, where depth (35 talas, janya ragas, kalpana swaras, jathis) beats generic singing apps.</dd>
+    <dt>Expansion</dt><dd>Voice Check and adaptive warm-ups apply to every singer, in any style; Hindustani packs; dance schools for jathis.</dd>
+    <dt>Pricing</dt><dd>Free core; Pro at about ₹299–499 a month in India and US$8–12 abroad; Guru plan with a dashboard to assign and review routines; institution licences.</dd>
+    <dt>Go to market</dt><dd>Teachers first: one teacher brings 10–40 students. Then sabhas, exam-preparation packs, Bharatanatyam schools and diaspora schools.</dd>
+    <dt>Moats</dt><dd>The constraint engine and raga grammars; a longitudinal voice and practice corpus with labels; teacher networks and bani-specific tolerances; published research.</dd>
+  </dl>
+  <h3>Scorecard</h3>
+  </div>
+  <div role="list" aria-label="Startup scorecard">
+    <div class="score" role="listitem"><span>Pain for serious learners</span><span class="bar"><i style="width:80%"></i></span><b>4/5</b></div>
+    <div class="score" role="listitem"><span>Willingness to pay</span><span class="bar"><i style="width:60%"></i></span><b>3/5</b></div>
+    <div class="score" role="listitem"><span>Market size, Carnatic only</span><span class="bar"><i style="width:40%"></i></span><b>2/5</b></div>
+    <div class="score" role="listitem"><span>Market size, with voice layer and B2B</span><span class="bar"><i style="width:80%"></i></span><b>4/5</b></div>
+    <div class="score" role="listitem"><span>Differentiation</span><span class="bar"><i style="width:100%"></i></span><b>5/5</b></div>
+    <div class="score" role="listitem"><span>Defensibility</span><span class="bar"><i style="width:80%"></i></span><b>4/5</b></div>
+    <div class="score" role="listitem"><span>Capital efficiency</span><span class="bar"><i style="width:80%"></i></span><b>4/5</b></div>
+    <div class="score" role="listitem"><span>Execution risk (higher is safer)</span><span class="bar"><i style="width:60%"></i></span><b>3/5</b></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>Small pure-Carnatic market</td><td>Lead with Carnatic depth, grow through the style-agnostic voice layer, Hindustani packs and dance schools</td></tr>
+      <tr><td>Low conversion and hobbyist churn (as seen at Riyaz [53])</td><td>Teacher-assigned routines create accountability; B2B seats; streaks tied to the teacher dashboard</td></tr>
+      <tr><td>Gurus distrust machine judgement; schools differ on gamaka and alankara forms</td><td>Teacher overrides on every template; bani-specific tolerances; position as a practice companion with the guru in the loop</td></tr>
+      <tr><td>Health claims and regulation</td><td>Wellness framing, no diagnosis, clear referral advice; clinical validation before any medical claim</td></tr>
+      <tr><td>Voice data privacy</td><td>On-device processing, opt-in uploads, federated learning, DPDP Act 2023 compliance</td></tr>
+      <tr><td>Phone microphones and rooms vary</td><td>Per-device calibration in Voice Check; recording normalisation [20]; uncertainty shown to the user</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>Verdict.</b> Fundable as a focused, research-led company with a clear path to publishable results in its first 18 months. A venture-scale outcome depends on the voice layer and B2B. Start with teachers, measure retention by teacher cohort, and let the published papers and the open dataset build credibility with institutions.</div>
+</section>
+
+<section id="corrections">
+  <h2>Corrections to the earlier material</h2>
+  <div class="prose">
+  <ul>
+    <li><b>Katapayadi table.</b> The earlier pitch and agent brief mapped ca and pa to 1. The correct groups are ka–ña = 1…0, ṭa–na = 1…0, pa–ma = 1…5, ya–ha = 1…8; read the first two syllables and reverse the digits [6]. Mechakalyani is ma (5), ca (6) → 56 → 65. In conjunct consonants the last consonant counts (Ratnangi → ra 2, na 0 → 2), except for seven melas such as Chakravakam where the first counts [7].</li>
+    <li><b>"35 alankaras".</b> These are the seven sapta tala alankaras extended to all five jatis of each family, not 35 unrelated melodic types [2].</li>
+    <li><b>Janya data in the agent brief.</b> Abheri is a janya of Kharaharapriya (22), not Natabhairavi; Bhoopalam is a janya of Mayamalavagowla and is not Mohanam; Begada's arohana is vakra in ascent; mela 59 is Dharmavati. Use this page's engine data instead.</li>
+    <li><b>Alankara templates (previous version of this page).</b> The earlier engine derived the five jatis of each family from formulas in the laghu length. Checked against the 35 tala alankara sheet [71], the formulas matched in 17 of 35 talas, including all seven default-jati forms, but not Adi (the sheet has S R G R | S R | G M, the formula gave S R G M | S R | G M), and the Sankeerna forms ran past the octave. The sheet now defines all 35.</li>
+    <li><b>Invented figures.</b> The earlier pitch showed accuracy percentages and quoted effect sizes for SOVT exercises that were not from studies. They have been removed; the strain survey above cites what the studies actually report.</li>
+  </ul>
+  </div>
+</section>
+
+<section id="refs" class="refs">
+  <h2>References</h2>
+  <ol>
+    <li>NCERT, <i>Kriti</i>, Grade 8, ch. 7: sapta tala alankaram notations. <a href="https://ncert.nic.in/textbook/pdf/hekr107.pdf">ncert.nic.in</a></li>
+    <li>NIOS, Carnatic Music, KCM-3: Alankaras (35 alankaras, 5 per family). <a href="https://www.nios.ac.in/media/documents/Carnatic_Music_243/carnaticmusicbook2/KCM-3.pdf">nios.ac.in</a></li>
+    <li>Rasikas.org, "35 alankaram notations" (construction rule). <a href="https://www.rasikas.org/forums/viewtopic.php?p=144014">rasikas.org</a></li>
+    <li>Upbeat Labs, "A Primer for Carnatic Talas". <a href="https://www.upbeatlabs.com/2017/01/17/a-primer-for-carnatic-talas/">upbeatlabs.com</a></li>
+    <li>Wikipedia, "Melakarta". <a href="https://en.wikipedia.org/wiki/Melakarta">wikipedia.org</a></li>
+    <li>Wikipedia, "Katapayadi system". <a href="https://en.wikipedia.org/wiki/Katapayadi_system">wikipedia.org</a></li>
+    <li>Ananya Bengaluru, "Srutis and Srutibheda (Part 10)" (conjunct exceptions). <a href="https://ananyabengaluru.com/?p=9044">ananyabengaluru.com</a></li>
+    <li>Wikipedia, "Janya". <a href="https://en.wikipedia.org/wiki/Janya">wikipedia.org</a></li>
+    <li>Wikipedia, "Kalpanaswaram". <a href="https://en.wikipedia.org/wiki/Kalpanaswaram">wikipedia.org</a></li>
+    <li>V. Subramanian, "Kalpana swaram singing – trick or treat?". <a href="https://www.vidyasubramanian.com/_files/ugd/eea84f_d5ef18d80cc74b0c8bc2221d80cf3e20.pdf">vidyasubramanian.com</a></li>
+    <li>Rasikas.org, "Creating eduppu korvais". <a href="https://rasikas.org/forums/viewtopic.php?p=314532">rasikas.org</a></li>
+    <li>Rasikas.org, "Kuraipu swaram". <a href="https://rasikas.org/forums/viewtopic.php?p=52417">rasikas.org</a></li>
+    <li>J. A. Krishnaswamy and R. Wells, "A Novel Generative Paradigm for Carnatic Rhythmic Composition", <i>Analytical Approaches to World Music</i>. <a href="https://southasia.iftawm.org/volumes/volume1/krishnaswamy-wells/">iftawm.org</a></li>
+    <li>C. Guedes, K. Trochidis and A. Anantapadmanabhan, "CAMeL: Carnatic Percussion Music Generation Using N-Gram and Clustering Approaches", 2017. <a href="https://bpb-us-e1.wpmucdn.com/wp.nyu.edu/dist/4/23414/files/2022/01/2017_cgktaa_came.pdf">nyu.edu</a></li>
+    <li>K. K. Ganguli and C. Guedes, "An Approach to Adding Knowledge Constraints to a Data-driven Generative Model for Carnatic Rhythm Sequence", 2019. <a href="https://bpb-us-e1.wpmucdn.com/wp.nyu.edu/dist/4/23414/files/2022/01/2019_kgcg_01.pdf">nyu.edu</a></li>
+    <li>KonakolSwaraLLM model card. <a href="https://huggingface.co/sgattup/KonakolSwaraLLM">huggingface.co</a></li>
+    <li>R. Sankaranarayanan and G. Weinberg, "Gamaka Synthesis for Kalpitha Swaras in Carnatic Music", ISMIR 2022 LBD. <a href="https://archives.ismir.net/ismir2022/latebreaking/000019.pdf">ismir.net</a></li>
+    <li>M. Jayanti, "Talam structure", Narthaki. <a href="https://narthaki.com/info/articles/art232.html">narthaki.com</a></li>
+    <li>Online Bharatanatyam, "Korvai or a Dance sequence". <a href="https://onlinebharatanatyam.com/2010/01/korvai-or-dance-sequence/">onlinebharatanatyam.com</a></li>
+    <li>S. P. Bayerl, D. Wagner, I. Baumann, T. Bocklet and K. Riedhammer, "Detecting Vocal Fatigue with Neural Embeddings", <i>Journal of Voice</i>, 2023. <a href="https://arxiv.org/abs/2204.03428">arXiv:2204.03428</a></li>
+    <li>C. Nanjundeswaran et al., "Vocal Fatigue Index (VFI): Development and Validation", <i>Journal of Voice</i> 29(4), 2015. <a href="https://doi.org/10.1016/j.jvoice.2014.09.012">doi</a></li>
+    <li>E. J. Hunter et al., "Toward a consensus description of vocal effort, vocal load, vocal loading, and vocal fatigue", <i>JSLHR</i> 63(2), 2020 (cited in [20]).</li>
+    <li>T. Carroll et al., "Objective measurement of vocal fatigue in classical singers: a vocal dosimetry pilot study", <i>Otolaryngol. Head Neck Surg.</i> 135(4), 2006 (cited in [20]).</li>
+    <li>M.-J. Caraty and C. Montacié, "Vocal fatigue induced by prolonged oral reading: Analysis and detection", <i>Computer Speech &amp; Language</i> 28(2), 2014 (cited in [20]).</li>
+    <li>Y. Gao, M. Dietrich and G. N. DeSouza, "Classification of vocal fatigue using sEMG", <i>Applied Sciences</i> 11(10), 2021 (cited in [20]).</li>
+    <li>M. Ghassemi et al., "Learning to detect vocal hyperfunction from ambulatory neck-surface acceleration features", <i>IEEE TBME</i>, 2014. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4077201">PMC</a></li>
+    <li>D. D. Mehta et al., "Using Ambulatory Voice Monitoring to Investigate Common Voice Disorders: Research Update", <i>Front. Bioeng. Biotechnol.</i> 3, 2015. <a href="https://www.frontiersin.org/journals/bioengineering-and-biotechnology/articles/10.3389/fbioe.2015.00155">frontiersin.org</a></li>
+    <li>"Closed-loop network of skin-interfaced wireless devices for quantifying vocal fatigue and providing user feedback", <i>PNAS</i>, 2023. <a href="https://www.pnas.org/doi/10.1073/pnas.2219394120">pnas.org</a></li>
+    <li>"Voice fatigue subtyping through individual modeling of vocal demand responses", <i>Scientific Reports</i>, 2025. <a href="https://www.nature.com/articles/s41598-025-10565-2">nature.com</a></li>
+    <li>I. R. Titze, J. G. Švec and P. S. Popolo, "Vocal dose measures: quantifying accumulated vibration exposure in vocal fold tissues", <i>JSLHR</i> 46(4), 2003.</li>
+    <li>I. R. Titze, "Voice training and therapy with a semi-occluded vocal tract: rationale and scientific underpinnings", <i>JSLHR</i> 49(2), 2006. <a href="https://pubs.asha.org/doi/10.1044/1092-4388(2006/035)">asha.org</a></li>
+    <li>L. Maxfield et al., "Intraoral pressures produced by thirteen semi-occluded vocal tract gestures". <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4970513/">PMC</a></li>
+    <li>"Vocal warm-up and cool-down: systematic review", <i>Revista CEFAC</i>. <a href="https://www.scielo.br/j/rcefac/a/47rW5K8NFbCgJSsYD4hNY4K/?lang=en">scielo.br</a></li>
+    <li>M. Schellenberg, "Acoustic effect of vocal warm-ups on singers' voices", MA thesis, University of Victoria, 1999. <a href="https://dspace.library.uvic.ca/items/134365a0-2af1-4b1e-8bfb-fe6938ddbc32">uvic.ca</a></li>
+    <li>"The Effect of Traditional Vocal Warm-up Versus Semi-Occluded Vocal Tract Exercises on Acoustic Parameters", thesis, Auburn University. <a href="https://etd.auburn.edu/bitstream/handle/10415/4004/Duke_Final_Thesis_Draft%203_25.pdf">auburn.edu</a></li>
+    <li>"Hierarchical Multi-class Classification of Voice Disorders Using Self-supervised Models and Glottal Features", Aalto University. <a href="https://acris.aalto.fi/ws/portalfiles/portal/102376388/Hierarchical_Multi_Class_Classification_of_Voice_Disorders_Using_Self_Supervised_Models_and_Glottal_Features.pdf">aalto.fi</a></li>
+    <li>S. Dutta, K. Sekhar PV and H. A. Murthy, "Raga Verification in Carnatic Music Using Longest Common Segment Set", ISMIR 2015. <a href="https://www.ismir2015.uma.es/articles/172_Paper.pdf">ismir2015</a>; error rate from <a href="https://cse.iitm.ac.in/seminar_details.php?arg=Nzk%3D">IIT Madras seminar</a></li>
+    <li>K. K. Ganguli and P. Rao, "On the Distributional Representation of Ragas: Experiments with Allied Raga Pairs", <i>TISMIR</i> 1(1), 2018. <a href="https://doi.org/10.5334/tismir.11">doi</a></li>
+    <li>K. K. Ganguli and P. Rao, "Towards Computational Modeling of the Ungrammatical in a Raga Performance", ISMIR 2017. <a href="https://archives.ismir.net/ismir2017/paper/000089.pdf">ismir.net</a></li>
+    <li>P. Singh and V. Arora, "Explainable Deep Learning Analysis for Raga Identification in Indian Art Music", <i>IEEE TASLP</i> 33, 2025. <a href="https://arxiv.org/abs/2406.02443">arXiv:2406.02443</a></li>
+    <li>S. Roychowdhury and P. Rao, "Multimodal Raga Classification from Vocal Performances with Disentanglement and Contrastive Loss", <i>TISMIR</i> 8, 2025. <a href="https://dblp.org/pid/54/790">dblp</a></li>
+    <li>S. Natesan and H. Beigi, "Carnatic Raga Identification System using Rigorous Time-Delay Neural Network", 2024. <a href="https://arxiv.org/abs/2405.16000">arXiv:2405.16000</a></li>
+    <li>S. Gulati, J. Serrà, V. Ishwar, S. Şentürk and X. Serra, "Phrase-based rāga recognition using vector space modeling", ICASSP 2016.</li>
+    <li>A. Srinivasamurthy, S. Gulati, R. Caro Repetto and X. Serra, "Saraga: Open Datasets for Research on Indian Art Music", <i>Empirical Musicology Review</i> 16(1), 2021. <a href="https://repositori.upf.edu/items/d4721c01-e38d-490b-b2d1-889f6dcd211d">upf.edu</a></li>
+    <li>A. Shankar et al., "Saraga Audiovisual", ISMIR 2024. <a href="https://repositori.upf.edu/items/2aca058e-9ab4-4d7d-9c02-12cafcca9324/full">upf.edu</a></li>
+    <li>G. Plaja-Roglans et al., "Repertoire-Specific Vocal Pitch Data Generation for Improved Melodic Analysis of Carnatic Music", <i>TISMIR</i> 6(1), 2023. <a href="https://doi.org/10.5334/tismir.137">doi</a></li>
+    <li>G. Plaja-Roglans et al., "Carnatic Singing Voice Separation Using Cold Diffusion on Training Data with Bleeding", ISMIR 2023. <a href="https://archives.ismir.net/ismir2023/paper/000065.pdf">ismir.net</a></li>
+    <li>G. Plaja-Roglans, X. Serra and M. Rocamora, "Leveraging Carnatic live recordings for singing voice separation using regression-guided latent diffusion", ISMIR 2025. <a href="https://repositori.upf.edu/items/3ab80d8b-254b-4e8d-abfc-c5dd257535ed">upf.edu</a></li>
+    <li>V. S. Viraraghavan, A. Pal, R. Aravind and H. A. Murthy, "State-Based Transcription of Components of Carnatic Music", ICASSP 2020. <a href="https://rc.signalprocessingsociety.org/conferences/icassp-2020/spsicassp20vid1462">IEEE SPS</a></li>
+    <li>V. S. Viraraghavan, "Automatic Descriptive Transcription of Carnatic Music" (precision of components), IIT Madras. <a href="https://www.iitm.ac.in/hi/node/12995">iitm.ac.in</a></li>
+    <li>S. Kumar, S. Jaiswal, P. Singh and V. Arora, "Automatic Detection and Analysis of Singing Mistakes for Music Pedagogy", 2026. <a href="https://arxiv.org/abs/2602.06917">arXiv:2602.06917</a></li>
+    <li>M. Gurunath Reddy and K. S. Rao, "Automatic Evaluation of Hindustani Learner's SARGAM Practice", EUSIPCO 2017. <a href="https://new.eurasip.org/Proceedings/Eusipco/Eusipco2017/wpapers/ML8.pdf">eurasip.org</a></li>
+    <li>YourStory, "Music learning app Riyaz hits the right note for self-learners". <a href="https://yourstory.com/weekender/music-learning-app-riyaz-hits-right-note-self-learners-technology">yourstory.com</a></li>
+    <li>Venture Intelligence, "Artium Academy raises Rs 19.2 Cr Series A". <a href="https://news.ventureintelligence.com/private-equity/online-music-education-focused-artium-academy-raises-rs.19.2-cr-series-a">ventureintelligence.com</a></li>
+    <li>Chiratae Ventures, "Why We Backed Artium Academy". <a href="https://www.chiratae.com/from-passion-to-music-education-why-we-backed-artium-academy/">chiratae.com</a></li>
+    <li>NaadSadhana, App Store listing. <a href="https://apps.apple.com/app/id1348181386">apple.com</a></li>
+    <li>ShruthiLaya announcement, Rasikas.org. <a href="https://www.rasikas.org/forums/viewtopic.php?p=270224">rasikas.org</a></li>
+    <li>Tala Shruti app listing. <a href="https://mwm.ai/ko/apps/tala-shruti/6740571964">mwm.ai</a></li>
+    <li>Entrackr, Artium Academy $3M round (music tech funding context). <a href="https://entrackr.com/?p=156972">entrackr.com</a></li>
+    <li>Kalaari Capital, Muzigal investment note. <a href="https://kalaari.com/?p=11097">kalaari.com</a></li>
+    <li>F. Pachet and P. Roy, "Markov constraints: steerable generation of Markov sequences", <i>Constraints</i> 16(2), 2011.</li>
+    <li>S. Geng, M. Josifoski, M. Peyrard and R. West, "Grammar-Constrained Decoding for Structured NLP Tasks without Finetuning", EMNLP 2023. <a href="https://arxiv.org/abs/2305.13971">arXiv:2305.13971</a></li>
+    <li>A. Riou et al., "PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective", ISMIR 2023. <a href="https://arxiv.org/abs/2309.02265">arXiv:2309.02265</a></li>
+    <li>J. W. Kim, J. Salamon, P. Li and J. P. Bello, "CREPE: A Convolutional Representation for Pitch Estimation", ICASSP 2018. <a href="https://arxiv.org/abs/1802.06182">arXiv:1802.06182</a></li>
+    <li>A. Baevski et al., "wav2vec 2.0", NeurIPS 2020. <a href="https://arxiv.org/abs/2006.11477">arXiv:2006.11477</a></li>
+    <li>S. Chen et al., "WavLM", <i>IEEE JSTSP</i>, 2022. <a href="https://arxiv.org/abs/2110.13900">arXiv:2110.13900</a></li>
+    <li>A. N. Angelopoulos and S. Bates, "A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification". <a href="https://arxiv.org/abs/2107.07511">arXiv:2107.07511</a></li>
+    <li>H. B. McMahan et al., "Communication-Efficient Learning of Deep Networks from Decentralized Data", AISTATS 2017. <a href="https://arxiv.org/abs/1602.05629">arXiv:1602.05629</a></li>
+    <li>R. J. Stachler et al., "Clinical Practice Guideline: Hoarseness (Dysphonia) (Update)", <i>Otolaryngol. Head Neck Surg.</i>, 2018.</li>
+    <li>P. Rao, "Introducing the TISMIR Education Track: What, Why, How?", <i>TISMIR</i> 7, 2024. <a href="https://dblp.org/pid/54/790">dblp</a></li>
+    <li><i>35 Tāla Alankāra-s</i>, Mayamalavagowla (15th mela), 15 pages, August 2012 (PDF supplied by the user; document metadata gives the author as "Ravikiran"). First ascending and descending lines for 7 tala families × 5 jatis, with instructions for completing and speeding them up.</li>
+    <li>Mridangams.com, "Yathi" (sama, vishama, mridanga, damaru, gopuccha and srotovaha yati, with examples). <a href="https://mridangams.com/2007/09/yathi.html">mridangams.com</a></li>
+    <li>Wikipedia, "Konnakol" (standard solkattu groups of 2 to 10 syllables). <a href="https://en.wikipedia.org/wiki/Konnakol">wikipedia.org</a></li>
+    <li>Narthaki, "Yathi" (yati as rhythmic syllables arranged to picture a shape). <a href="https://narthaki.com/info/articles/art499.html">narthaki.com</a></li>
+    <li>eambalam, "Eduppu" glossary (sama eduppu; vishama graham, atita and anagata, usually 2, 4 or 6 counts). <a href="https://www.eambalam.com/newsite/glossary/eduppu/">eambalam.com</a></li>
+    <li>CompMusic, "Tāḷa in Carnatic Music: Examples" (eduppu as the offset of a composition from sam). <a href="https://compmusic.upf.edu/examples-taala-carnatic">upf.edu</a></li>
+    <li>"Bharatanatyam Dance Transcription using Multimedia Ontology and Machine Learning", 2020 (adavu, sollukattu and tirmana definitions; adavu syllables). <a href="https://arxiv.org/abs/2004.11994">arXiv:2004.11994</a></li>
+  </ol>
+</section>
+</main>
+</div>
+
+<script>
+/* @engine */
+</script>
+<script>
+/* @include ../demo/demo.js */
+</script>

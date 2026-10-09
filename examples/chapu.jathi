@@ -1,0 +1,12 @@
+# Misra chapu (3 + 2 + 2 counts), chatusra nadai: 28 matras per avartanam.
+# Starts 2 matras before sam (atita eduppu) and lands on sam after 2 avartanams.
+tala: misra chapu
+nadai: 4
+avartanams: 2
+eduppu: -2
+land: sam
+
+dhi-mi ||                                                  # 2-matra pickup into sam
+tha-ka-dhi-mi tha-ka-jho-nu tha-ka-dhi-mi | tha , dhi , tha-ka-dhi-mi | tha-ki-ta tha-ka-tha-ki-ta ||
+gi-na-thom dhi-gi-na-thom tha-dhi-gi-na-thom                # srotovaha yati 3 → 4 → 5
+{tha-dhi-gi-na-thom}/1

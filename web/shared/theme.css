@@ -1,0 +1,49 @@
+/* Layout: a long research document with a sticky contents rail on wide screens; wide tables and the engine demo scroll inside their own boxes.
+   Identity carried over from the Vocal Gym pitch: midnight indigo ground, saffron for the voice, teal for the machine. Dark first, with a light variant. */
+:root{
+  --bg:#0E1022; --surface:#151935; --raise:#1C2145; --line:rgba(242,169,59,.18); --line-2:rgba(238,233,223,.11);
+  --fg:#EEE9DF; --fg-2:#C3BDB1; --muted:#9295AE;
+  --saffron:#F2A93B; --teal:#4FC3BE; --rose:#E0929F; --violet:#AE9EF0;
+  --good:#5BC98A; --warn:#E9B949; --bad:#EF7D74;
+  --saffron-soft:rgba(242,169,59,.13); --teal-soft:rgba(79,195,190,.13); --violet-soft:rgba(174,158,240,.15); --rose-soft:rgba(224,146,159,.14);
+  --font-display:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body:'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#F3F4F9; --surface:#FFFFFF; --raise:#E9ECF5; --line:rgba(164,95,0,.24); --line-2:rgba(25,28,51,.12);
+  --fg:#181B33; --fg-2:#3C405E; --muted:#5C6080;
+  --saffron:#A35E00; --teal:#0D7671; --rose:#A3435A; --violet:#5A43B6;
+  --good:#1D7C48; --warn:#876200; --bad:#B1352B;
+  --saffron-soft:rgba(163,94,0,.10); --teal-soft:rgba(13,118,113,.10); --violet-soft:rgba(90,67,182,.10); --rose-soft:rgba(163,67,90,.10);
+  color-scheme:light; } }
+:root[data-theme="light"]{
+  --bg:#F3F4F9; --surface:#FFFFFF; --raise:#E9ECF5; --line:rgba(164,95,0,.24); --line-2:rgba(25,28,51,.12);
+  --fg:#181B33; --fg-2:#3C405E; --muted:#5C6080;
+  --saffron:#A35E00; --teal:#0D7671; --rose:#A3435A; --violet:#5A43B6;
+  --good:#1D7C48; --warn:#876200; --bad:#B1352B;
+  --saffron-soft:rgba(163,94,0,.10); --teal-soft:rgba(13,118,113,.10); --violet-soft:rgba(90,67,182,.10); --rose-soft:rgba(163,67,90,.10);
+  color-scheme:light; }
+:root[data-theme="dark"]{
+  --bg:#0E1022; --surface:#151935; --raise:#1C2145; --line:rgba(242,169,59,.18); --line-2:rgba(238,233,223,.11);
+  --fg:#EEE9DF; --fg-2:#C3BDB1; --muted:#9295AE;
+  --saffron:#F2A93B; --teal:#4FC3BE; --rose:#E0929F; --violet:#AE9EF0;
+  --good:#5BC98A; --warn:#E9B949; --bad:#EF7D74;
+  --saffron-soft:rgba(242,169,59,.13); --teal-soft:rgba(79,195,190,.13); --violet-soft:rgba(174,158,240,.15); --rose-soft:rgba(224,146,159,.14);
+  color-scheme:dark; }
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.65;padding-inline:20px;padding-block:0 64px}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--saffron)}
+:focus-visible{outline:2px solid var(--saffron);outline-offset:2px;border-radius:2px}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;line-height:1.15;text-wrap:balance;margin:0}
+h2{font-size:clamp(1.75rem,3.2vw,2.35rem);margin-bottom:.4rem}
+h3{font-size:1.32rem;margin-top:1.8rem;margin-bottom:.35rem}
+p{margin:.55rem 0}
+ul,ol{padding-left:1.25rem;margin:.5rem 0}
+li{margin:.25rem 0}
+code,.mono{font-family:var(--font-mono);font-size:.86em}
+sub{font-size:.7em}

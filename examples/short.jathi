@@ -1,0 +1,14 @@
+# The same jathi with one karvai missing. Press Judge to see the fix.
+tala: adi
+nadai: 4
+avartanams: 2
+eduppu: sam
+land: sam
+let A = tha-ka-dhi-mi
+let B = tha-ka-jho-nu
+
+$A $B $A $B |
+tha dhi , $A |
+tha-ka-tha-ki-ta tha-ki-ta ||
+tha-ka-tha-ki-ta ka-tha-ki-ta tha-ki-ta
+{tha-dhi-gi-na-thom}/3

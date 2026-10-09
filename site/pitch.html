@@ -1,0 +1,359 @@
+<title>Vocal Gym Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a scrolling deck; each section is one "slide" sized to its content, set on a 1080px column with wide notation and tables scrolling in their own boxes.
+   Identity: midnight indigo ground, saffron for the voice, teal for the machine; Cormorant for display, DM Sans for text, Plex Mono for swara notation. */
+:root{
+  --bg:#0E1022; --surface:#151935; --raise:#1C2145; --line:rgba(242,169,59,.18); --line-2:rgba(238,233,223,.11);
+  --fg:#EEE9DF; --fg-2:#C3BDB1; --muted:#9295AE;
+  --saffron:#F2A93B; --teal:#4FC3BE; --rose:#E0929F; --violet:#AE9EF0;
+  --good:#5BC98A; --bad:#EF7D74;
+  --saffron-soft:rgba(242,169,59,.13); --teal-soft:rgba(79,195,190,.13); --violet-soft:rgba(174,158,240,.15);
+  --font-display:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body:'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#F3F4F9; --surface:#FFFFFF; --raise:#E9ECF5; --line:rgba(164,95,0,.24); --line-2:rgba(25,28,51,.12);
+  --fg:#181B33; --fg-2:#3C405E; --muted:#5C6080;
+  --saffron:#A35E00; --teal:#0D7671; --rose:#A3435A; --violet:#5A43B6; --good:#1D7C48; --bad:#B1352B;
+  --saffron-soft:rgba(163,94,0,.10); --teal-soft:rgba(13,118,113,.10); --violet-soft:rgba(90,67,182,.10);
+  color-scheme:light; } }
+:root[data-theme="light"]{
+  --bg:#F3F4F9; --surface:#FFFFFF; --raise:#E9ECF5; --line:rgba(164,95,0,.24); --line-2:rgba(25,28,51,.12);
+  --fg:#181B33; --fg-2:#3C405E; --muted:#5C6080;
+  --saffron:#A35E00; --teal:#0D7671; --rose:#A3435A; --violet:#5A43B6; --good:#1D7C48; --bad:#B1352B;
+  --saffron-soft:rgba(163,94,0,.10); --teal-soft:rgba(13,118,113,.10); --violet-soft:rgba(90,67,182,.10);
+  color-scheme:light; }
+:root[data-theme="dark"]{
+  --bg:#0E1022; --surface:#151935; --raise:#1C2145; --line:rgba(242,169,59,.18); --line-2:rgba(238,233,223,.11);
+  --fg:#EEE9DF; --fg-2:#C3BDB1; --muted:#9295AE;
+  --saffron:#F2A93B; --teal:#4FC3BE; --rose:#E0929F; --violet:#AE9EF0; --good:#5BC98A; --bad:#EF7D74;
+  --saffron-soft:rgba(242,169,59,.13); --teal-soft:rgba(79,195,190,.13); --violet-soft:rgba(174,158,240,.15);
+  color-scheme:dark; }
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.65;padding-inline:20px;padding-block:0 48px}
+a{color:var(--teal);text-underline-offset:3px}
+a:hover{color:var(--saffron)}
+:focus-visible{outline:2px solid var(--saffron);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;line-height:1.12;text-wrap:balance;margin:0}
+p{margin:.55rem 0}
+.wrap{max-width:1080px;margin:0 auto}
+nav.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;margin-inline:-20px;padding-inline:20px}
+nav.bar .brand{font-family:var(--font-display);font-size:1.3rem;color:var(--saffron);font-weight:600}
+nav.bar .links{display:flex;gap:18px;font-size:.84rem;overflow-x:auto}
+nav.bar .links a{color:var(--fg-2);text-decoration:none;white-space:nowrap}
+nav.bar .links a:hover{color:var(--saffron)}
+@media (max-width:760px){nav.bar .links{display:none}}
+.slide{padding-block:64px 24px;border-bottom:1px solid var(--line-2);scroll-margin-top:56px}
+.num{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);margin:0 0 .6rem}
+.slide h2{font-size:clamp(2rem,4.2vw,3.1rem);font-weight:500;max-width:22ch}
+.lead{font-size:1.08rem;color:var(--fg-2);max-width:62ch;margin-top:.8rem}
+/* hero */
+.hero{padding-block:72px 40px;display:grid;gap:36px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.hero{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center}}
+.hero h1{font-size:clamp(3rem,8vw,5.6rem);font-weight:500;letter-spacing:-.015em}
+.hero h1 em{color:var(--saffron);font-style:italic;font-weight:500}
+.hero .lead{font-size:1.15rem}
+.facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:1.4rem;font-size:.9rem;color:var(--fg-2)}
+.facts b{font-family:var(--font-display);font-size:1.6rem;color:var(--saffron);font-weight:600;margin-right:6px}
+.score-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0}
+.score-card .cap{font-size:.8rem;color:var(--muted);margin:0 0 8px}
+.score-card .cap b{color:var(--fg)}
+.nt{font-family:var(--font-mono);font-size:.98rem;line-height:2;overflow-x:auto;white-space:nowrap}
+.nt div{min-width:max-content}
+.nt .bar1{color:var(--saffron)}
+.nt .k{color:var(--muted)}
+.nt .up{color:var(--teal)}
+.nt .y{color:var(--violet)}
+.nt .t{color:var(--saffron);font-weight:600}
+/* grids */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:1.6rem}
+.card{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:18px;min-width:0}
+.card h3{font-size:1.3rem;margin-bottom:.3rem}
+.card p{font-size:.92rem;color:var(--fg-2)}
+.card .tag{display:inline-block;font-size:.76rem;font-weight:600;padding:2px 9px;border-radius:999px;margin-bottom:.5rem}
+.t-high{background:var(--teal-soft);color:var(--teal)}
+.t-mh{background:var(--violet-soft);color:var(--violet)}
+.t-low{background:var(--raise);color:var(--muted)}
+.gap-list{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:1.6rem;border-top:1px solid var(--line-2)}
+.gap-list div{padding:16px 16px 16px 0;border-bottom:1px solid var(--line-2)}
+.gap-list h3{font-size:1.2rem}
+.gap-list p{font-size:.92rem;color:var(--fg-2);margin:.3rem 0 0}
+.flow{list-style:none;padding:0;margin:1.6rem 0 0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));counter-reset:f}
+.flow li{counter-increment:f;background:var(--surface);border:1px solid var(--line-2);border-top:3px solid var(--saffron);border-radius:6px;padding:12px 14px;margin:0}
+.flow li.ml{border-top-color:var(--teal)}
+.flow b{display:block;font-family:var(--font-display);font-size:1.12rem;font-weight:600}
+.flow b::before{content:counter(f) "  ";color:var(--muted);font-family:var(--font-mono);font-size:.8rem}
+.flow p{font-size:.85rem;color:var(--fg-2);margin:.2rem 0 0}
+.key{display:flex;flex-wrap:wrap;gap:16px;font-size:.82rem;color:var(--muted);margin-top:.7rem}
+.key span::before{content:"";display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle;background:var(--saffron)}
+.key span.ml::before{background:var(--teal)}
+.two{display:grid;gap:22px;grid-template-columns:minmax(0,1fr);margin-top:1.4rem}
+@media (min-width:900px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:18px;min-width:0}
+.panel h3{font-size:1.35rem;margin-bottom:.35rem}
+.panel p,.panel li{font-size:.92rem;color:var(--fg-2)}
+.panel ul{padding-left:1.1rem;margin:.4rem 0}
+.audit{list-style:none;padding:0;margin:.6rem 0 0;font-size:.84rem;display:grid;gap:3px}
+.audit li::before{content:"✓";color:var(--good);font-weight:700;margin-right:8px}
+.tbl{overflow-x:auto;margin-top:1.4rem;border:1px solid var(--line-2);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.88rem}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:top}
+th{background:var(--raise);color:var(--fg-2);font-size:.8rem;font-weight:600}
+tr:last-child td{border-bottom:0}
+td{color:var(--fg-2)}
+td:first-child{color:var(--fg);font-weight:500}
+td.y{color:var(--teal);font-weight:600}
+td.vg{background:var(--saffron-soft);color:var(--fg)}
+.kata{display:grid;grid-template-columns:110px repeat(10,minmax(34px,1fr));font-family:var(--font-mono);font-size:.82rem;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;min-width:520px}
+.kata div{padding:7px 6px;border-bottom:1px solid var(--line-2);text-align:center}
+.kata .h{background:var(--raise);color:var(--muted);text-align:left}
+.kata .d{color:var(--saffron);font-weight:600;background:var(--raise)}
+.scroll{overflow-x:auto;margin-top:1rem}
+.phases{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:1.4rem}
+.phase{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:16px;min-width:0}
+.phase h3{font-size:1.2rem}
+.phase .when{font-family:var(--font-mono);font-size:.76rem;color:var(--muted)}
+.phase ul{padding-left:1.1rem;font-size:.88rem;color:var(--fg-2);margin:.5rem 0 0}
+.close{padding-block:72px 40px;text-align:left}
+.close h2{font-size:clamp(2.2rem,5vw,3.6rem);max-width:20ch}
+.ask{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:1.6rem}
+.ask div{border-left:3px solid var(--saffron);padding:4px 0 4px 14px}
+.ask b{display:block;font-family:var(--font-display);font-size:1.2rem}
+.ask p{font-size:.9rem;color:var(--fg-2);margin:.2rem 0 0}
+.src{font-size:.8rem;color:var(--muted);margin-top:1rem;max-width:90ch}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--muted);padding-top:24px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<nav class="bar" aria-label="Sections">
+  <span class="brand">Vocal Gym</span>
+  <div class="links"><a href="#gap">Gap</a><a href="#new">What's new</a><a href="#session">Session</a><a href="#engine">Generators</a><a href="#listen">Listening</a><a href="#voice">Voice</a><a href="#research">Research</a><a href="#market">Market</a><a href="#plan">Roadmap</a></div>
+</nav>
+
+<div class="wrap">
+<header class="hero">
+  <div>
+    <h1>Vocal Gym. The practice room that knows raga, tala and your voice.</h1>
+    <p class="lead">A daily practice system for Carnatic vocalists. It checks how your voice is today, chooses your warm-up, writes exercises that cannot break raga or tala rules, listens for where you leave the raga, and coaches the hardest skill to practise alone: kalpana swaras.</p>
+    <div class="facts"><span><b>86</b>ragas encoded, all 72 melakartas computed</span><span><b>35</b>tala alankaras, verified against the sheet</span><span><b>3</b>rule-proof generators and a jathi judge</span><span><b>1</b>personal voice model</span></div>
+  </div>
+  <figure class="score-card" style="margin:0">
+    <p class="cap"><b>Mohanam in Misra Jhampa.</b> The first pattern is alankara 4.3 from the 35 tala alankara sheet, carried by the engine into Mohanam. Mohanam has five swaras, so it runs three lines up and three down instead of five and five.</p>
+    <div class="nt" role="img" aria-label="Mohanam Misra Jhampa alankaram, six lines">
+      <div>S R G S R S R <span class="bar1">|</span> G <span class="bar1">|</span> P <span class="k">,</span> <span class="bar1">||</span></div>
+      <div>R G P R G R G <span class="bar1">|</span> P <span class="bar1">|</span> D <span class="k">,</span> <span class="bar1">||</span></div>
+      <div>G P D G P G P <span class="bar1">|</span> D <span class="bar1">|</span> Ṡ <span class="k">,</span> <span class="bar1">||</span></div>
+      <div>Ṡ D P Ṡ D Ṡ D <span class="bar1">|</span> P <span class="bar1">|</span> G <span class="k">,</span> <span class="bar1">||</span></div>
+      <div>D P G D P D P <span class="bar1">|</span> G <span class="bar1">|</span> R <span class="k">,</span> <span class="bar1">||</span></div>
+      <div>P G R P G P G <span class="bar1">|</span> R <span class="bar1">|</span> S <span class="k">,</span> <span class="bar1">||</span></div>
+    </div>
+    <ul class="audit"><li>10 aksharas per line: laghu 7, anudhrutam 1, dhrutam 2</li><li>Only Mohanam's swaras, in their allowed directions</li></ul>
+  </figure>
+</header>
+
+<section class="slide" id="gap">
+  <p class="num">01 / The gap</p>
+  <h2>Serious vocalists practise alone, most of the time, with nothing that listens.</h2>
+  <p class="lead">A student meets the guru once or twice a week and practises for hours in between. Mistakes in pitch, rhythm or raga get rehearsed until they stick.</p>
+  <div class="gap-list">
+    <div><h3>Practice has no structure</h3><p>Time goes to deciding what to practise. The same exercises repeat while weak ragas and talas stay untouched.</p></div>
+    <div><h3>Warm-up is guesswork</h3><p>A 7 a.m. voice and a 7 p.m. voice after a day of teaching need different warm-ups. Nothing measures which one you have today.</p></div>
+    <div><h3>Exercises stop at the textbook</h3><p>Alankaras are taught in a few ragas and talas. Moving them into Bilahari or Kambhoji, or into Khanda Ata, is left to the student.</p></div>
+    <div><h3>Raga errors go unheard</h3><p>A stray varjya swara or a phrase that belongs to an allied raga passes unnoticed until the next lesson.</p></div>
+    <div><h3>Manodharma has no drill</h3><p>Kalpana swaras must land exactly on the eduppu. Students rarely get structured practice for that.</p></div>
+    <div><h3>Dance teachers compose by hand</h3><p>Jathis must sum to the tala and land on sam. Nattuvanars work the arithmetic out on paper, and a student's jathi waits for the next class to be checked.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="new">
+  <p class="num">02 / What is new</p>
+  <h2>Five things no practice app does today.</h2>
+  <div class="cards">
+    <div class="card"><span class="tag t-high">High novelty</span><h3>Generators that cannot break the rules</h3><p>Alankaras in all 35 talas, starting from the sheet and then new patterns on request; jathis for dancers; kalpana swaras. Temperature is the performer's creativity, from recognisable patterns to unconventional ones, and a feasibility table keeps every output inside raga and tala.</p></div>
+    <div class="card"><span class="tag t-high">High novelty</span><h3>Kalpana swara tutor</h3><p>Rounds built from named devices (runs, janta, dattu, sequences, mora) that must land on the eduppu, a creativity ladder from conventional to adventurous, and a check that the swara you name is the swara you sing.</p></div>
+    <div class="card"><span class="tag t-high">High novelty</span><h3>Jathi creator and judge</h3><p>Generate a jathi whose teermanam lands on sam every time, or write your own in JathiScript. The judge checks the arithmetic exactly, scores six aspects of craft and tells you which line to fix.</p></div>
+    <div class="card"><span class="tag t-mh">Medium-high novelty</span><h3>Raga conformance coach</h3><p>Not "which raga is this?" but "where did you leave the raga you chose, and towards which allied raga?", phrase by phrase.</p></div>
+    <div class="card"><span class="tag t-high">High novelty</span><h3>Personal voice model</h3><p>A 90-second daily Voice Check on the phone, compared with your own rested baseline, chooses the warm-up and learns which warm-ups actually help you.</p></div>
+    <div class="card"><span class="tag t-low">Table stakes</span><h3>The practice shell</h3><p>Session timer, tanpura, all 35 talas, logs and streaks. Necessary, familiar, and built first.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="session">
+  <p class="num">03 / A session, in order</p>
+  <h2>One flow from "how is my voice today" to "what did I learn".</h2>
+  <ol class="flow">
+    <li><b>Session start</b><p>Time of day, vocal load since waking, minutes available.</p></li>
+    <li class="ml"><b>Voice Check</b><p>90 seconds sung to the drone: sustained Sa, soft high onsets, a siren, Sarali 1.</p></li>
+    <li class="ml"><b>Strain estimate</b><p>Today against your rested baseline, with a confidence band.</p></li>
+    <li class="ml"><b>Warm-up chosen</b><p>Inside voice-science limits: strained voices get semi-occluded work only.</p></li>
+    <li><b>Warm-up and re-check</b><p>Timed exercises; a short re-check tells the model whether they helped.</p></li>
+    <li><b>Pattern practice</b><p>The 35 tala alankaras in your raga, then new patterns, with live intonation feedback.</p></li>
+    <li class="ml"><b>Repertoire</b><p>Spaced repetition picks compositions; the coach marks phrases that drift.</p></li>
+    <li class="ml"><b>Manodharma</b><p>Kalpana swara rounds that must land on the eduppu.</p></li>
+    <li><b>Summary</b><p>Minutes by phase, streaks, teacher view; the personal model updates overnight.</p></li>
+  </ol>
+  <div class="key"><span>Rules and symbolic engine, works offline from day one</span><span class="ml">Learned models, Phases 2 and 3</span></div>
+</section>
+
+<section class="slide" id="engine">
+  <p class="num">04 / Generators</p>
+  <h2>Creativity on a dial. Rules that never bend.</h2>
+  <p class="lead">One engine encodes the tala (angas, jati, nadai, eduppu) and the raga (which swaras may be used going up and coming down). It builds a table of every state from which a valid ending is still possible, then samples only from those. Temperature is the performer's creativity: low keeps to patterns listeners recognise, high reaches for unconventional ones. It can never produce a wrong one.</p>
+  <div class="two">
+    <div class="panel">
+      <h3>Alankaras across 35 talas and every raga class</h3>
+      <ul>
+        <li>The first pattern in each of the 35 talas is the line from the 35 tala alankara sheet, reproduced note for note: all 35 first lines up and down, and every line of Chaturashra Dhruva.</li>
+        <li>"New pattern" gives one the student has not seen: it differs from the sheet and from every earlier variation for that raga and tala. At low temperature it keeps the sheet's idiom; at high temperature it reaches for leaps, turns and syncopation.</li>
+        <li>Audava, shadava and sampurna ragas, including janyas whose ascent and descent differ (Bilahari, Malahari, Kambhoji): line counts adapt, and the few swaras that would break a rule are corrected and underlined.</li>
+        <li>Tested on 86 ragas × 35 talas: 23,992 lines, every step valid; 0.30% of swaras needed correction, all in asymmetric janyas.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Jathi creator, guide and judge</h3>
+      <p>Students write jathis in JathiScript, where one word is one matra. A worked example in Adi, two avartanams from sam:</p>
+      <div class="nt" style="font-size:.8rem;line-height:1.8" role="img" aria-label="Jathi written in JathiScript">
+        <div><span class="k">let A = tha-ka-dhi-mi · let B = tha-ka-jho-nu</span></div>
+        <div>$A $B $A $B <span class="bar1">|</span> tha <span class="k">,</span> dhi <span class="k">,</span> $A <span class="bar1">|</span> tha-ka-tha-ki-ta tha-ki-ta <span class="bar1">||</span></div>
+        <div><span class="y">tha-ka-tha-ki-ta ka-tha-ki-ta tha-ki-ta</span> <span class="t">{tha-dhi-gi-na-thom}/3</span></div>
+      </div>
+      <ul class="audit"><li>Gate: 65 slots, the final "thom" on sam, every bar on an anga line</li><li>Judge: 100 / 100, with a gopuccha yati 5 → 4 → 3 and teermanam statements on beats</li><li>Delete one karvai and the judge answers: "Start with line 11: the phrases before the bar there are 1 matra short."</li></ul>
+    </div>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <h3>Kalpana swara tutor</h3>
+      <p>Temperature is the singer's creativity. The same slot in Kalyani, Adi, second speed, landing on Pa:</p>
+      <div class="nt" style="font-size:.88rem;line-height:1.9"><div><span class="k">T 0 ·</span> S R G M P M <span class="k">,</span> <span class="t">D N P · D N P · D N P</span> <span class="up">→ eduppu</span></div><div><span class="k">T 2 ·</span> S <span class="k">,</span> Ṇ <span class="y">M</span> P <span class="k">,</span> <span class="y">R G M Ṡ Ṗ</span> Ṁ <span class="k">,</span> Ṙ <span class="y">D</span> P <span class="up">→ eduppu</span></div></div>
+      <p>At 0 every swara comes from conventional devices (a run, a held swara, a mora); at 2, 44% come from unconventional ones (wide leaps, a leap that climbs back, a rise into the upper octave). Both obey Kalyani's direction rules and land exactly. The tutor then listens: landing error, out-of-raga swaras, devices used, and whether the swara you named matches the pitch you sang.</p>
+    </div>
+    <div class="panel">
+      <h3>Carnatic depth, correctly encoded</h3>
+      <p>All 72 melakartas are computed from the mela number: M₁ for 1–36, M₂ for 37–72, six Ri–Ga pairs by chakra, six Dha–Ni pairs within it. Names carry their number through the Katapayadi code: read the first two syllables, reverse the digits.</p>
+      <div class="scroll"><div class="kata" role="table" aria-label="Katapayadi digits">
+        <div class="h" role="rowheader">Digit</div><div class="d">1</div><div class="d">2</div><div class="d">3</div><div class="d">4</div><div class="d">5</div><div class="d">6</div><div class="d">7</div><div class="d">8</div><div class="d">9</div><div class="d">0</div>
+        <div class="h">ka-varga + ca</div><div>ka</div><div>kha</div><div>ga</div><div>gha</div><div>ṅa</div><div>ca</div><div>cha</div><div>ja</div><div>jha</div><div>ña</div>
+        <div class="h">ṭa-varga + ta</div><div>ṭa</div><div>ṭha</div><div>ḍa</div><div>ḍha</div><div>ṇa</div><div>ta</div><div>tha</div><div>da</div><div>dha</div><div>na</div>
+        <div class="h">pa-varga</div><div>pa</div><div>pha</div><div>ba</div><div>bha</div><div>ma</div><div></div><div></div><div></div><div></div><div></div>
+        <div class="h">ya-varga</div><div>ya</div><div>ra</div><div>la</div><div>va</div><div>śa</div><div>ṣa</div><div>sa</div><div>ha</div><div></div><div></div>
+      </div></div>
+      <p style="font-size:.86rem">Mechakalyani: ma 5, ca 6 → 56 → mela 65. Harikambhoji: ha 8, ri 2 → 28. Conjuncts count their last consonant, with seven named exceptions such as Chakravakam (16).</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="listen">
+  <p class="num">05 / Listening</p>
+  <h2>A coach asks where you left the raga, not which raga you sang.</h2>
+  <p class="lead">Raga recognition is a crowded research area with closed-set accuracies around 95%. A learner has already chosen the raga. What helps is knowing which phrase left it, how, and which allied raga it drifted towards.</p>
+  <div class="cards">
+    <div class="card"><h3>Clean signal</h3><p>The app synthesises its own tanpura, so it can subtract that exact signal from the microphone before tracking pitch. The tonic is known, not guessed.</p></div>
+    <div class="card"><h3>Swara tokens with gamaka</h3><p>Carnatic-tuned pitch tracking, then segmentation into held notes and turning points, the units Carnatic intonation research measures.</p></div>
+    <div class="card"><h3>Three scorers</h3><p>Swara placement against the raga's own intonation; transitions against the raga grammar (varjya, vakra); phrases against allied ragas such as Kalyani and Yamuna Kalyani, or Darbar and Nayaki.</p></div>
+    <div class="card"><h3>Mistakes made on purpose</h3><p>Valid phrases are altered in controlled ways (a forbidden swara, an allied-raga phrase, a flattened gamaka) to create labelled training data without thousands of hours of annotation.</p></div>
+    <div class="card"><h3>Your teacher's ear</h3><p>Teachers set different tolerances; one study found 12 cents for one teacher and about 22 for another. Each student inherits their teacher's profile.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="voice">
+  <p class="num">06 / Voice</p>
+  <h2>A warm-up chosen for the voice you have today.</h2>
+  <div class="two">
+    <div class="panel">
+      <h3>What research shows</h3>
+      <ul>
+        <li>Fatigue shows up differently in different people, so models need personal baselines.</li>
+        <li>Neural speech embeddings separated rested from fatigued speech at 81–85% for one lecturer, falling to 70–76% for a new speaker without adaptation.</li>
+        <li>Wearables can measure vocal dose and alert singers, but need hardware and measure load, not condition.</li>
+        <li>Evidence on warm-ups is positive but mixed and drawn from small studies, so each singer's response is worth measuring.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>What Vocal Gym does</h3>
+      <ul>
+        <li>A standard 90-second Voice Check sung to the app's drone, every day, on the phone.</li>
+        <li>Voice-quality features and self-supervised embeddings, normalised per recording and compared with your own rested days.</li>
+        <li>A confidence band, so the app says when it is unsure.</li>
+        <li>A warm-up chooser that learns from before-and-after checks, inside fixed safety rules.</li>
+        <li>Wellness feedback, never a diagnosis. Hoarseness that lasts for weeks gets a referral to an ENT or speech-language pathologist.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="research">
+  <p class="num">07 / Research</p>
+  <h2>Four papers and a dataset, built into the product plan.</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Work</th><th>Claim</th><th>Venues</th></tr></thead>
+    <tbody>
+      <tr><td>Constraint-guaranteed generation of Carnatic exercises, jathis and kalpana swaras</td><td>100% valid outputs, with temperature as creativity from conventional to unconventional; teacher and nattuvanar ratings; judge agreement with teachers</td><td>TISMIR, ISMIR, JNMR</td></tr>
+      <tr><td>Raga conformance for learners</td><td>Phrase-level, open-set scoring trained on deliberate mistakes localises errors better than recognition scores</td><td>IEEE/ACM TASLP, TISMIR, ICASSP</td></tr>
+      <tr><td>Personal vocal-strain estimation from daily phone probes</td><td>Personal baselines track self-reported strain within singers</td><td>Journal of Voice, JASA Express Letters, IEEE JBHI, Interspeech</td></tr>
+      <tr><td>Closed-loop warm-up prescription</td><td>A safe adaptive chooser beats a fixed routine in n-of-1 trials</td><td>Journal of Voice, JSLHR</td></tr>
+      <tr><td>Kalpana swara tutoring study</td><td>Landing drills improve rhythmic landing and raga adherence</td><td>TISMIR Education Track, CHI, NIME</td></tr>
+      <tr><td>Vocal Gym Practice Corpus</td><td>First longitudinal Carnatic practice corpus with strain labels and teacher annotations</td><td>NeurIPS Datasets and Benchmarks, TISMIR</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="slide" id="market">
+  <p class="num">08 / Market</p>
+  <h2>Demand is proven. Depth is missing.</h2>
+  <div class="cards">
+    <div class="card"><h3>Riyaz</h3><p>2.7 million downloads, 150,000 monthly actives, 25,000 paid at ₹499–1,999. Proof of demand, and a warning: under 1% of downloads pay.</p></div>
+    <div class="card"><h3>Artium Academy</h3><p>Live one-to-one classes: FY25 operating income ₹27.74 crore, net loss ₹20.30 crore, ₹19.2 crore Series A. Live teaching sells but costs a lot to deliver.</p></div>
+    <div class="card"><h3>Learner base</h3><p>An investor estimate puts Indian music-learning households above 15 million, at home and abroad.</p></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Capability</th><th>Riyaz</th><th>NaadSadhana</th><th>ShruthiLaya</th><th>Tala Shruti</th><th>Artium</th><th>Vocal Gym</th></tr></thead>
+    <tbody>
+      <tr><td>Listens to your singing</td><td class="y">Yes</td><td class="y">Yes</td><td>–</td><td class="y">Yes</td><td class="y">AI practice studio</td><td class="vg">Phase 2</td></tr>
+      <tr><td>Carnatic varisai and alankaras</td><td>–</td><td>–</td><td class="y">Melakartas</td><td>–</td><td>Taught live</td><td class="vg">All 35 from the sheet, new patterns, janyas</td></tr>
+      <tr><td>Tala support</td><td>–</td><td class="y">110 taals</td><td class="y">Metronome, nadai</td><td class="y">Talam machine</td><td>–</td><td class="vg">All 35 with nadai</td></tr>
+      <tr><td>Kalpana swara tutoring</td><td>–</td><td>–</td><td>–</td><td>–</td><td>Taught live</td><td class="vg">Yes</td></tr>
+      <tr><td>Jathi generation and judging</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="vg">Yes</td></tr>
+      <tr><td>Personal voice-condition model</td><td>Warm-ups</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="vg">Yes</td></tr>
+      <tr><td>Teacher in the loop</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="y">Live teachers</td><td class="vg">Dashboard</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">A dash means the listing or coverage reviewed did not mention the capability. Sources: YourStory, Venture Intelligence, Chiratae Ventures, App Store and forum listings; full citations in the research plan.</p>
+  <div class="two">
+    <div class="panel"><h3>Business model</h3><ul><li>Free core practice</li><li>Pro: about ₹299–499 a month in India, US$8–12 abroad</li><li>Guru plan: assign routines, review recordings, set tolerances</li><li>Institution licences for music schools, dance academies and university departments</li></ul></div>
+    <div class="panel"><h3>Go to market</h3><ul><li>Teachers first: one teacher brings 10–40 students</li><li>Sabhas and exam-preparation packs</li><li>Bharatanatyam schools for the jathi studio</li><li>Diaspora schools, then a style-agnostic Voice Check for all singers</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" id="plan">
+  <p class="num">09 / Roadmap</p>
+  <h2>Useful in month four. Intelligent by month eighteen.</h2>
+  <div class="phases">
+    <div class="phase"><span class="when">Months 0–4</span><h3>Practice core and engine</h3><ul><li>Session flow, drone, 35 talas</li><li>35 sheet alankaras and new patterns; jathi creator and judge; kalpana generator</li><li>Voice Check recordings begin (data only)</li><li>Teacher panel of 5–8</li></ul></div>
+    <div class="phase"><span class="when">Months 4–10</span><h3>Listening</h3><ul><li>On-device pitch and drone cancellation</li><li>Live intonation; raga conformance v1</li><li>Kalpana tutor levels 1–3</li><li>Strain pilot: about 30 singers, 8 weeks</li></ul></div>
+    <div class="phase"><span class="when">Months 10–18</span><h3>Personalisation</h3><ul><li>Strain model with confidence bands</li><li>Adaptive warm-ups; n-of-1 trials</li><li>Teacher dashboard; jathi studio</li><li>Papers and dataset release</li></ul></div>
+    <div class="phase"><span class="when">Months 18–24</span><h3>Expansion</h3><ul><li>Hindustani packs</li><li>Voice Check for every singer</li><li>Institutions and choirs</li></ul></div>
+  </div>
+  <div class="two">
+    <div class="panel"><h3>Main risks</h3><ul><li>A small pure-Carnatic market</li><li>Hobbyist churn and low conversion</li><li>Gurus' trust and differences between schools</li><li>Health claims and voice-data privacy</li></ul></div>
+    <div class="panel"><h3>How we handle them</h3><ul><li>Grow through the voice layer, Hindustani and dance</li><li>Teacher-assigned routines and B2B seats</li><li>Teacher overrides and bani-specific tolerances</li><li>Wellness framing; on-device processing; DPDP Act 2023 compliance</li></ul></div>
+  </div>
+</section>
+
+<section class="close" id="ask">
+  <p class="num">10 / The ask</p>
+  <h2>Built by a vocalist, for the hours between lessons.</h2>
+  <div class="ask">
+    <div><b>Teachers</b><p>Five to eight Carnatic gurus and two nattuvanars for a 12-week pilot.</p></div>
+    <div><b>Research partners</b><p>A Carnatic MIR group and a voice-science lab to co-run the strain study and the conformance benchmarks.</p></div>
+    <div><b>Pre-seed</b><p>Sized to an 18-month runway for a team of four: engineering, audio ML, design and a teacher-community lead.</p></div>
+  </div>
+  <footer><span>Vocal Gym · pitch · October 2026</span><span>स्वरं ब्रह्म · sound is sacred</span></footer>
+</section>
+</div>
+<!-- Generated by scripts/build.js from web/pitch/index.html. Edit the source, not this file. -->

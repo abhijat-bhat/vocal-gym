@@ -1,0 +1,57 @@
+<title>Vocal Gym Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* @include ../shared/theme.css */
+/* @include ../shared/components.css */
+/* playground page */
+.page{max-width:1080px;margin:0 auto}
+.page section{border-bottom:0;padding-top:24px}
+.howto{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:1rem}
+.howto .verdict ul{font-size:.9rem;color:var(--fg-2);margin:.4rem 0 0}
+.cheat{font-family:var(--font-mono);font-size:.84rem;background:var(--raise);border:1px solid var(--line-2);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre;line-height:1.6}
+footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px solid var(--line-2);margin-top:28px}
+</style>
+
+<main class="page">
+<header class="top">
+  <p class="kicker">Vocal Gym · playground</p>
+  <h1>Raga and tala, with a creativity dial</h1>
+  <p class="lede">Three generators that cannot break the rules of raga or tala, and a judge for jathis you write yourself. Temperature is the performer's creativity: 0 keeps to patterns a listener recognises, 2 reaches for unconventional ones. No setting can produce a wrong one.</p>
+  <div class="meta"><span><a href="research-plan.html">Research and build plan</a></span><span><a href="pitch.html">Pitch deck</a></span><span><a href="index.html">All pages</a></span></div>
+</header>
+
+<section id="engine" aria-label="Generators">
+<!-- @include ../demo/demo.html -->
+</section>
+
+<section aria-labelledby="howto-h">
+  <h2 id="howto-h">How to use it</h2>
+  <div class="howto">
+    <div class="verdict"><h3>Alankaras</h3>
+      <ul><li>The first pattern in each of the 35 talas is the line from the 35 tala alankara sheet.</li><li>New pattern gives one you have not seen for this raga and tala; Previous and Next step through them.</li><li>Janya ragas get the sheet line adapted; swaras changed to keep the raga's direction rules are underlined.</li></ul></div>
+    <div class="verdict"><h3>Jathis</h3>
+      <ul><li>Generate: set tala, nadai, avartanams, eduppu and yati. Open in editor shows the jathi as JathiScript.</li><li>Compose and judge: write your own. The gate checks the arithmetic; six craft scores total 100; the first suggestion says which line to fix.</li></ul></div>
+    <div class="verdict"><h3>Kalpana swaras</h3>
+      <ul><li>Choose the raga, length, start and landing swara.</li><li>Violet swaras come from unconventional devices, teal from the mora. Raise the temperature to hear more of them.</li></ul></div>
+  </div>
+  <h3>JathiScript in one minute</h3>
+  <div class="cheat">tala: adi            # or rupaka, misra chapu, khanda jati ata, custom 3+2+2
+nadai: 4             # matras per akshara
+avartanams: 2        # the span the jathi must fill
+eduppu: sam          # or +2 (after sam) or -2 (before sam)
+land: sam            # last syllable on sam; or end, or +n
+let A = tha-ka-dhi-mi
+$A $A tha , dhi , | tha-ki-ta (tha-ka)x2 ...   # one word = one matra; , and ; are karvai
+{tha-dhi-gi-na-thom}/2                          # teermanam: three times, gaps of 2</div>
+  <footer class="foot">Playback uses equal temperament and plain tones, so it shows swaras and timing, not gamakas. Generated from the Vocal Gym repository by scripts/build.js.</footer>
+</section>
+</main>
+
+<script>
+/* @engine */
+</script>
+<script>
+/* @include ../demo/demo.js */
+</script>
