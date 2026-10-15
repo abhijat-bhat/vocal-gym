@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.2.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.3.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -4438,6 +4438,6 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   };
 
   // src/engine/index.js
-  var VERSION = "0.2.0";
+  var VERSION = "0.3.0";
   return __toCommonJS(engine_exports);
 })();

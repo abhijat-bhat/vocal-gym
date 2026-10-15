@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.3.0
+
+- **Raga profiles.**
+  - `data/raga-profiles.json`: sourced swara roles, phrases, avoid lists and allied ragas for all 86 ragas, with its documentation, research notes, checker and tests.
+  - `npm run profiles` validates it and compiles what the generator needs into `src/engine/data/profiles.generated.js`; the build recompiles it and a test fails when the committed module is stale.
+  - `getProfile`, `setProfiles` and `getSource` in the engine.
+- **Kalpana swaras: phrase-driven generation.**
+  - Attested phrases, their 3–5 swara fragments and octave shifts become devices, weighted by source reliability, phrase type and confidence.
+  - Out-of-the-box variants (phrases shifted along the scale; inverted fragments at T ≥ 1) count as novelty.
+  - A phrase-share controller (target 0.70 − 0.20 T) keeps rounds predominantly characteristic. Generic devices, janta and dattu are scaled by the profile, holds are scored from its landing, nyasa and alpa swaras, and hard avoid lists are enforced.
+  - Ragas without phrases fall back to the generic devices; `stats.profileCoverage` says which applies.
+  - `allowExceptions` offers the documented direction-rule exceptions, whole.
+- **Kalpana swaras: reasoned jumps.**
+  - Leaps, including junctions between devices, are licensed (attested phrase, structural swara, fourth, fifth or octave, arpeggio at T ≥ 1), resolved and budgeted.
+  - Below T = 1.5 the tritone, leaps over an octave, leaps onto alpa swaras and same-direction double leaps are excluded by the feasibility tables; a short span that becomes infeasible is rebuilt with the filter relaxed (`stats.relaxed`).
+  - `stats.leaps`.
+- **Kalpana swaras: landing next to the eduppu.**
+  - New option `eduppuPitch`, the swara the composition resumes on. The round ends on its lower neighbour (rising into it) or upper neighbour (falling into it), never on it; `ending.approach` records which.
+  - `eduppuNeighbours()`, and `kalpanaRound()`, which returns `{ error, code }` where `kalpana()` returns `null`.
+  - `targetPitch` keeps its meaning and is deprecated.
+- **Kalpana swaras: graded mora.**
+  - Three similar statements, not identical ones: `shift` (one contour, a step nearer the eduppu each time), `gopuccha` (shorter each time) and `srotovaha` (longer each time), from attested or generic contours. `moraStyle: 'identical'` keeps the v0.2 mora.
+  - `ending` gains `style`, `statements`, `direction`, `template` and `adjusted`; `ending.phrase` stays for old callers.
+- **Interfaces.**
+  - The generator moved to `src/engine/kalpana/` (`devices`, `leaps`, `landing`, `mora`, `index`); `src/engine/kalpana.js` re-exports it.
+  - CLI: `--eduppu-swara` (with `--land` as a deprecated alias), `--mora-style`, `--allow-exceptions`; phrase sources, phrase share, leaps and mora style in the output.
+  - Demo: "Composition resumes on" and "Mora style" controls, phrase colours with sources, and the phrases, leaps and mora in the audit.
+- **Tests.** 28 tests and 593,940 checks, including the plan's acceptance tables (printed as diagnostics), a golden mora and `test/kalpana-phrases.test.js`. The smoke test checks the new controls and times 100 rounds.
+
 ## 0.2.0
 
 - **Alankaras.**

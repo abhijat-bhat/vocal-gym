@@ -1,10 +1,10 @@
-/* Vocal Gym · Raga–Tala Constraint Engine (v0.2)
+/* Vocal Gym · Raga–Tala Constraint Engine (v0.3)
    Every hard rule (raga membership and direction, tala length, anga lines, eduppu, landing)
    is enforced by a feasibility table. Temperature is the performer's creativity: it tilts the
    score from conventional to unconventional choices and widens sampling, but it only ever
    chooses among moves that can still finish legally. */
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export { rng, pick, soft, dial } from './random.js';
 export { SEMI, CHAKRA, MELA_NAMES, melaLabels, defineRaga, melakarta, JANYA, allRagas } from './ragas.js';
 export { FAM, DEFJ, JATI, CHAPU, tala, customTala, angaStarts } from './talas.js';

@@ -5,14 +5,14 @@ Vocal Gym is a daily practice system for Carnatic vocalists, with a studio for B
 This repository holds the part that works today: the **raga–tala constraint engine**. It drives three generators that cannot break the rules of raga or tala, plus a notation and judge for jathis:
 
 - **Alankaras in all 35 talas.** The first pattern for each tala comes from the *35 Tāla Alankāra-s* sheet. "New pattern" then gives patterns you have not seen, in any of 86 ragas.
-- **Kalpana swaras.** Rounds are built from named devices and land exactly on the eduppu. Temperature is the singer's creativity: low means recognisable, high means unconventional.
+- **Kalpana swaras.** Rounds are built mostly from the raga's own sourced phrases, with reasoned jumps, and end on the swara just above or below the one the composition resumes on, often with a graded mora. Temperature is the singer's creativity: low means recognisable, high means out-of-the-box variants of the raga's phrases.
 - **Jathis for dance.** A generator, JathiScript (a text format students write jathis in), and a judge. The judge checks the arithmetic exactly, scores six aspects of craft and says which line to fix.
 
 It also holds the web pages built on the engine: an interactive playground, the research and build plan, and the pitch deck. The learned parts of the product (pitch tracking, raga conformance, the personal voice model) are designed in the research plan and listed under [Roadmap](#18-roadmap). They are not implemented yet.
 
 ```
 npm install          # esbuild and jsdom, for the page build and the smoke test
-npm test             # 12 tests, 449,886 checked properties, about 10 seconds
+npm test             # 28 tests, 593,940 checked properties
 npm run build        # bundles the engine and writes the pages to site/
 npm run smoke        # loads every page in jsdom and drives every control
 node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
@@ -55,7 +55,8 @@ node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
 | Talas: 35 suladi talas, Tisra, Khanda and Misra Chapu, custom talas | Done, tested | `src/engine/talas.js` |
 | Raga direction rules and contour-preserving projection for janyas | Done, tested | `src/engine/projection.js` |
 | Alankaras: the 35 sheet patterns, new patterns with no repeats, creativity dial | Done, tested | `src/engine/alankara/` |
-| Kalpana swaras: device-based rounds, mora endings, creativity dial | Done, tested | `src/engine/kalpana.js` |
+| Raga profiles: sourced swara roles, phrases and avoid lists for all 86 ragas, compiled for the engine | Done, tested; phrases for 32 ragas | `data/`, `src/engine/profiles.js` |
+| Kalpana swaras: phrase-driven rounds, reasoned jumps, landing next to the eduppu, graded mora, creativity dial | Done, tested | `src/engine/kalpana/` |
 | Jathi generator (35 + 3 talas, any nadai, atita and anagata eduppu, seven yati settings) | Done, tested | `src/engine/jathi/generator.js` |
 | JathiScript parser | Done, tested | `src/engine/jathi/script.js` |
 | Jathi judge: correctness gate, six craft aspects, computed fixes | Done, tested; weights not yet calibrated with teachers | `src/engine/jathi/judge.js` |
@@ -97,8 +98,9 @@ const lines = alankara(mayamalavagowla, misraJhampa, pdfMotif('jhampa', 7)).line
 // a new pattern, different from the sheet line
 const fresh = newMotif(misraJhampa, { T: 1, seed: 7, span: 4, avoid: [pdfMotif('jhampa', 7)] });
 
-// one avartanam of Adi in Kalyani, second speed, landing on Pa, at creativity 0
-const round = kalpana(melakartas[64], { aksharas: 8, perAkshara: 2, startPitch: 0, targetPitch: 7, T: 0, seed: 3 });
+// one avartanam of Adi in Kalyani, second speed, the composition resuming on Pa, at creativity 0
+const round = kalpana(melakartas[64], { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: 0, seed: 3 });
+round.ending;         // { type: 'mora', style: 'shift', statements: [...], approach: 'above', ... }
 
 // a jathi, then the same jathi judged as JathiScript
 const j = jathi({ tl: tala('triputa', 4), nadai: 4, avartanams: 2, offset: 0, T: 1, seed: 5 });
@@ -115,8 +117,9 @@ In a browser, include `site/vocal-gym-engine.js` (or `dist/vocal-gym-engine.js`)
 ```
 vocal-gym/
 ├── README.md                    this file
+├── CLAUDE.md                    working rules for code assistants
 ├── CHANGELOG.md                 what changed between versions
-├── package.json                 scripts: test, build, smoke, check; bin: vocal-gym
+├── package.json                 scripts: profiles, test, build, smoke, check; bin: vocal-gym
 ├── package-lock.json            exact versions of the two dev dependencies
 ├── bin/vocal-gym.js             command line entry point
 ├── src/
@@ -130,7 +133,15 @@ vocal-gym/
 │   │   │   ├── sheet.js         the 35 first lines of the tala alankara sheet
 │   │   │   ├── motif.js         familiarity model, exact sampling, new patterns, reports
 │   │   │   └── lines.js         a motif shifted through a raga, up and down
-│   │   ├── kalpana.js           device catalogue and the kalpana swara generator
+│   │   ├── profiles.js          getProfile, setProfiles, getSource over the compiled profiles
+│   │   ├── data/profiles.generated.js   compiled from data/raga-profiles.json (generated; committed)
+│   │   ├── kalpana.js           re-exports kalpana/ (kept for old imports)
+│   │   ├── kalpana/
+│   │   │   ├── index.js         kalpana and kalpanaRound: tables, endings, sampling, stats
+│   │   │   ├── devices.js       generic cells and anchored phrase devices
+│   │   │   ├── leaps.js         licensing, resolution, budget, leap statistics
+│   │   │   ├── landing.js       eduppu neighbours
+│   │   │   └── mora.js          graded mora
 │   │   ├── sollu.js             sollukattu vocabulary, aliases, idiom test
 │   │   └── jathi/
 │   │       ├── generator.js     jathi generator
@@ -138,8 +149,13 @@ vocal-gym/
 │   │       ├── judge.js         correctness gate, craft aspects, fixes
 │   │       └── examples.js      the worked examples used everywhere
 │   └── cli/                     command line commands and text layout
+├── data/raga-profiles.json      raga profiles: roles, phrases, avoid lists, sources (source of truth)
+├── docs/
+│   ├── raga-profiles.md         the profile format and how the generator uses it
+│   ├── research/raga-profiles-report.md   the research behind the profiles
+│   └── plans/kalpana-v0.3.md    the plan for the v0.3 kalpana generator
 ├── examples/*.jathi             the worked JathiScript examples as files
-├── test/                        node:test suite: helpers.js and 6 *.test.js files (12 tests)
+├── test/                        node:test suite: helpers.js and 8 *.test.js files (28 tests)
 ├── web/                         page sources
 │   ├── shared/theme.css         colour tokens (dark first, light variant) and base type
 │   ├── shared/components.css    layout and component styles
@@ -148,7 +164,9 @@ vocal-gym/
 │   ├── playground/index.html    the demos on their own
 │   ├── research-plan/index.html the research and build plan, with the demos inline
 │   └── pitch/index.html         the pitch deck
-├── scripts/build.js             bundles the engine; expands web/ templates into site/
+├── scripts/build.js             compiles the profiles, bundles the engine, expands web/ templates into site/
+├── scripts/compile-profiles.js  data/raga-profiles.json → src/engine/data/profiles.generated.js
+├── scripts/check-raga-profiles.js   validates the profiles against the engine (--fix recomputes fields)
 ├── scripts/smoke.js             jsdom smoke test of every page in site/
 ├── site/                        built pages (generated; committed so they open without a build)
 └── dist/                        the engine bundle (generated; ignored by git)
@@ -282,8 +300,8 @@ c = T / 2                 tilt from familiarity (c = 0) to novelty (c = 1)
 score = (1 − c) · F + c · N
 ```
 
-- **F (familiarity)** measures how much a choice resembles what a teacher or listener expects. For alankaras it is learned from the 35 sheet lines. For kalpana swaras and jathis it is a set of named conventional devices and placements: runs, janta, sequences, beat-aligned groups, nyasa holds, the mora.
-- **N (novelty)** rewards named unconventional devices that are still legal: leaps, zig-zags, syncopation, off-beat groups, shaped yatis, excursions out of the middle octave.
+- **F (familiarity)** measures how much a choice resembles what a teacher or listener expects. For alankaras it is learned from the 35 sheet lines. For kalpana swaras it is first the raga's own sourced phrases, then named conventional devices and placements: runs, janta, sequences, beat-aligned groups, holds on the raga's resting swaras, the mora. For jathis it is the jathi devices.
+- **N (novelty)** rewards named unconventional choices that are still legal: variants of the raga's phrases (shifted sequences and inversions), leaps, zig-zags, syncopation, off-beat groups, shaped yatis, excursions out of the middle octave.
 
 N is deliberately **not** the negative of F. If it were, c = 0.5 would cancel everything into uniform noise. With separate novelty features, T = 1 means "mostly idiomatic with some surprises", and T = 2 means "prefer the unexpected, still inside the rules".
 
@@ -292,7 +310,8 @@ Because τ never reaches zero, asking again at T = 0 still gives a different but
 | Generator | Measure | T = 0 | T = 1 | T = 2 |
 | --- | --- | --- | --- | --- |
 | Alankara (1,248 new patterns) | Mean share of the 35 sheet lines that are less conventional than the new pattern | 0.38 | 0.02 | 0.00 |
-| Kalpana (rounds of 8+ slots) | Share of swaras from unconventional devices | 1.7% | 24% | 41% |
+| Kalpana (3,600 rounds of 8+ slots, sampled ragas, all endings) | Share of swaras from phrase variants and unconventional devices | 2.6% | 19% | 42% |
+| Kalpana (27 phrase-rich ragas, 1 avartanam, free ending) | Share of swaras from attested phrases | 67% | 42% | 23% |
 
 ---
 
@@ -686,86 +705,172 @@ The weights are a starting point. They should be calibrated against teachers' ma
 
 ## 12. Module C: kalpana swaras
 
+Version 0.3 changes the generator in four ways: raga profiles drive it, jumps need a reason, the round lands next to the swara the composition resumes on, and a mora is three similar statements rather than three identical ones. The plan is `docs/plans/kalpana-v0.3.md`; the code is in `src/engine/kalpana/`.
+
 ### 12.1 What the generator guarantees
 
-`kalpana(raga, { aksharas, perAkshara, startPitch, targetPitch, T = 1, seed, ending = 'auto' })` returns a round of exactly `aksharas × perAkshara` slots, with these guarantees:
+`kalpanaRound(raga, { aksharas, perAkshara, startPitch, eduppuPitch, T = 1, seed, ending = 'auto', moraStyle = 'auto', allowExceptions = false })` returns a round of exactly `aksharas × perAkshara` slots, or `{ error, code }`. Every round:
 
-- it starts on `startPitch` and ends on `targetPitch`, the swara just before the eduppu;
-- it stays between mandra Pa (−5) and tara Pa (19);
-- every step obeys the raga's direction rule;
-- it returns `null` if the start or landing pitch is not a swara of the raga within that range, or if no legal round exists (two slots cannot reach a distant swara);
-- `ending: 'mora'` falls back to a free ending when no mora fits, and the result says so (`ending.fallbackFrom === 'mora'`).
+- starts on `startPitch` and ends on a **legal neighbour of the eduppu swara** `eduppuPitch` (12.5), never on the eduppu itself;
+- stays between mandra Pa (−5) and tara Pa (19);
+- obeys the raga's direction rule on every step (documented exceptions only with `allowExceptions`, 12.2);
+- contains no hard-avoid subsequence from the raga profile;
+- below T = 1.5, contains no tritone, no leap wider than an octave, no leap onto an alpa swara and no two leaps in a row in one direction outside attested phrases (12.4).
 
-### 12.2 Devices
+Error codes are `bad-length`, `start-not-in-raga`, `eduppu-not-in-raga`, `eduppu-out-of-range`, `no-neighbour`, `unreachable` and `bad-mora-style`. `kalpana(raga, opts)` is the same call returning `null` instead of an error, as in v0.2. `targetPitch` keeps its v0.2 meaning (the last swara itself) and is deprecated; when both are given, `eduppuPitch` wins. `ending: 'mora'` falls back to a free ending when no mora fits, and the result says so (`ending.fallbackFrom === 'mora'`).
 
-A round is built from devices: short cells written as steps through the raga's own swaras (index steps in the union of its arohana and avarohana). Each device exists in an upward and a downward form. F0 and N0 are the device's built-in familiarity and novelty weights. Examples are in Kalyani (mela 65), continuing from Sa:
+### 12.2 Raga profiles and devices
+
+**Profiles.** `data/raga-profiles.json` holds sourced swara roles, phrases and avoid lists for the 86 ragas; `docs/raga-profiles.md` documents it and `docs/research/raga-profiles-report.md` is the research behind it. `npm run profiles` validates it and compiles what the generator needs into `src/engine/data/profiles.generated.js`: landing, nyasa, jiva, alpa, not-nyasa and avoid-landing swaras, janta and dattu tags, phrase confidence, the phrases that obey the direction rule with weight ≥ 0.15, the documented exceptions, avoid subsequences and the cited sources. `getProfile(ragaId)` reads it; `setProfiles(table)` swaps it (tests, future teacher-edited profiles). 32 ragas have usable phrases; 2 have roles only; 52 have neither and fall back to the generic devices.
+
+**Generic devices** are short cells written as steps through the raga's union scale, each in an upward and a downward form. F0 and N0 are the built-in familiarity and novelty weights; examples are in Kalyani from Sa:
 
 | Id | Name | Kind | F0 | N0 | Steps `[step, duration]` | Example |
 | --- | --- | --- | --- | --- | --- | --- |
 | step | step | step | 0.2 | -0.2 | `[[1,1]]` | R |
 | skip | skip | step | 0.0 | 0.2 | `[[2,1]]` | G |
 | hold | held step | step | 0.1 | -0.1 | `[[1,2]]` | R , |
-| run3 | run | conv | 1.0 | -0.4 | `[[1,1],[1,1],[1,1]]` | R G M |
-| run4 | run | conv | 1.1 | -0.5 | `[[1,1],[1,1],[1,1],[1,1]]` | R G M P |
-| run5 | run | conv | 0.9 | -0.5 | `[[1,1],[1,1],[1,1],[1,1],[1,1]]` | R G M P D |
-| janta | janta | conv | 0.9 | -0.2 | `[[1,1],[0,1],[1,1],[0,1]]` | R R G G |
-| janta3 | janta | conv | 0.8 | -0.3 | `[[1,1],[0,1],[1,1],[0,1],[1,1],[0,1]]` | R R G G M M |
+| run3, run4, run5 | run | conv | 1.0, 1.1, 0.9 | -0.4, -0.5, -0.5 | 3 to 5 steps up | R G M P |
+| janta, janta3 | janta | conv | 0.9, 0.8 | -0.2, -0.3 | `[[1,1],[0,1],…]` | R R G G |
 | dattu | dattu | conv | 0.7 | 0.1 | `[[2,1],[-1,1],[2,1],[-1,1]]` | G R M G |
 | turn | turn | conv | 0.6 | 0.0 | `[[1,1],[1,1],[-1,1]]` | R G R |
-| seq3 | sequence of threes | conv | 1.1 | -0.3 | `[[1,1],[1,1],[1,1],[-1,1],[1,1],[1,1]]` | R G M G M P |
-| seq3x3 | sequence of threes | conv | 1.0 | -0.4 | `[[1,1],[1,1],[1,1],[-1,1],[1,1],[1,1],[-1,1],[1,1],[1,1]]` | R G M G M P M P D |
-| seq4 | sequence of fours | conv | 1.0 | -0.4 | `[[1,1],[1,1],[1,1],[1,1],[-2,1],[1,1],[1,1],[1,1]]` | R G M P G M P D |
+| seq3, seq3x3, seq4 | sequence | conv | 1.1, 1.0, 1.0 | -0.3, -0.4, -0.4 | groups of three or four | R G M G M P |
 | cad | run into a held swara | conv | 0.9 | -0.3 | `[[1,1],[1,1],[1,2]]` | R G M , |
-| leap3 | leap | nov | -0.6 | 0.8 | `[[3,1]]` | M |
-| leap4 | wide leap | nov | -1 | 1.0 | `[[4,1]]` | P |
+| leap3, leap4 | leap | nov | -0.6, -1.0 | 0.8, 1.0 (−0.3 in use) | `[[3,1]]`, `[[4,1]]` | M, P |
 | arp | arpeggio | nov | -0.4 | 1.0 | `[[2,1],[2,1],[2,1]]` | G P N |
 | leapfill | leap and fall back | nov | -0.3 | 0.9 | `[[3,1],[-1,1],[-1,1]]` | M G R |
 | zigzag | zig-zag | nov | -0.8 | 1.1 | `[[2,1],[-3,1],[2,1]]` | G Ṇ R |
 | synco | syncopated hold | nov | -0.3 | 0.7 | `[[1,2],[1,1]]` | R , G |
 | skipjanta | displaced janta | nov | -0.2 | 0.8 | `[[2,1],[0,1],[-1,1],[0,1]]` | G G R R |
 
-The **mora** ending is handled separately (see below). `kind` decides how a device is shown and counted: `conv` (conventional), `nov` (unconventional), or `step` (connective, neither).
+**Phrase devices** have absolute pitches from the profile. Each compiled phrase gives:
 
-### 12.3 Context
+| Variant | Pitches | Kind | F0 | N0 |
+| --- | --- | --- | --- | --- |
+| whole | as written; a karvai lengthens the swara before it | `phrase` | 2.0 × weight × type × confidence | −0.5 |
+| octave ±1 | ±12, only when the octave was inferred and every swara stays in range | `phrase` | 0.8 × whole | −0.5 |
+| fragment | every window of 3 to 5 swaras of a phrase of 5 or more | `phrase-fragment` | 0.6 × whole | −0.2 |
+| sequence | the whole or a fragment shifted one place along the scale; legal and not itself attested | `phrase-variant` | 0.3 × whole | +0.6 |
+| inversion | a fragment's contour mirrored around its first swara; T ≥ 1 only | `phrase-variant` | 0 | +0.9 |
 
-Context adds to both scores at every choice:
+Type factors: signature 1.0, ending 0.9, janta and dattu 0.8, connective 0.6. Confidence factors: high 1.0, medium 0.8, low 0.5. Variants are the **out-of-the-box phrases**: rooted in the raga's idiom but not attested, and counted as novelty. A phrase device can start from the current swara when the step into its first swara is legal (and not a repeat, unless the phrase opens with a janta); its own steps are its licence. With `allowExceptions`, the 10 documented direction-rule exceptions in range (anya swaras such as Bilahari's N₂, and vakra steps) are offered whole, checked only at entry and exit; without it no anya swara ever appears.
+
+Phrase devices sit in the same reachability tables as the generic cells, grouped by their entry condition, so feasibility stays exact. The tables are built once per raga, profile and mode and cached.
+
+### 12.3 Scoring
+
+Every choice is scored `(1 − c) · F + c · N` (section 6). On top of the device's F0 and N0:
 
 | Context | Effect on F | Effect on N |
 | --- | --- | --- |
-| Starts on a beat | +0.6 | — |
-| Starts off the beat | −0.4 | +0.5 |
-| Fills whole beats | +0.4 | — |
-| Odd length (when there are 2+ slots per beat) | — | +0.4 |
-| Same device and direction as the previous one | +0.5 | −0.4 |
+| Generic conventional device, phrase confidence high / medium / low or none | F0 × 0.5 / 0.7 / 1.0 | — |
+| Janta or dattu device when the profile says the raga avoids / suits it | × 0.2 / × 1.2 | — |
+| Starts on a beat / off the beat | +0.6 / −0.4 | — / +0.5 |
+| Fills whole beats / odd length (2+ slots per beat) | +0.4 | — / +0.4 |
+| Same generic device and direction as the previous one | +0.5 | −0.4 |
 | Literal repeat of the previous device | +0.2 | −1.0 |
-| Held last swara on Sa or Pa ending on a beat | +0.6 | — |
-| Any other held last swara | — | +0.3 |
-| Distance from the singer's working register, `centre = clamp((start + target) / 2 + 2, 2, 10)` | −0.06 per semitone | — |
-| Leaves the octave between Sa and tara Sa | −0.3 | +0.5 |
+| A phrase already used in this round | −0.8 | — |
+| Held swara on a profile landing swara, ending on a beat (S and P without a profile) | +0.6 | otherwise +0.3 |
+| Held swara the profile says not to rest on / held alpa swara | −0.4 / −0.3 | — |
+| Jiva swaras in the device | +0.2 each, at most +0.4 | — |
+| Soft avoid subsequence created | −1.0 | — |
+| Distance from `centre = clamp((start + final) / 2 + 2, 2, 10)` | −0.06 per semitone | — |
+| Generic device leaving the octave between Sa and tara Sa | −0.3 | +0.5 |
 | Reverses the previous device's direction | — | +0.3 |
+| Leap terms (12.4) | see there | — |
 
-### 12.4 Building a round
+**The phrase-share controller** keeps rounds predominantly characteristic. It tracks the share of slots so far from `phrase` and `phrase-fragment` devices against `target(T) = 0.70 − 0.20 T`. Below target, phrase devices gain `0.8 · (target − share) · 4` on the score; above it they lose the same, and variants and unconventional devices gain it scaled by c, so a round at T = 0 fills the rest with conventional devices rather than novelty.
 
-1. **Reachability.** Forward from the opening swara (held for 1 or 2 slots), mark every reachable (slot, swara) state.
-2. **Ending.**
-   - **When a mora is considered:** if `ending: 'mora'`, or with `auto` when the round is at least 7 aksharas, and only when the round has at least 8 slots.
-   - **The phrase:** 3 or 4 swaras ending on the landing swara. Its steps are ±1 or ±2 swaras and obey the direction rule. Its first swara differs from the landing, and stepping from the landing back to the first swara is legal.
-   - **The gap:** q from 0 to 2 × slots per beat. The mora may take at most 60% of the round, and the body before it at least max(2, one beat).
-   - **Feasibility:** a mora is kept only if some reachable body state can step legally into its first swara.
-   - **Scoring the mora (F):** +0.8 stepwise, +0.9 if all three statements start on beats, +0.3 for a gap within one beat, +0.3 for a three-swara phrase, +0.2 for approaching the landing from below.
-   - **Scoring the mora (N):** +0.7 for skips, +0.7 for off-beat statements, +0.3 for approaching from above.
-   - **Mora or free:** under `auto`, when both are possible, the choice is weighted `mora: (1 − c) · 1.0` against `free: c · 0.6`.
-3. **Backward feasibility for the body.** Mark every (slot, swara) from which the ending can still be reached exactly.
-4. **Sampling.** Choose devices left to right with weights `exp(score / τ)` among devices that keep the round finishable.
+### 12.4 Reasoned jumps
 
-The result lists `units` (each device with its kind, name, direction, start slot and swaras) and `stats` (`novelShare`, `convShare` and device counts), so the tutor can say what the student, or the generator, actually did.
+A **step** moves one place in the raga's union scale; a **leap** moves two or more, including the move from one device into the next. A leap is **licensed** when it lies inside an attested phrase or fragment, lands on a structural swara (S, P, or a profile nyasa, jiva or landing swara), is a fourth, fifth or octave, or lies inside an arpeggio at T ≥ 1. It is **resolved** when, within the next two swaras, the line steps back the other way or holds the swara it leapt to.
 
-Example at T = 0 (ending `auto`, which chose a mora) and T = 2 (ending `free`), Kalyani, Adi, second speed, from Sa to Pa, seed 3:
+- **Hard, below T = 1.5, outside attested phrases:** no tritone, no leap wider than an octave, no leap onto an alpa swara, no two leaps in a row in one direction. The first three are filters in the device tables. For the fourth, the reachability tables carry the class of the move that arrived on each swara (a step, a leap up, a leap down), so it holds across device and mora junctions too.
+- **Relaxation:** if a filter makes a short span infeasible, the round is rebuilt without it and `stats.relaxed = 'leaps'`. No span fails that unfiltered generation could fill.
+- **Soft, on F:** unlicensed leap −1.5; unresolved leap −0.6; same-direction double leap −2.0; −1.0 for each unlicensed leap beyond the budget (0, 0.5, 1, 2, 3 per 8 slots at T = 0, 0.5, 1, 1.5, 2); −0.8 for each semitone by which an akshara spans more than 9 (T < 1) or 12 semitones.
+
+`stats.leaps` is `{ total, licensed, unlicensed, unresolved, perEight, outsidePhrases: { tritone, wide, alpa, double }, list }`, one list entry per leap with its licence.
+
+### 12.5 Landing next to the eduppu
+
+The eduppu swara `e` is where the composition resumes; the singer sings it, the round does not. With the arohana and avarohana extended across octaves:
+
+- the **lower neighbour** `lo(e)` is the arohana swara just before `e`, so the singer rises into it (only if `e` is in the arohana);
+- the **upper neighbour** `hi(e)` is the avarohana swara just before `e` in descent, so the singer falls into it (only if `e` is in the avarohana).
+
+| Raga | Eduppu | Lower neighbour | Upper neighbour |
+| --- | --- | --- | --- |
+| Kalyani | S | Ṇ | R |
+| Kalyani | P | M₂ | D |
+| Mohanam | P | G | D |
+| Mohanam | S | Ḍ | R |
+| Saveri | M | R (G is not in the arohana) | P |
+| Saveri | G | — | M (descent only) |
+| Hamsadhwani | S | Ṇ | R |
+
+`eduppuNeighbours(raga, e)` returns `{ lo, hi }`. The final swara must be one of them, inside the range. When both can finish, the choice is scored mildly: +0.4 for a landing or nyasa swara, +0.3 for approaching S or P from above, +0.3 for approaching a jiva swara from below. `ending.approach` records `'above'` or `'below'`.
+
+### 12.6 Graded mora
+
+A mora is three statements S1, S2, S3 separated by two equal karvai gaps q:
+
+| Style | Statements | Lengths | Total |
+| --- | --- | --- | --- |
+| `shift` | the same contour, one scale step nearer the eduppu each time | u, u, u | 3u + 2q |
+| `gopuccha` | shifted, and one swara dropped from the front each time | u, u − 1, u − 2 | 3u − 3 + 2q |
+| `srotovaha` | shifted, and one swara added at the front each time | u, u + 1, u + 2 | 3u + 3 + 2q |
+| `identical` | v0.2: one statement three times, only on request | u, u, u | 3u + 2q |
+
+Construction, all exact:
+
+1. **Landing.** S3 ends on the chosen neighbour `f` of the eduppu.
+2. **Contour.** Templates come, in order of familiarity, from windows of attested phrases that end with a step, the ends of ending phrases, then generic runs, turns and dattu.
+3. **S3** is realised backward from `f`; every step must be legal.
+4. **S2 and S1** are S3 shifted one and two places toward the eduppu's register (down when the mora starts above it), then trimmed or grown for gopuccha and srotovaha. In asymmetric ragas a shift that breaks the direction rule tries one place further, then a projection (`makeProjector(raga).repair`) that may change at most one swara per statement; such moras are marked `adjusted`. The opposite direction is allowed at T ≥ 1.
+5. **Junctions.** The last swara of one statement, held for 1 + q slots, must step legally into the first of the next, and not repeat it.
+6. **Arithmetic and feasibility.** q runs from 0 to 2 × slots per beat; the mora takes at most 60% of the round and leaves a body of at least max(2, one beat), from which some reachable state steps legally into S1.
+7. **Score.** F: +1.0 for a contour from an attested phrase, +0.6 stepwise, +0.9 if all three statements start on beats, +0.3 for `shift`, +0.3 for a gap within one beat, minus leap penalties. N: +0.5 generic contour, +0.5 opposite direction, +0.6 gopuccha or srotovaha, +0.7 off-beat statements.
+
+`moraStyle: 'auto'` picks among shift, gopuccha and srotovaha by score and never picks identical. A mora is considered for `ending: 'mora'`, or under `auto` for rounds of at least 7 aksharas, and only with at least 8 slots; under `auto` the choice between mora and free is weighted `mora: (1 − c) · 1.0` against `free: c · 0.6`. `ending` is `{ type: 'mora', style, statements, q, start, approach, adjusted, template, templatePhrase, direction, phrase }`, where `phrase` (the last statement) is kept for v0.2 callers.
+
+### 12.7 Building a round
+
+1. **Landing.** Work out `lo(e)` and `hi(e)` (or take `targetPitch`).
+2. **Forward reachability** from the opening swara (held 1 or 2 slots), over states (slot, swara, arriving move class).
+3. **Ending.** Collect the moras for each neighbour, choose the neighbour, then mora or free.
+4. **Backward feasibility** for the body.
+5. **Sampling.** Left to right, among devices that keep the round finishable, with weights `exp(score / τ)`. Scores are computed in two passes, an upper bound and then the exact leap, register and avoid terms, until the remaining bounds are more than 15τ below the best.
+
+The result lists `units` (each with `kind`: `start`, `step`, `conv`, `nov`, `phrase`, `phrase-fragment`, `phrase-variant` or `mora`; phrase units also carry `phraseId`, `source`, `type` and `variant`) and `stats`: `phraseShare`, `variantShare`, `novelShare` (unconventional devices plus variants), `convShare` (conventional devices, attested phrases and the mora), `profileCoverage` (`phrases`, `roles-only` or `none`), the phrases used with their sources, device counts, `leaps` and `relaxed`.
+
+### 12.8 Measured
+
+Acceptance numbers from the test suite (the tests print them):
+
+| Check | T = 0 | T = 1 | T = 2 |
+| --- | --- | --- | --- |
+| Phrase share, 27 ragas with phrase confidence high or medium, 1 avartanam of Adi at 2 per beat, free ending | 0.67 | 0.42 | 0.23 |
+| The same with `auto` endings, where the mora takes about half the round | 0.31 | 0.31 | 0.16 |
+| Novelty (variants and unconventional devices), same rounds, free ending | 0.11 | 0.40 | 0.61 |
+| Unlicensed leaps per 8 slots, 86 ragas × 10 seeds | 0.07 | 0.26 | 0.99 |
+| Unresolved leaps, share of all leaps | 5% | 16% | 43% |
+| Tritones, leaps over an octave, same-direction double leaps, leaps onto alpa swaras | 0 | 0 | allowed |
+| Hard-avoid subsequences | 0 | 0 | 0 |
+
+- **Landing:** 2,022 rounds over 86 ragas (every swara as the eduppu, plus tara S, 3 seeds) all end on `lo(e)` or `hi(e)`, step legally into it, and never end on it.
+- **Mora:** 1,032 moras over 86 ragas: 616 shift, 278 gopuccha, 138 srotovaha; 341 from attested contours; no two statements identical; equal gaps, legal junctions and exact arithmetic in all of them; 8 with one projected swara.
+- **Phrases:** at T = 0, an attested phrase or fragment appears in 20 of 20 rounds in each of Kalyani, Todi, Mohanam, Hamsadhwani and Hemavati. Every phrase unit matches its profile pitches (or an octave shift where the octave was inferred), and every fragment is a window of its phrase.
+
+Kalyani, Adi, second speed, from Sa, resuming on Pa, seed 3 (from `vocal-gym kalpana`):
 
 ```
-T 0   S R G M P M , D N P D N P D N P → eduppu      run, held step, mora (D N P × 3)
-T 2   S , Ṇ M P , R G M Ṡ Ṗ Ṁ , Ṙ D P → eduppu      wide leaps, a leap that climbs back, upper octave (44% unconventional)
+T 0   S R G G M P , M | P M P D | P D N D → eduppu P
+      janta fragment of mela65#23 (S144), held step, shift mora M P M · P D P · D N D landing on D (above P)
+T 2   S , G , M P D Ġ | Ṁ Ṗ , Ġ | , Ṙ N D → eduppu P
+      an inversion of mela65#0, a fragment of mela65#6 (S143), skip, step; 44% attested, 31% variants
 ```
+
+Two avartanams at T = 0 resuming on Sa (seed 3) open with the whole signature phrase mela65#0 (`G D P M P G , R S Ṇ R ,`, source S143) and end with the shift mora `Ṇ Ḍ Ṇ · S Ṇ S · R S R` landing on R. In such rounds the body before the mora is about three quarters attested phrases; the round as a whole is about 40%.
 
 ---
 
@@ -835,8 +940,11 @@ A `Motif` is `[{ d: scaleDegree, dur: 1 | 2 }]`.
 
 | Export | Description |
 | --- | --- |
-| `kalpana(raga, { aksharas, perAkshara, startPitch, targetPitch, T, seed, ending: 'auto'\|'mora'\|'free' })` | Returns `{ notes: [{ p, dur }], slots, units, ending: { type, phrase?, q?, start?, fallbackFrom? }, stats: { novelShare, convShare, devices }, dial }`, or `null` |
-| `CELL_DEFS`, `CELLS` | The device catalogue (upward and downward forms) |
+| `kalpanaRound(raga, { aksharas, perAkshara, startPitch, eduppuPitch, T, seed, ending: 'auto'\|'mora'\|'free', moraStyle: 'auto'\|'shift'\|'gopuccha'\|'srotovaha'\|'identical', allowExceptions })` | Returns `{ notes: [{ p, dur }], slots, units, ending, stats, dial }` (section 12), or `{ error, code }` |
+| `kalpana(raga, opts)` | The same, returning `null` instead of an error. `targetPitch` (the last swara itself) is deprecated but still accepted; `eduppuPitch` wins when both are given |
+| `eduppuNeighbours(raga, e) → { eduppu, lo, hi, inRange } \| { error, code }` | The legal neighbours of an eduppu swara (12.5) |
+| `getProfile(ragaOrId) → Profile \| null`, `setProfiles(table \| null)`, `getSource(id) → { title, url, reliability } \| null` | The compiled raga profiles (12.2) |
+| `CELL_DEFS`, `CELLS` | The generic device catalogue (upward and downward forms) |
 
 ### Jathis
 
@@ -865,7 +973,7 @@ node bin/vocal-gym.js <command> [options]     # or: npm link, then vocal-gym <co
 | `talas` | List the 35 suladi talas and the chapu talas |
 | `sheet [--tala "misra jhampa"]` | The sheet's first lines |
 | `alankara --raga R --tala T [--new N] [--temp T] [--seed S] [--span s] [--speed 1\|2\|4] [--numbers]` | The sheet pattern through the raga, then N new patterns |
-| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--land P] [--ending auto\|mora\|free] [--temp T] [--seed S]` | One round, with its devices |
+| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--eduppu-swara P] [--ending auto\|mora\|free] [--mora-style auto\|shift\|gopuccha\|srotovaha\|identical] [--allow-exceptions] [--temp T] [--seed S]` | One round, with its devices and their phrase sources, the phrase share, the mora style and the leaps. `--land X` (deprecated) ends on X itself |
 | `jathi --tala T [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam\|end] [--temp T] [--seed S] [--script]` | Generate; `--script` prints JathiScript |
 | `judge <file \| -> [--json]` | Judge a JathiScript file (exit code 1 if the gate fails) |
 | `example <adi\|short\|chapu\|speed>` | Print a worked example |
@@ -874,7 +982,7 @@ node bin/vocal-gym.js <command> [options]     # or: npm link, then vocal-gym <co
 
 - **Ragas** can be given by mela number (`15`), id (`mela15`, `mohanam`) or name (`kalyani`, `Mayamalavagowla`).
 - **Talas** use JathiScript tala names.
-- **Swaras** for `--start` and `--land` are letters (`S`, `P`, `S'` for tara Sa).
+- **Swaras** for `--start`, `--eduppu-swara` and `--land` are letters (`S`, `P`, `S'` for tara Sa, `N.` for mandra Ni). The default eduppu is Pa (tara Sa in ragas without Pa).
 
 ```
 $ node bin/vocal-gym.js alankara --raga kambhoji --tala "chatusra dhruva"
@@ -940,19 +1048,20 @@ The research plan covers: verdict, novelty assessment, the engine, Modules A to 
   - the gate, computed fixes, aspect bars with notes, and warnings;
   - Play.
 - **Kalpana:**
-  - raga, tala, length, speed, start and landing swara, ending and temperature;
-  - devices coloured by kind;
-  - a creativity readout and a device list.
+  - raga, tala, length, speed, opening swara, the swara the composition resumes on, ending, mora style and temperature;
+  - attested phrases in saffron, fragments in lighter saffron, variants in violet italics, the mora in teal; each phrase's title names its source;
+  - an audit with the creativity readout, the phrases used and their sources (or "phrase data: none for this raga"), the leaps and their licences, and the mora's style and contour.
 
 **Design.** The palette is midnight indigo with saffron for the voice and teal for the machine. Pages are dark first, with a light variant from `prefers-color-scheme`. Type is Cormorant Garamond, DM Sans and IBM Plex Mono. Colours are tokens in `web/shared/theme.css`.
 
 **The build** (`scripts/build.js`):
 
-1. esbuild bundles `src/engine/index.js` into an IIFE that defines the global `VGEngine` (`dist/vocal-gym-engine.js`).
-2. Each template in `web/` is expanded:
+1. `data/raga-profiles.json` is validated and compiled into `src/engine/data/profiles.generated.js`, and its size is printed.
+2. esbuild bundles `src/engine/index.js` into an IIFE that defines the global `VGEngine` (`dist/vocal-gym-engine.js`); the build prints how much of the bundle the profiles take.
+3. Each template in `web/` is expanded:
    - `<!-- @include path -->` and `/* @include path */` insert a file, relative to the template;
    - `/* @engine */` inserts the bundle.
-3. The result is written to `site/` as one self-contained HTML file per page.
+4. The result is written to `site/` as one self-contained HTML file per page.
 
 The build refuses unresolved includes and a bundle containing `</script`. **Edit `web/` and `src/`, never `site/`**, then run `npm run build`.
 
@@ -968,14 +1077,16 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 | --- | --- | --- |
 | `ragas-talas.test.js` | Melakarta formula (12 spot values, ordering, 72 distinct scales, names); the class and parent of every janya, and that each uses only its parent's swaras; tala totals for all 35; chapu; invalid tala arguments; tala-spec parsing and round trips | 647 |
 | `alankara.test.js` | **All 35 sheet first lines, ascending and descending, note for note** in Mayamalavagowla; bars on anga lines; row counts equal the sheet's for every tala; all ten lines of 1.1; variation 0 is the sheet. Direction rule on every step of 23,992 lines (217,320 notes) in 86 ragas × 35 talas. 1,248 new patterns: legal, never a repeat, direction-valid in every line, conventionality falling with temperature, the sheet's span by default, every Tisra Eka alternative found, `null` only when all are shown | 310,676 |
-| `kalpana.test.js` | 6,165 rounds over 86 ragas, 4 lengths, 2 speeds, 3 temperatures and 3 ending modes: exact length, start, landing, range, direction; moras with three identical statements and equal gaps; novelty rising with temperature | 87,903 |
+| `kalpana.test.js` | The v0.2 sweep (every other melakarta and every janya, 4 lengths, 2 speeds, 3 temperatures, 3 endings): exact length, start, landing, range, direction, three different mora statements with equal gaps, novelty rising with temperature. Eduppu neighbours (the table in 12.5) and 2,022 rounds landing next to every eduppu. Structured errors and backward compatibility. Leap acceptance over 86 ragas × 10 seeds × 3 temperatures; the relaxation over 2,696 short spans. Graded mora acceptance over 1,032 moras and the Mayamalavagowla golden mora | 185,734 |
+| `kalpana-phrases.test.js` | Attested phrases at T = 0 in Kalyani, Todi, Mohanam, Hamsadhwani and Hemavati, with every phrase and fragment unit matching its profile; the phrase-share acceptance over the 27 phrase-rich ragas; profile coverage and the fallback with no profile; exceptions only with `allowExceptions` | 30,250 |
+| `raga-profiles.test.js` | The profile file covers the 86 engine ragas with the engine's scales; every phrase parses and its computed flags match; sources and enums are valid; the compiled module is up to date and loads in the engine | 15,973 |
 | `jathi.test.js` | 12,417 generated jathis over 38 talas, nadai 3–5, 1–2 avartanams, eduppu −2, 0 and +2, seven yati settings and three temperatures: exact sums, slot formula, yati shapes, threefold teermanam. 2,452 exported to JathiScript all pass the gate (scores 71–100, median 88). 1,947 combinations are refused with a message because no teermanam fits the span with the chosen yati | 50,570 |
 | `jathiscript.test.js` | Worked examples (100 for the guide example; the short example fails with a fix at line 11); syntax errors with line and column; compound and vocabulary warnings; land `end` and `+n`; inferred avartanams; kalai; atita and anagata eduppu and their aliases; speed changes; bar errors; missing teermanam; opening karvai; written-out teermanams; trailing karvai; generator–parser round trips | 90 |
-| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge | — |
+| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions` | — |
 
-Total: 449,886 checked properties in about 10 seconds.
+Total: 593,940 checked properties. Test files run in parallel; the slowest, `kalpana.test.js`, takes about 10 seconds on a laptop CPU at full speed.
 
-`npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, and switches tabs. It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
+`npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, checks that kalpana presets land next to their eduppu and that the audit names phrase sources, leaps and every mora style, and switches tabs. It also times 100 Kalyani rounds (best of three; the limit is 1 s at full CPU speed, scaled up by a calibration loop on a throttled machine). It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
 
 ---
 
@@ -1031,6 +1142,9 @@ Evaluation hooks already in the engine:
 - **Projection changes a few swaras in asymmetric janyas.** 0.30% of notes, always flagged. Teachers may prefer a different adaptation, which is why changes are shown, not hidden.
 - **The familiarity model is first-order.** It learns steps, karvai placement and contour from 35 lines. It does not capture longer devices such as "repeat the laghu's pattern". At T = 0, new patterns are sheet-like but not sheet-identical, by design.
 - **"Conventional" and "unconventional" kalpana devices are a curated catalogue.** The classification follows common pedagogy (janta and dattu varisai, runs, sequences, the mora) and should be validated by the teacher panel.
+- **Raga profiles are research notes, not a teacher's ear.** Phrases came through summarising fetches and some octaves were inferred (`octaveCertain: false`, so the generator also tries the other octave). 52 ragas have no usable phrases and fall back to generic devices, and the demo says so. A teacher review screen is planned.
+- **Phrase share is measured on free endings.** A mora takes about half of a one-avartanam round and is not phrase material, so with `auto` endings the attested share is about 30% at T = 0 even though the body before the mora is about 70% attested.
+- **Path-dependent leap rules are soft, except one.** Unlicensed and unresolved leaps, the leap budget and the register cap are scores. The same-direction double-leap ban is exact below T = 1.5 because the tables carry the arriving move's class; the hard-avoid lists are exact for one swara of look-behind and avoided by the sampler for longer junctions.
 - **Sollu vocabulary and spellings vary by bani.** Unknown syllables are warnings, not errors, and aliases map common spellings (ta/tha, di/dhi, tom/thom, tei/tai, …).
 - **Chapu support covers Tisra, Khanda and Misra.** Sankeerna Chapu is not included because counting conventions for it differ.
 - **Playback is a sketch.** Equal temperament, plain tones, no gamakas.
