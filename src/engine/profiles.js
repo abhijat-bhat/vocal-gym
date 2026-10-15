@@ -1,10 +1,10 @@
-import GENERATED from './data/profiles.generated.js';
+import GENERATED, { SOURCES } from './data/profiles.generated.js';
 
 /* Vocal Gym engine · raga profiles for the kalpana generator
    The table is compiled from data/raga-profiles.json by scripts/compile-profiles.js, so the browser
    never parses the JSON. getProfile(ragaId) returns a raga's compiled entry or null.
    setProfiles(table) swaps in another table (tests, future teacher-edited profiles);
-   setProfiles(null) restores the compiled one. */
+   setProfiles(null) restores the compiled one. getSource(id) names a cited source. */
 let TABLE = GENERATED;
 
 function getProfile(raga) {
@@ -14,5 +14,8 @@ function getProfile(raga) {
 function setProfiles(table) {
   TABLE = table == null ? GENERATED : table;
 }
+function getSource(id) {
+  return (id != null && Object.prototype.hasOwnProperty.call(SOURCES, id) && SOURCES[id]) || null;
+}
 
-export { getProfile, setProfiles };
+export { getProfile, setProfiles, getSource };

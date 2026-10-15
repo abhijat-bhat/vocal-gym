@@ -37,4 +37,77 @@ const CELLS = (function () {
   return out;
 })();
 
-export { CELL_DEFS, CELLS };
+/* Anchored phrase devices: absolute pitches taken from the raga profile (plan 2.1).
+     whole      the phrase as written                                  phrase           F0 = 2 · weight · type · confidence
+     octave     ±12, only when the octave was inferred                 phrase           0.8 × whole
+     fragment   every 3–5 swara window of a phrase of 5 or more        phrase-fragment  0.6 × whole
+     sequence   whole or fragment shifted one place along the scale    phrase-variant   0.3 × whole, N0 +0.6
+     inversion  a fragment's contour mirrored around its first swara   phrase-variant   0, N0 +0.9 (T >= 1 only)
+   Variants are the out-of-the-box phrases: rooted in the raga's idiom but not attested.
+   notes: the raga's union scale (pitches, ascending); valid: the raga's direction rule. */
+const TYPE_FACTOR = { signature: 1.0, ending: 0.9, janta: 0.8, dattu: 0.8, connective: 0.6 };
+const CONF_FACTOR = { high: 1.0, medium: 0.8, low: 0.5, none: 0.5 };
+const KIND_WORD = { phrase: 'phrase', 'phrase-fragment': 'fragment', 'phrase-variant': 'variant' };
+
+function phraseDevices(profile, notes, valid, opts) {
+  const o = opts || {}, out = [], seen = new Map(), ix = new Map(notes.map((p, k) => [p, k]));
+  const attested = new Set();
+  const key = (ps, ds) => ps.join(',') + '/' + ds.join(',');
+  const legal = ps => { for (let k = 1; k < ps.length; k++) if (!valid(ps[k - 1], ps[k])) return false; return true; };
+  function add(d) {
+    const k = key(d.pitches, d.durs), old = seen.get(k);
+    if (old) { if (d.F0 > old.F0) Object.assign(old, d); return; }
+    d.len = d.durs.reduce((s, x) => s + x, 0);
+    seen.set(k, d); out.push(d);
+  }
+  const base = (ph, kind, variant, pitches, durs, F0, N0, extra) => Object.assign({
+    id: ph.id + ':' + variant + ':' + pitches.join(','), base: 'ph:' + ph.id, kind, variant, name: ph.type + ' ' + KIND_WORD[kind] + (variant === 'octave+' ? ', octave up' : variant === 'octave-' ? ', octave down' : variant === 'sequence' ? ' (sequence)' : variant === 'inversion' ? ' (inversion)' : ''),
+    phraseId: ph.id, source: ph.source, type: ph.type, pitches, durs, F0, N0, dir: 0, attested: kind !== 'phrase-variant'
+  }, extra || {});
+  const conf = CONF_FACTOR[profile.confidence] || 0.5;
+  const shift = (ps, d) => { const out2 = []; for (const p of ps) { const k = ix.get(p); if (k == null || k + d < 0 || k + d >= notes.length) return null; out2.push(notes[k + d]); } return out2; };
+  const mirror = ps => { const k0 = ix.get(ps[0]), out2 = []; for (const p of ps) { const k = 2 * k0 - ix.get(p); if (k < 0 || k >= notes.length) return null; out2.push(notes[k]); } return out2; };
+  const pending = [];
+  (profile.phrases || []).forEach(ph => {
+    if (!ph.pitches.every(p => ix.has(p))) return;
+    const whole = 2.0 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;
+    const n = ph.pitches.length;
+    add(base(ph, 'phrase', 'whole', ph.pitches, ph.durs, whole, -0.5));
+    attested.add(ph.pitches.join(','));
+    if (!ph.octaveCertain) [12, -12].forEach(d => {
+      const ps = ph.pitches.map(p => p + d);
+      if (ps.every(p => ix.has(p))) { add(base(ph, 'phrase', d > 0 ? 'octave+' : 'octave-', ps, ph.durs, 0.8 * whole, -0.5)); attested.add(ps.join(',')); }
+    });
+    const frags = [];
+    if (n >= 5) for (let w = 3; w <= 5; w++) for (let s = 0; s + w <= n; s++) {
+      if (w === n) continue;
+      const ps = ph.pitches.slice(s, s + w), ds = ph.durs.slice(s, s + w);
+      ds[ds.length - 1] = 1;                       // a fragment ends on its swara, not on the phrase's karvai
+      add(base(ph, 'phrase-fragment', 'fragment@' + s, ps, ds, 0.6 * whole, -0.2));
+      attested.add(ps.join(','));
+      frags.push([ps, ds]);
+    }
+    pending.push({ ph, whole, frags });
+  });
+  // variants: built after every attested shape is known, so none of them repeats one
+  pending.forEach(({ ph, whole, frags }) => {
+    [[ph.pitches, ph.durs]].concat(frags).forEach(([ps, ds]) => [1, -1].forEach(d => {
+      const sp = shift(ps, d);
+      if (sp && legal(sp) && !attested.has(sp.join(','))) add(base(ph, 'phrase-variant', 'sequence', sp, ds, 0.3 * whole, 0.6));
+    }));
+    if (o.inversions) frags.forEach(([ps, ds]) => {
+      const mp = mirror(ps);
+      if (mp && legal(mp) && !attested.has(mp.join(',')) && mp.join(',') !== ps.join(',')) add(base(ph, 'phrase-variant', 'inversion', mp, ds, 0, 0.9));
+    });
+  });
+  // documented direction-rule exceptions: whole phrases only, checked at entry and exit only (plan 2.6)
+  if (o.exceptions) (profile.exceptions || []).forEach(ph => {
+    const first = ph.pitches[0], last = ph.pitches[ph.pitches.length - 1];
+    if (!ix.has(first) || !ix.has(last) || !ph.pitches.every(p => p >= notes[0] && p <= notes[notes.length - 1])) return;
+    const whole = 2.0 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;
+    add(base(ph, 'phrase', 'whole', ph.pitches, ph.durs, whole, -0.5, { exception: true, anya: ph.anya }));
+  });
+  return out;
+}
+
+export { CELL_DEFS, CELLS, TYPE_FACTOR, CONF_FACTOR, phraseDevices };

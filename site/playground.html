@@ -162,7 +162,7 @@ input[type=range]{width:100%;accent-color:var(--saffron)}
 .s.teer{color:var(--saffron);font-weight:600}
 .s.gap{color:var(--muted)}
 .s.pre{color:var(--line-2)}
-.s.land{color:var(--saffron);font-weight:600}
+.s.land{font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .s.edp{color:var(--teal)}
 .audit{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:4px;font-size:.84rem}
 .audit li::before{content:"✓";color:var(--good);font-weight:700;margin-right:8px}
@@ -182,6 +182,9 @@ textarea.src{display:block;width:100%;font-family:var(--font-mono);font-size:.86
 .btn:disabled:hover{border-color:var(--line-2)}
 .s.nov{color:var(--violet)}
 .s.mora{color:var(--teal)}
+.s.ph{color:var(--saffron)}
+.s.frag{color:var(--saffron);opacity:.72}
+.s.var{color:var(--violet);font-style:italic}
 .s.cs{box-shadow:inset 1px 0 0 var(--line)}
 .s.sub{min-width:.9ch}
 .scorehead{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:14px 0 4px;font-size:.92rem;color:var(--fg-2)}
@@ -315,7 +318,7 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
       <div class="btnrow"><button class="btn primary" type="button" id="k-new">New variation</button><button class="btn" type="button" id="k-play">Play</button><button class="btn" type="button" id="k-copy">Copy notation</button></div>
       <p class="info" id="k-info"></p>
       <div class="notation" id="k-out" aria-live="polite"></div>
-      <div class="legend"><span style="color:var(--fg)">conventional device</span><span style="color:var(--violet)">unconventional device</span><span style="color:var(--teal)">mora</span><span>│ device boundary</span><span style="color:var(--saffron);font-weight:600">last swara, next to the eduppu</span></div>
+      <div class="legend"><span style="color:var(--saffron)">attested phrase</span><span style="color:var(--saffron);opacity:.72">phrase fragment</span><span style="color:var(--violet);font-style:italic">phrase variant</span><span style="color:var(--fg)">generic device</span><span style="color:var(--violet)">unconventional device</span><span style="color:var(--teal)">mora</span><span>│ device boundary</span><span style="font-weight:700;text-decoration:underline">last swara, next to the eduppu</span></div>
       <ul class="audit" id="k-audit"></ul>
     </div>
     <div class="panel" style="border-top:1px solid var(--line-2);padding-top:12px">
@@ -416,6 +419,7 @@ var VGEngine = (() => {
     fmtTicks: () => fmtTicks,
     generateMotif: () => generateMotif,
     getProfile: () => getProfile,
+    getSource: () => getSource,
     hamming: () => hamming,
     idiomatic: () => idiomatic,
     jathi: () => jathi,
@@ -2745,6 +2749,57 @@ var VGEngine = (() => {
       avoid: []
     }
   };
+  var SOURCES = {
+    S31: { "title": "musicmaster.in: Era napai varnam (Todi) transcription", "url": "https://musicmaster.in/blog/era-napai-varnam-thodi-raagam/", "reliability": "medium" },
+    S36: { "title": "Darbar Raga Explorer: Todi", "url": "https://darbar.org/raga/todi", "reliability": "high" },
+    S37: { "title": 'M. Subramanian, "Carnatic Ragam Thodi: Pitch Analysis of Notes and Gamakams", Sangeet Natak XLI(1), 2007', "url": "https://icvtesting.nvli.in/system/files/indculturePDFs/JSNA-41%281%29%2003-20.pdf", "reliability": "high" },
+    S40: { "title": "Wikipedia: Mayamalavagowla", "url": "https://en.wikipedia.org/wiki/Mayamalavagowla", "reliability": "medium" },
+    S53: { "title": "rasikas.org: Gourimanohari thread (SrinathK)", "url": "https://www.rasikas.org/forums/viewtopic.php?p=362597", "reliability": "medium" },
+    S55: { "title": "shivkumar.org: Deva Deva Kalayami (Swati Tirunal) notation", "url": "https://www.shivkumar.org/music/devadeva.htm", "reliability": "high" },
+    S56: { "title": "shivkumar.org: Gajananayutham (Dikshitar, Semmangudi version) notation", "url": "https://www.shivkumar.org/music/gajananayutham.htm", "reliability": "high" },
+    S57: { "title": "shivkumar.org: Guruleka (Tyagaraja) notation", "url": "https://www.shivkumar.org/music/guruleka.htm", "reliability": "high" },
+    S58: { "title": "shivkumar.org: Chakkani raja (Tyagaraja) notation", "url": "https://www.shivkumar.org/music/Chakkaniraja.htm", "reliability": "high" },
+    S59: { "title": "shivkumar.org: Amba vani (Muthiah Bhagavatar) notation", "url": "https://www.shivkumar.org/music/ambavani-keeravani.htm", "reliability": "high" },
+    S60: { "title": "Darbar Raga Explorer: Keeravani", "url": "https://darbar.org/raga/keeravani/", "reliability": "high" },
+    S61: { "title": "Shankar Mahadevan Academy: Natabhairavi", "url": "https://shankarmahadevanacademy.com/raga/natabhairavi/", "reliability": "low" },
+    S75: { "title": "rasikas.org: Harikambhoji vs Khamas / Kambhoji thread", "url": "https://www.rasikas.org/forums/viewtopic.php?p=298177", "reliability": "medium" },
+    S80: { "title": "Darbar Raga Explorer: Harikambhoji", "url": "https://darbar.org/raga/harikambhoji/", "reliability": "high" },
+    S81: { "title": "Darbar Raga Explorer: Charukesi", "url": "https://darbar.org/raga/charukesi/", "reliability": "high" },
+    S82: { "title": "shivkumar.org: Ada modi (Tyagaraja) notation", "url": "https://www.shivkumar.org/music/adamodi.htm", "reliability": "high" },
+    S102: { "title": "shivkumar.org: Antaranga bhakti (Koteeswara Iyer) notation", "url": "https://www.shivkumar.org/music/antarangabhakti.htm", "reliability": "high" },
+    S115: { "title": "rasikas.org: Raga Bhava - Pantuvarali (ratanabhinav)", "url": "https://rasikas.org/forums/viewtopic.php?p=313317", "reliability": "medium" },
+    S119: { "title": "musicmaster.in: Shanmugapriya", "url": "https://musicmaster.in/blog/delve-into-shanmugapriya-carnatic-raagam/", "reliability": "low" },
+    S121: { "title": "Ragajunglism: Simhendra Madhyamam", "url": "https://ragajunglism.org/ragas/simhendra-madhyamam", "reliability": "medium" },
+    S123: { "title": "Darbar Raga Explorer: Hemavati", "url": "https://darbar.org/raga/hemavati/", "reliability": "high" },
+    S124: { "title": "Darbar Raga Explorer: Dharmavati", "url": "https://darbar.org/raga/dharmavati/", "reliability": "high" },
+    S125: { "title": "Ocean of Ragas: Shanmukhpriya (Raga of the Month, Dec 2018, citing B. Subba Rao, Raga Nidhi IV)", "url": "https://www.oceanofragas.com/RagaOfMonthPDF/201812_December_ROTM_Shanmukhpriya.pdf", "reliability": "medium" },
+    S126: { "title": "shivkumar.org: Apparamabhakthi (Tyagaraja) notation", "url": "https://www.shivkumar.org/music/apparamabhakthi.htm", "reliability": "high" },
+    S127: { "title": "shivkumar.org: Devar Munivar (Lalgudi Jayaraman) varnam notation", "url": "https://www.shivkumar.org/music/varnams/devarmunivar-lalgudi-varnam-shanmukhapriya.htm", "reliability": "high" },
+    S141: { "title": "Darbar Raga Explorer: Latangi", "url": "https://darbar.org/raga/latangi/", "reliability": "high" },
+    S142: { "title": "Darbar Raga Explorer: Vachaspati", "url": "https://darbar.org/raga/vachaspati/", "reliability": "high" },
+    S143: { "title": "Darbar Raga Explorer: Kalyani", "url": "https://darbar.org/raga/kalyani/", "reliability": "high" },
+    S144: { "title": "Rajan Parrikar: Kalyani (Carnatic)", "url": "https://www.parrikar.org/carnatic/kalyani/", "reliability": "high" },
+    S152: { "title": "Wikipedia: Abhogi", "url": "https://en.wikipedia.org/wiki/Abhogi", "reliability": "medium" },
+    S162: { "title": "Darbar Raga Explorer: Mohana", "url": "https://darbar.org/raga/mohana/", "reliability": "high" },
+    S163: { "title": "Darbar Raga Explorer: Hindola", "url": "https://darbar.org/raga/hindola/", "reliability": "high" },
+    S164: { "title": "Darbar Raga Explorer: Madhyamavati", "url": "https://darbar.org/raga/madhyamavati/", "reliability": "high" },
+    S165: { "title": "Darbar Raga Explorer: Shuddha Saveri", "url": "https://darbar.org/raga/shuddha-saveri/", "reliability": "high" },
+    S166: { "title": "Darbar Raga Explorer: Hamsadhwani", "url": "https://darbar.org/raga/hamsadhwani", "reliability": "high" },
+    S168: { "title": "Darbar Raga Explorer: Kambhoji", "url": "https://darbar.org/raga/kambhoji/", "reliability": "high" },
+    S169: { "title": "Darbar Raga Explorer: Bilahari", "url": "https://darbar.org/raga/bilahari/", "reliability": "high" },
+    S170: { "title": "Darbar Raga Explorer: Saveri", "url": "https://darbar.org/raga/saveri/", "reliability": "high" },
+    S171: { "title": "Darbar Raga Explorer: Arabhi", "url": "https://darbar.org/raga/arabhi/", "reliability": "high" },
+    S172: { "title": "Darbar Raga Explorer: Kedaragaula", "url": "https://darbar.org/raga/kedaragaula/", "reliability": "high" },
+    S176: { "title": "NIOS Carnatic Music textbook, KCM-6", "url": "https://www.nios.ac.in/media/documents/Carnatic_Music_243/carnaticmusicbook2/KCM-6.pdf", "reliability": "medium" },
+    S179: { "title": "shivkumar.org: Evvari Bodhana (Patnam Subramania Iyer) varnam notation", "url": "https://www.shivkumar.org/music/varnams/evvaribodhana.htm", "reliability": "high" },
+    S180: { "title": "shivkumar.org: Brochevarevare (Tyagaraja) notation", "url": "https://www.shivkumar.org/music/brochevarevare.htm", "reliability": "high" },
+    S181: { "title": "shivkumar.org: Kunda Goura geetham (Malahari) notation", "url": "https://www.shivkumar.org/music/varnams/kundagoura-geetham.htm", "reliability": "high" },
+    S182: { "title": "shivkumar.org: Lambodara / Sri Gananatha geetham (Malahari) notation", "url": "https://www.shivkumar.org/music/varnams/lambodara-geetham.htm", "reliability": "high" },
+    S183: { "title": "shivkumar.org: Bhajare re manasa (Mysore Vasudevachar) notation", "url": "https://www.shivkumar.org/music/bhajare-re-manasa.htm", "reliability": "medium" },
+    S184: { "title": "guruguha.org: Kannada Bangala & Malahari, the conjoined twins", "url": "https://guruguha.org/?p=1971", "reliability": "high" },
+    S185: { "title": "guruguha.org: The mystery about Kambhoji, part 2", "url": "https://guruguha.org/the-mystery-about-kambhoji-part-2/", "reliability": "high" },
+    S190: { "title": "Shankar Mahadevan Academy: Sriranjani", "url": "https://shankarmahadevanacademy.com/raga/sriranjani/", "reliability": "low" }
+  };
 
   // src/engine/profiles.js
   var TABLE = profiles_generated_default;
@@ -2754,6 +2809,9 @@ var VGEngine = (() => {
   }
   function setProfiles(table) {
     TABLE = table == null ? profiles_generated_default : table;
+  }
+  function getSource(id) {
+    return id != null && Object.prototype.hasOwnProperty.call(SOURCES, id) && SOURCES[id] || null;
   }
 
   // src/engine/kalpana/devices.js
@@ -2789,6 +2847,105 @@ var VGEngine = (() => {
     }));
     return out;
   }();
+  var TYPE_FACTOR = { signature: 1, ending: 0.9, janta: 0.8, dattu: 0.8, connective: 0.6 };
+  var CONF_FACTOR = { high: 1, medium: 0.8, low: 0.5, none: 0.5 };
+  var KIND_WORD = { phrase: "phrase", "phrase-fragment": "fragment", "phrase-variant": "variant" };
+  function phraseDevices(profile, notes, valid, opts) {
+    const o = opts || {}, out = [], seen = /* @__PURE__ */ new Map(), ix = new Map(notes.map((p, k) => [p, k]));
+    const attested = /* @__PURE__ */ new Set();
+    const key = (ps, ds) => ps.join(",") + "/" + ds.join(",");
+    const legal = (ps) => {
+      for (let k = 1; k < ps.length; k++) if (!valid(ps[k - 1], ps[k])) return false;
+      return true;
+    };
+    function add(d) {
+      const k = key(d.pitches, d.durs), old = seen.get(k);
+      if (old) {
+        if (d.F0 > old.F0) Object.assign(old, d);
+        return;
+      }
+      d.len = d.durs.reduce((s, x) => s + x, 0);
+      seen.set(k, d);
+      out.push(d);
+    }
+    const base = (ph, kind, variant, pitches, durs, F0, N0, extra) => Object.assign({
+      id: ph.id + ":" + variant + ":" + pitches.join(","),
+      base: "ph:" + ph.id,
+      kind,
+      variant,
+      name: ph.type + " " + KIND_WORD[kind] + (variant === "octave+" ? ", octave up" : variant === "octave-" ? ", octave down" : variant === "sequence" ? " (sequence)" : variant === "inversion" ? " (inversion)" : ""),
+      phraseId: ph.id,
+      source: ph.source,
+      type: ph.type,
+      pitches,
+      durs,
+      F0,
+      N0,
+      dir: 0,
+      attested: kind !== "phrase-variant"
+    }, extra || {});
+    const conf = CONF_FACTOR[profile.confidence] || 0.5;
+    const shift = (ps, d) => {
+      const out2 = [];
+      for (const p of ps) {
+        const k = ix.get(p);
+        if (k == null || k + d < 0 || k + d >= notes.length) return null;
+        out2.push(notes[k + d]);
+      }
+      return out2;
+    };
+    const mirror = (ps) => {
+      const k0 = ix.get(ps[0]), out2 = [];
+      for (const p of ps) {
+        const k = 2 * k0 - ix.get(p);
+        if (k < 0 || k >= notes.length) return null;
+        out2.push(notes[k]);
+      }
+      return out2;
+    };
+    const pending = [];
+    (profile.phrases || []).forEach((ph) => {
+      if (!ph.pitches.every((p) => ix.has(p))) return;
+      const whole = 2 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;
+      const n = ph.pitches.length;
+      add(base(ph, "phrase", "whole", ph.pitches, ph.durs, whole, -0.5));
+      attested.add(ph.pitches.join(","));
+      if (!ph.octaveCertain) [12, -12].forEach((d) => {
+        const ps = ph.pitches.map((p) => p + d);
+        if (ps.every((p) => ix.has(p))) {
+          add(base(ph, "phrase", d > 0 ? "octave+" : "octave-", ps, ph.durs, 0.8 * whole, -0.5));
+          attested.add(ps.join(","));
+        }
+      });
+      const frags = [];
+      if (n >= 5) for (let w = 3; w <= 5; w++) for (let s = 0; s + w <= n; s++) {
+        if (w === n) continue;
+        const ps = ph.pitches.slice(s, s + w), ds = ph.durs.slice(s, s + w);
+        ds[ds.length - 1] = 1;
+        add(base(ph, "phrase-fragment", "fragment@" + s, ps, ds, 0.6 * whole, -0.2));
+        attested.add(ps.join(","));
+        frags.push([ps, ds]);
+      }
+      pending.push({ ph, whole, frags });
+    });
+    pending.forEach(({ ph, whole, frags }) => {
+      [[ph.pitches, ph.durs]].concat(frags).forEach(([ps, ds]) => [1, -1].forEach((d) => {
+        const sp2 = shift(ps, d);
+        if (sp2 && legal(sp2) && !attested.has(sp2.join(","))) add(base(ph, "phrase-variant", "sequence", sp2, ds, 0.3 * whole, 0.6));
+      }));
+      if (o.inversions) frags.forEach(([ps, ds]) => {
+        const mp = mirror(ps);
+        if (mp && legal(mp) && !attested.has(mp.join(",")) && mp.join(",") !== ps.join(",")) add(base(ph, "phrase-variant", "inversion", mp, ds, 0, 0.9));
+      });
+    });
+    if (o.exceptions) (profile.exceptions || []).forEach((ph) => {
+      const first = ph.pitches[0], last = ph.pitches[ph.pitches.length - 1];
+      if (!ix.has(first) || !ix.has(last) || !ph.pitches.every((p) => p >= notes[0] && p <= notes[notes.length - 1])) return;
+      const whole = 2 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;
+      add(base(ph, "phrase", "whole", ph.pitches, ph.durs, whole, -0.5, { exception: true, anya: ph.anya }));
+    });
+    return out;
+  }
 
   // src/engine/kalpana/landing.js
   var KALPANA_RANGE = [-5, 19];
@@ -2877,6 +3034,46 @@ var VGEngine = (() => {
     }
     return { unl, dbl, unres };
   }
+  function internalTerms(LX, cn) {
+    return leapTerms(LX, cn, 1, cn.length);
+  }
+  function boundaryTerms(LX, tail, cn, after, countAfter) {
+    const T0 = tail.length, E = T0 + cn.length, len = E + after.length;
+    const at = (k) => k < T0 ? tail[k] : k < E ? cn[k - T0] : after[k - E];
+    const mv = (k) => at(k).i - at(k - 1).i;
+    const inPhrase = (k) => {
+      const a = at(k), b = at(k - 1);
+      return a.g === b.g && a.g != null && !!a.phrase;
+    };
+    let unl = 0, dbl = 0, unres = 0;
+    const counted = countAfter && after.length ? [T0, E] : [T0];
+    for (const k of counted) {
+      if (k < 1 || k >= len || Math.abs(mv(k)) < 2) continue;
+      const a = at(k - 1), b = at(k), tag = a.g === b.g ? { phrase: !!b.phrase, arp: !!b.arp } : null;
+      if (!licence(LX, a.p, b.p, tag)) unl++;
+    }
+    for (const k of countAfter && after.length ? [T0, T0 + 1, E] : [T0, T0 + 1]) {
+      if (k < 2 || k >= len || k === T0 + 1 && k >= E) continue;
+      const d = mv(k), d0 = mv(k - 1);
+      if (Math.abs(d) >= 2 && Math.abs(d0) >= 2 && Math.sign(d) === Math.sign(d0) && !inPhrase(k) && !inPhrase(k - 1)) dbl++;
+    }
+    for (let k = Math.max(1, T0 - 2); k < len; k++) {
+      const d = mv(k), close = k + 2;
+      if (Math.abs(d) < 2 || close >= len || close < T0 || inPhrase(k)) continue;
+      if (k >= T0 + 1 && close <= E - 1) continue;
+      if (at(k).dur >= 2) continue;
+      let ok = false;
+      for (let m = k + 1; m <= close; m++) {
+        const e = mv(m);
+        if (m === k + 1 && e === 0 || Math.abs(e) === 1 && Math.sign(e) === -Math.sign(d)) {
+          ok = true;
+          break;
+        }
+      }
+      if (!ok) unres++;
+    }
+    return { unl, dbl, unres };
+  }
   function leapStats(LX, line, after, slots) {
     const seq = line.concat(after || []), list = [];
     let licensed = 0, unlicensed = 0, unresolved = 0, tritone = 0, wide = 0, alpa = 0, double = 0;
@@ -2908,6 +3105,37 @@ var VGEngine = (() => {
   // src/engine/kalpana/index.js
   var fail = (code, error) => ({ error, code });
   var swaraName = (raga, p) => (raga.labels[mod12(p)] || "?") + (p >= 12 ? "'" : p < 0 ? "." : "");
+  var PHRASE_KINDS = /* @__PURE__ */ new Set(["phrase", "phrase-fragment"]);
+  var GENERIC_FACTOR = { high: 0.5, medium: 0.7, low: 1, none: 1 };
+  var JANTA = /* @__PURE__ */ new Set(["janta", "janta3"]);
+  var DATTU = /* @__PURE__ */ new Set(["dattu"]);
+  var JD_FACTOR = { avoid: 0.2, suits: 1.2 };
+  var targetShare = (T) => 0.7 - 0.2 * T;
+  function containsRun(seq, pat, from) {
+    for (let s = Math.max(0, (from || 0) - pat.length + 1); s + pat.length <= seq.length; s++) {
+      let k = 0;
+      while (k < pat.length && seq[s + k] === pat[k]) k++;
+      if (k === pat.length) return true;
+    }
+    return false;
+  }
+  var DEVICE_CACHE = /* @__PURE__ */ new WeakMap();
+  function cachedTables(raga, profile, key, make) {
+    let ent = DEVICE_CACHE.get(raga);
+    if (!ent || ent.profile !== profile) {
+      ent = { profile, map: /* @__PURE__ */ new Map() };
+      DEVICE_CACHE.set(raga, ent);
+    }
+    if (!ent.map.has(key)) ent.map.set(key, make());
+    return ent.map.get(key);
+  }
+  function profileCoverage(profile, phraseCount) {
+    if (!profile) return "none";
+    if (phraseCount) return "phrases";
+    const roles = ["nyasa", "jiva", "alpa", "notNyasa", "avoidLanding", "avoid"].some((k) => (profile[k] || []).length);
+    const landing = (profile.landing || []).join(",") !== "0,7";
+    return roles || landing ? "roles-only" : "none";
+  }
   function kalpanaRound(raga, opts) {
     const o = opts || {}, D = dial(o.T == null ? 1 : o.T);
     const strict = build(raga, o, D.T < 1.5);
@@ -2928,6 +3156,13 @@ var VGEngine = (() => {
     });
     notes.sort((a, b) => a - b);
     const NN = notes.length, ix = (p) => notes.indexOf(p);
+    const pos = (p) => {
+      const k = ix(p);
+      if (k >= 0) return k;
+      let n = 0;
+      while (n < NN && notes[n] < p) n++;
+      return n - 0.5;
+    };
     const s0 = ix(startPitch);
     if (!(slots >= 1)) return fail("bad-length", "The round needs at least one slot.");
     if (s0 < 0) return fail("start-not-in-raga", "The opening swara is not a swara of " + raga.name + " inside the kalpana range (mandra Pa to tara Pa).");
@@ -2945,39 +3180,118 @@ var VGEngine = (() => {
       targets = [{ p: o.targetPitch, approach: null }];
     }
     const profile = getProfile(raga), LX = leapContext(profile, D.T, hard);
+    const landing = new Set(profile ? profile.landing : [0, 7]);
+    const restBad = new Set(profile ? profile.avoidLanding.concat(profile.notNyasa) : []);
+    const alpa = new Set(profile ? profile.alpa : []), jiva = new Set(profile ? profile.jiva : []);
+    const hardAvoid = profile ? profile.avoid.filter((a) => a.strength === "hard").map((a) => a.pitches) : [];
+    const softAvoid = profile ? profile.avoid.filter((a) => a.strength !== "hard").map((a) => a.pitches) : [];
+    const avoidsHard = (seq, from) => hardAvoid.some((p) => containsRun(seq, p, from));
     const badLeap = (ia, ib) => hard && isLeap(ia, ib) && !!forbiddenLeap(LX, notes[ia], notes[ib]);
     const sameDirLeaps = (ia, ib, ic) => isLeap(ia, ib) && isLeap(ib, ic) && Math.sign(ib - ia) === Math.sign(ic - ib);
     const cls = (ia, ib) => isLeap(ia, ib) ? ib > ia ? 1 : 2 : 0;
     const clash = (m2, m22) => hard && m2 !== 0 && m2 === m22;
     const NS = NN * 3;
-    const app = CELLS.map((c) => {
-      const row = new Array(NN);
-      for (let i2 = 0; i2 < NN; i2++) {
-        let cur = i2, back = -1, ok = true;
-        const seq = [];
-        for (const [dl, du] of c.shape) {
-          const j = cur + dl;
-          if (j < 0 || j >= NN || !Pj.valid(notes[cur], notes[j]) || badLeap(cur, j) || hard && back >= 0 && sameDirLeaps(back, cur, j)) {
-            ok = false;
-            break;
+    const tables = cachedTables(raga, profile, (hard ? "h" : "") + (D.T >= 1 ? "i" : "") + (o.allowExceptions ? "x" : ""), makeTables);
+    const { app, phr, G } = tables;
+    const entryOK = (gp, i2, m2) => gp.allow[m2] >> i2 & 1;
+    function makeTables() {
+      const app2 = CELLS.map((c) => {
+        const row = new Array(NN);
+        for (let i2 = 0; i2 < NN; i2++) {
+          let cur = i2, back = -1, ok = true;
+          const seq = [];
+          for (const [dl, du] of c.shape) {
+            const j = cur + dl;
+            if (j < 0 || j >= NN || !Pj.valid(notes[cur], notes[j]) || badLeap(cur, j) || hard && back >= 0 && sameDirLeaps(back, cur, j)) {
+              ok = false;
+              break;
+            }
+            seq.push({ j, dur: du });
+            back = cur;
+            cur = j;
           }
-          seq.push({ j, dur: du });
-          back = cur;
-          cur = j;
+          if (ok && hardAvoid.length && avoidsHard([notes[i2]].concat(seq.map((x) => notes[x.j])), 0)) ok = false;
+          if (!ok) {
+            row[i2] = null;
+            continue;
+          }
+          const tpl = seq.map((x) => ({ p: notes[x.j], i: x.j, dur: x.dur, g: -9, arp: c.base === "arp", phrase: false }));
+          row[i2] = { end: cur, seq, tpl, ps: tpl.map((x) => x.p), int: internalTerms(LX, tpl), mf: cls(i2, seq[0].j), me: cls(back, cur) };
         }
-        row[i2] = ok ? { end: cur, seq, mf: cls(i2, seq[0].j), me: cls(back, cur) } : null;
-      }
-      return row;
-    });
+        return row;
+      });
+      const phr2 = phraseDevices(profile || { phrases: [] }, notes, Pj.valid, { inversions: D.T >= 1, exceptions: !!o.allowExceptions });
+      const anch = [];
+      phr2.forEach((dv) => {
+        const js = dv.pitches.map(pos), n = js.length;
+        if (!dv.attested) {
+          for (let k = 1; k < n; k++) if (badLeap(js[k - 1], js[k]) || hard && k >= 2 && sameDirLeaps(js[k - 2], js[k - 1], js[k])) return;
+        }
+        if (hardAvoid.length && avoidsHard(dv.pitches, 0)) return;
+        const first = js[0], janta = n > 1 && dv.pitches[0] === dv.pitches[1];
+        let mask = 0;
+        for (let i2 = 0; i2 < NN; i2++) {
+          if (!Pj.valid(notes[i2], dv.pitches[0]) || i2 === first && !janta || badLeap(i2, first)) continue;
+          if (hard && !dv.attested && n > 1 && sameDirLeaps(i2, first, js[1])) continue;
+          if (hardAvoid.length && avoidsHard([notes[i2]].concat(dv.pitches), 1)) continue;
+          mask |= 1 << i2;
+        }
+        if (!mask) return;
+        const tpl = js.map((j, k) => ({ p: dv.pitches[k], i: j, dur: dv.durs[k], g: -9, phrase: dv.kind !== "phrase-variant", arp: false }));
+        anch.push({ dv, tpl, ps: dv.pitches, int: internalTerms(LX, tpl), first, end: js[n - 1], me: n > 1 ? cls(js[n - 2], js[n - 1]) : 0, len: dv.len, mask });
+      });
+      const groups = /* @__PURE__ */ new Map();
+      anch.forEach((a) => {
+        const k = a.mask + ":" + a.first;
+        if (!groups.has(k)) {
+          const allow = [0, 1, 2].map((m2) => {
+            let b = 0;
+            for (let i2 = 0; i2 < NN; i2++) if (a.mask >> i2 & 1 && !clash(m2, cls(i2, a.first))) b |= 1 << i2;
+            return b;
+          });
+          groups.set(k, { allow, first: a.first, devs: [] });
+        }
+        groups.get(k).devs.push(a);
+      });
+      const G2 = Array.from(groups.values());
+      G2.forEach((gp) => {
+        const seen = /* @__PURE__ */ new Set();
+        gp.moves = [];
+        gp.devs.forEach((a) => {
+          const k = a.len * 1e3 + a.end * 3 + a.me;
+          if (!seen.has(k)) {
+            seen.add(k);
+            gp.moves.push([a.len, a.end * 3 + a.me]);
+          }
+        });
+      });
+      return { app: app2, phr: phr2, G: G2 };
+    }
+    const masks = (row) => {
+      const b = [0, 0, 0];
+      for (let s = 0; s < NS; s++) if (row[s]) b[s % 3] |= 1 << (s / 3 | 0);
+      return b;
+    };
     const fwd = Array.from({ length: slots + 1 }, () => new Uint8Array(NS));
     [1, 2].forEach((d02) => {
       if (d02 <= slots) fwd[d02][s0 * 3] = 1;
     });
-    for (let t2 = 1; t2 < slots; t2++) for (let s = 0; s < NS; s++) if (fwd[t2][s]) {
-      const i2 = s / 3 | 0, m2 = s % 3;
-      for (let ci = 0; ci < CELLS.length; ci++) {
-        const a = app[ci][i2];
-        if (a && t2 + CELLS[ci].len <= slots && !clash(m2, a.mf)) fwd[t2 + CELLS[ci].len][a.end * 3 + a.me] = 1;
+    for (let t2 = 1; t2 < slots; t2++) {
+      const F = fwd[t2];
+      let anyState = false;
+      for (let s = 0; s < NS; s++) if (F[s]) {
+        anyState = true;
+        const i2 = s / 3 | 0, m2 = s % 3;
+        for (let ci = 0; ci < CELLS.length; ci++) {
+          const a = app[ci][i2];
+          if (a && t2 + CELLS[ci].len <= slots && !clash(m2, a.mf)) fwd[t2 + CELLS[ci].len][a.end * 3 + a.me] = 1;
+        }
+      }
+      if (!anyState) continue;
+      const R = masks(F);
+      for (const gp of G) {
+        if (!(R[0] & gp.allow[0] | R[1] & gp.allow[1] | R[2] & gp.allow[2])) continue;
+        for (const [L, es] of gp.moves) if (t2 + L <= slots) fwd[t2 + L][es] = 1;
       }
     }
     const reach = (t2, i2) => fwd[t2][i2 * 3] || fwd[t2][i2 * 3 + 1] || fwd[t2][i2 * 3 + 2];
@@ -3009,6 +3323,7 @@ var VGEngine = (() => {
           if (badLeap(cyc[k - 1], cyc[k]) || hard && k >= 2 && sameDirLeaps(cyc[k - 2], cyc[k - 1], cyc[k])) leapsOK = false;
         }
         if (!leapsOK) return;
+        if (hardAvoid.length && avoidsHard(ph.concat(ph).map((j) => notes[j]), 0)) return;
         const two = ph.concat(ph), unresolvedAt = (q) => {
           let n = 0;
           for (let k = 1; k <= u; k++) {
@@ -3066,14 +3381,27 @@ var VGEngine = (() => {
     } else inSet = (i2) => i2 === tg;
     const bwd = Array.from({ length: B + 1 }, () => new Uint8Array(NS));
     for (let s = 0; s < NS; s++) bwd[B][s] = inSet(s / 3 | 0, s % 3) ? 1 : 0;
-    for (let t2 = B - 1; t2 >= 1; t2--) for (let s = 0; s < NS; s++) {
-      const i2 = s / 3 | 0, m2 = s % 3;
-      for (let ci = 0; ci < CELLS.length; ci++) {
-        const a = app[ci][i2];
-        if (a && t2 + CELLS[ci].len <= B && !clash(m2, a.mf) && bwd[t2 + CELLS[ci].len][a.end * 3 + a.me]) {
-          bwd[t2][s] = 1;
-          break;
+    for (let t2 = B - 1; t2 >= 1; t2--) {
+      const W = bwd[t2];
+      for (let s = 0; s < NS; s++) {
+        const i2 = s / 3 | 0, m2 = s % 3;
+        for (let ci = 0; ci < CELLS.length; ci++) {
+          const a = app[ci][i2];
+          if (a && t2 + CELLS[ci].len <= B && !clash(m2, a.mf) && bwd[t2 + CELLS[ci].len][a.end * 3 + a.me]) {
+            W[s] = 1;
+            break;
+          }
         }
+      }
+      const add = [0, 0, 0];
+      for (const gp of G) {
+        if (!gp.moves.some(([L, es]) => t2 + L <= B && bwd[t2 + L][es])) continue;
+        add[0] |= gp.allow[0];
+        add[1] |= gp.allow[1];
+        add[2] |= gp.allow[2];
+      }
+      for (let m2 = 0; m2 < 3; m2++) if (add[m2]) {
+        for (let i2 = 0; i2 < NN; i2++) if (add[m2] >> i2 & 1) W[i2 * 3 + m2] = 1;
       }
     }
     const d0s = [1, 2].filter((d) => d <= B && bwd[d][s0 * 3]);
@@ -3083,14 +3411,14 @@ var VGEngine = (() => {
     const line = [{ p: startPitch, i: s0, dur: d0, pos: 0, g: 0 }];
     const after = mora ? mora.ph.map((j) => ({ p: notes[j], i: j, dur: 1, g: -1 })) : useEduppu ? [{ p: e, i: ix(e), dur: 1, g: -2 }] : [];
     const centre = Math.max(2, Math.min(10, (startPitch + targetPitch) / 2 + 2));
-    function registerExcess(cn) {
-      let ak = Math.floor(cn[0].pos / per), lo = Infinity, hi = -Infinity, ex = 0;
+    function registerExcess(cn, t0) {
+      let ak = Math.floor(t0 / per), lo = Infinity, hi = -Infinity, ex = 0, p0 = t0;
       for (let k = line.length - 1; k >= 0 && Math.floor(line[k].pos / per) === ak; k--) {
         lo = Math.min(lo, line[k].p);
         hi = Math.max(hi, line[k].p);
       }
       for (const n of cn) {
-        const a = Math.floor(n.pos / per);
+        const a = Math.floor(p0 / per);
         if (a !== ak) {
           if (hi - lo > LX.regCap) ex += hi - lo - LX.regCap;
           ak = a;
@@ -3099,75 +3427,113 @@ var VGEngine = (() => {
           lo = Math.min(lo, n.p);
           hi = Math.max(hi, n.p);
         }
+        p0 += n.dur;
       }
       if (hi - lo > LX.regCap) ex += hi - lo - LX.regCap;
       return ex;
     }
-    let t = d0, i = s0, m = 0, prev = null, unlSoFar = 0;
+    const phraseCount = phr.filter((d) => d.kind === "phrase").length;
+    const gFactor = phraseCount ? GENERIC_FACTOR[profile.confidence] || 1 : 1;
+    const jdF = (k, base) => JANTA.has(base) ? JD_FACTOR[profile && profile.janta] || 1 : DATTU.has(base) ? JD_FACTOR[profile && profile.dattu] || 1 : 1;
+    const maxAvoid = Math.max(1, ...hardAvoid.concat(softAvoid).map((p) => p.length));
+    const used = /* @__PURE__ */ new Set();
+    let t = d0, i = s0, m = 0, prev = null, unlSoFar = 0, phraseSlots = 0;
     while (t < B) {
       let cand = [];
       for (let ci = 0; ci < CELLS.length; ci++) {
-        const c = CELLS[ci], a = app[ci][i];
-        if (a && t + c.len <= B && !clash(m, a.mf) && bwd[t + c.len][a.end * 3 + a.me]) cand.push({ c, a });
+        const c2 = CELLS[ci], a = app[ci][i];
+        if (a && t + c2.len <= B && !clash(m, a.mf) && bwd[t + c2.len][a.end * 3 + a.me]) cand.push({ c: c2, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
       }
-      const g = units.length, tail = line.slice(-3);
+      for (const gp of G) if (entryOK(gp, i, m)) {
+        for (const a of gp.devs)
+          if (t + a.len <= B && bwd[t + a.len][a.end * 3 + a.me]) cand.push({ c: a.dv, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
+      }
+      const g = units.length, tail = line.slice(-3), look = line.slice(-(maxAvoid - 1)).map((n) => n.p);
       cand.forEach((x) => {
-        const cn = [];
-        let pos = t;
-        x.a.seq.forEach((s) => {
-          cn.push({ p: notes[s.j], i: s.j, dur: s.dur, pos, g, arp: x.c.base === "arp" });
-          pos += s.dur;
-        });
+        const cn = x.cn, ph = PHRASE_KINDS.has(x.c.kind);
         const last = t + x.c.len === B;
-        const seq = tail.concat(cn, last ? after : []);
-        const countTo = tail.length + cn.length + (last && mora ? 1 : 0);
-        x.cn = cn;
-        x.L = leapTerms(LX, seq, tail.length, countTo);
-        x.reg = per > 1 ? registerExcess(cn) : 0;
+        const bt = boundaryTerms(LX, tail, cn, last ? after : [], !!mora);
+        x.L = { unl: x.int.unl + bt.unl, dbl: x.int.dbl + bt.dbl, unres: x.int.unres + bt.unres };
+        x.reg = per > 1 && !ph ? registerExcess(cn, t) : 0;
+        if (hardAvoid.length || softAvoid.length) {
+          const run = look.concat(x.ps);
+          x.hardAvoid = hardAvoid.length && avoidsHard(run, look.length);
+          x.softAvoid = softAvoid.filter((p) => containsRun(run, p, look.length)).length;
+        } else {
+          x.hardAvoid = false;
+          x.softAvoid = 0;
+        }
       });
-      const scores = cand.map(({ c, a, L, reg }) => {
-        const ps = a.seq.map((x) => notes[x.j]);
-        let F = c.F0, N = c.N0;
+      if (hardAvoid.length && cand.some((x) => !x.hardAvoid)) cand = cand.filter((x) => !x.hardAvoid);
+      const share = phraseSlots / t, target = targetShare(D.T), push = 0.8 * (target - share) * 4;
+      const scores = cand.map(({ c: c2, ps, cn, L, reg, softAvoid: sa }) => {
+        const isPh = PHRASE_KINDS.has(c2.kind), isVar = c2.kind === "phrase-variant", anchored = !!c2.phraseId;
+        let F = c2.F0, N = c2.N0;
+        if (c2.kind === "conv") F *= gFactor;
+        F *= jdF(c2.kind, c2.base);
+        if (c2.base === "leap3" || c2.base === "leap4") N -= 0.3;
         if (t % per === 0) F += 0.6;
         else {
           F -= 0.4;
           N += 0.5;
         }
-        if (c.len % per === 0) F += 0.4;
+        if (c2.len % per === 0) F += 0.4;
         else if (per > 1) N += 0.4;
-        if (prev && prev.base === c.base && prev.dir === c.dir) {
+        if (!anchored && prev && prev.base === c2.base && prev.dir === c2.dir) {
           F += 0.5;
           N -= 0.4;
         }
-        if (prev && prev.id === c.id && prev.startP === ps[0]) {
+        if (prev && prev.id === c2.id && prev.startP === ps[0]) {
           F += 0.2;
           N -= 1;
         }
-        const last = a.seq[a.seq.length - 1];
-        if (last.dur === 2) {
-          if ((mod12(notes[last.j]) === 0 || mod12(notes[last.j]) === 7) && (t + c.len) % per === 0) F += 0.6;
-          else N += 0.3;
-        }
+        if (anchored && used.has(c2.phraseId)) F -= 0.8;
+        let pt = t;
+        cn.forEach((n) => {
+          if (n.dur >= 2) {
+            const pc = mod12(n.p);
+            if (landing.has(pc) && (pt + n.dur) % per === 0) F += 0.6;
+            else N += 0.3;
+            if (restBad.has(pc)) F -= 0.4;
+            if (alpa.has(pc)) F -= 0.3;
+          }
+          pt += n.dur;
+        });
+        F += Math.min(0.4, 0.2 * ps.filter((p) => jiva.has(mod12(p))).length);
+        F -= 1 * sa;
         const avg = ps.reduce((s, p) => s + p, 0) / ps.length;
         F -= 0.06 * Math.abs(avg - centre);
-        if (ps.some((p) => p > 12 || p < 0)) {
+        if (!isPh && ps.some((p) => p > 12 || p < 0)) {
           N += 0.5;
           F -= 0.3;
         }
-        if (prev && prev.dir && c.dir !== prev.dir) N += 0.3;
-        const allowed = Math.floor(LX.budget * (t + c.len) / 8 + 1e-9);
+        if (prev && prev.dir && c2.dir && c2.dir !== prev.dir) N += 0.3;
+        const allowed = Math.floor(LX.budget * (t + c2.len) / 8 + 1e-9);
         const over = Math.max(0, Math.min(L.unl, unlSoFar + L.unl - allowed));
         F -= 1.5 * L.unl + 0.6 * L.unres + 2 * L.dbl + 1 * over + 0.8 * reg;
-        return (1 - D.c) * F + D.c * N;
+        let score = (1 - D.c) * F + D.c * N;
+        if (isPh) score += push;
+        else if (push < 0 && (isVar || c2.kind === "nov")) score -= push * D.c;
+        return score;
       });
-      const ch = cand[soft(scores, D.tau, rand)];
-      units.push({ kind: ch.c.kind, base: ch.c.base, id: ch.c.id, name: ch.c.name, dir: ch.c.dir, t, notes: ch.a.seq.map((x) => ({ p: notes[x.j], dur: x.dur })) });
-      ch.cn.forEach((n) => line.push(n));
+      const ch = cand[soft(scores, D.tau, rand)], c = ch.c;
+      const unit = { kind: c.kind, base: c.base, id: c.id, name: c.name, dir: c.dir, t, notes: ch.cn.map((n) => ({ p: n.p, dur: n.dur })) };
+      if (c.phraseId) Object.assign(unit, { phraseId: c.phraseId, source: c.source, type: c.type, variant: c.variant }, c.exception ? { exception: true } : {});
+      units.push(unit);
+      {
+        let p0 = t;
+        ch.cn.forEach((n) => {
+          line.push(Object.assign({}, n, { g, pos: p0 }));
+          p0 += n.dur;
+        });
+      }
       unlSoFar += ch.L.unl;
-      prev = { base: ch.c.base, id: ch.c.id, dir: ch.c.dir, startP: notes[ch.a.seq[0].j] };
-      t += ch.c.len;
-      i = ch.a.end;
-      m = ch.a.me;
+      if (PHRASE_KINDS.has(c.kind)) phraseSlots += c.len;
+      if (c.phraseId) used.add(c.phraseId);
+      prev = { base: c.base, id: c.id, dir: c.dir, startP: ch.cn[0].p };
+      t += c.len;
+      i = ch.end;
+      m = ch.me;
     }
     if (mora) {
       for (let r = 0; r < 3; r++) {
@@ -3183,16 +3549,19 @@ var VGEngine = (() => {
     const notesOut = [];
     units.forEach((u) => u.notes.forEach((n) => notesOut.push(n)));
     const slotsOf = (u) => u.notes.reduce((s, n) => s + n.dur, 0);
-    let nov = 0, conv = 0;
-    const devices = {};
+    let nov = 0, conv = 0, phraseS = 0, variantS = 0;
+    const devices = {}, phrasesUsed = [];
     units.forEach((u) => {
       const L = slotsOf(u);
       if (u.kind === "nov") nov += L;
+      else if (u.kind === "phrase-variant") variantS += L;
+      else if (PHRASE_KINDS.has(u.kind)) phraseS += L;
       else if (u.kind === "conv" || u.kind === "mora") conv += L;
-      if (u.kind === "conv" || u.kind === "nov") {
+      if (u.kind !== "start" && u.kind !== "step" && u.kind !== "mora") {
         const k = u.name + (u.dir > 0 ? " \u2191" : u.dir < 0 ? " \u2193" : "");
         devices[k] = (devices[k] || 0) + 1;
       }
+      if (u.phraseId) phrasesUsed.push({ phraseId: u.phraseId, source: u.source, kind: u.kind, variant: u.variant, type: u.type, notes: u.notes.map((n) => n.p) });
     });
     const endInfo = mora ? { type: "mora", phrase: mora.ph.map((j) => notes[j]), q: mora.q, start: mora.B } : ending === "mora" ? { type: "free", fallbackFrom: "mora" } : { type: "free" };
     if (useEduppu) Object.assign(endInfo, { eduppu: e, final: targetPitch, approach: pick2.approach });
@@ -3202,7 +3571,16 @@ var VGEngine = (() => {
       slots,
       units,
       ending: endInfo,
-      stats: { novelShare: nov / slots, convShare: conv / slots, devices, leaps },
+      stats: {
+        novelShare: (nov + variantS) / slots,
+        convShare: (conv + phraseS) / slots,
+        phraseShare: phraseS / slots,
+        variantShare: variantS / slots,
+        profileCoverage: profileCoverage(profile, phraseCount),
+        phrases: phrasesUsed,
+        devices,
+        leaps
+      },
       dial: D
     };
   }
@@ -4616,6 +4994,14 @@ function kalLeapText(L){
   const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
   return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
 }
+function kalPhraseText(r, st){
+  const pct = x => Math.round(x * 100) + '%';
+  if (st.profileCoverage !== 'phrases') return 'Phrase data: none for this raga' + (st.profileCoverage === 'roles-only' ? ' (its resting, jiva and avoid data still shape the round)' : '') + ', so the round uses generic devices only.';
+  if (!st.phrases.length) return 'Phrases: none in this round (' + pct(st.phraseShare) + ' of the slots).';
+  const kind = { phrase: 'phrase', 'phrase-fragment': 'fragment', 'phrase-variant': 'variant' };
+  const list = st.phrases.map(p => p.notes.map(x => swara(r, x, false)).join(' ') + ' (' + kind[p.kind] + ' of ' + p.phraseId + ', ' + p.source + (E.getSource(p.source) ? ' ' + E.getSource(p.source).title : '') + ')');
+  return 'Phrases: ' + pct(st.phraseShare) + ' of the slots from attested phrases and fragments, ' + pct(st.variantShare) + ' from variants. ' + list.join('; ') + '.';
+}
 function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
@@ -4628,9 +5014,10 @@ function kalRender(){
   }
   const slots = [], notes = [];
   res.units.forEach(u => {
-    const cls = u.kind === 'nov' ? 'nov' : u.kind === 'mora' ? 'mora' : '';
+    const cls = { nov: 'nov', mora: 'mora', phrase: 'ph', 'phrase-fragment': 'frag', 'phrase-variant': 'var' }[u.kind] || '';
+    const src = u.source ? E.getSource(u.source) : null, srcTxt = u.source ? ' · ' + u.phraseId + ', source ' + u.source + (src ? ': ' + src.title : '') : '';
     u.notes.forEach((n, j) => {
-      slots.push({ t: swara(r, n.p, false), cls: cls + (j === 0 ? ' cs' : ''), title: u.name + (u.dir > 0 ? ' (up)' : u.dir < 0 ? ' (down)' : '') });
+      slots.push({ t: swara(r, n.p, false), cls: cls + (j === 0 ? ' cs' : ''), title: u.name + (u.dir > 0 ? ' (up)' : u.dir < 0 ? ' (down)' : '') + srcTxt });
       for (let k = 1; k < n.dur; k++) slots.push({ t: ',', cls: 'k ' + cls });
       notes.push({ p: n.p, slots: n.dur });
     });
@@ -4643,8 +5030,9 @@ function kalRender(){
   const nearTxt = fin + ', the ' + (res.ending.approach === 'below' ? 'arohana swara just below ' + edp + ', so the line rises into the eduppu' : 'avarohana swara just above ' + edp + ', so the line descends into the eduppu');
   const endTxt = res.ending.type === 'mora' ? 'Mora ending: ' + res.ending.phrase.map(p => swara(r, p, false)).join(' ') + ' three times with ' + (res.ending.q ? res.ending.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
   $('k-audit').innerHTML = [
-    ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(st.convShare * 100) + '% from conventional ones', true],
+    ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices and phrase variants, ' + Math.round(st.convShare * 100) + '% from attested phrases and conventional devices', true],
     ['Devices: ' + (dev || 'single steps only'), true],
+    [kalPhraseText(r, st), true],
     [kalLeapText(st.leaps) + (st.relaxed ? ' The leap filter was relaxed one level to fit this short span.' : ''), true],
     [endTxt, true],
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],

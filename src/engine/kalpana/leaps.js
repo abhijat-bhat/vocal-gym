@@ -88,6 +88,40 @@ function leapTerms(LX, seq, from, countTo) {
   return { unl, dbl, unres };
 }
 
+/* The same terms split for speed: internalTerms(cn) covers the device's own moves and is computed
+   once per device; boundaryTerms covers the moves that touch the line before it (tail) or what
+   follows the body (after: the mora, counted, or the eduppu, judged only). Together they equal
+   leapTerms(tail ++ cn ++ after, tail.length, ...). */
+function internalTerms(LX, cn) { return leapTerms(LX, cn, 1, cn.length); }
+function boundaryTerms(LX, tail, cn, after, countAfter) {
+  const T0 = tail.length, E = T0 + cn.length, len = E + after.length;
+  const at = k => k < T0 ? tail[k] : k < E ? cn[k - T0] : after[k - E];
+  const mv = k => at(k).i - at(k - 1).i;
+  const inPhrase = k => { const a = at(k), b = at(k - 1); return a.g === b.g && a.g != null && !!a.phrase; };
+  let unl = 0, dbl = 0, unres = 0;
+  const counted = countAfter && after.length ? [T0, E] : [T0];
+  for (const k of counted) {
+    if (k < 1 || k >= len || Math.abs(mv(k)) < 2) continue;
+    const a = at(k - 1), b = at(k), tag = a.g === b.g ? { phrase: !!b.phrase, arp: !!b.arp } : null;
+    if (!licence(LX, a.p, b.p, tag)) unl++;
+  }
+  for (const k of countAfter && after.length ? [T0, T0 + 1, E] : [T0, T0 + 1]) {
+    if (k < 2 || k >= len || (k === T0 + 1 && k >= E)) continue;
+    const d = mv(k), d0 = mv(k - 1);
+    if (Math.abs(d) >= 2 && Math.abs(d0) >= 2 && Math.sign(d) === Math.sign(d0) && !inPhrase(k) && !inPhrase(k - 1)) dbl++;
+  }
+  for (let k = Math.max(1, T0 - 2); k < len; k++) {
+    const d = mv(k), close = k + 2;
+    if (Math.abs(d) < 2 || close >= len || close < T0 || inPhrase(k)) continue;
+    if (k >= T0 + 1 && close <= E - 1) continue;                  // internal: counted once per device
+    if (at(k).dur >= 2) continue;
+    let ok = false;
+    for (let m = k + 1; m <= close; m++) { const e = mv(m); if ((m === k + 1 && e === 0) || (Math.abs(e) === 1 && Math.sign(e) === -Math.sign(d))) { ok = true; break; } }
+    if (!ok) unres++;
+  }
+  return { unl, dbl, unres };
+}
+
 /* Statistics for a finished line. after: notes that follow the round (the eduppu), used only to
    judge resolution. */
 function leapStats(LX, line, after, slots) {
@@ -112,4 +146,4 @@ function leapStats(LX, line, after, slots) {
   return { total, licensed, unlicensed, unresolved, perEight: slots ? unlicensed * 8 / slots : 0, outsidePhrases: { tritone, wide, alpa, double }, list };
 }
 
-export { CONSONANT, leapBudget, leapContext, isLeap, licence, forbiddenLeap, leapTerms, leapStats };
+export { CONSONANT, leapBudget, leapContext, isLeap, licence, forbiddenLeap, leapTerms, internalTerms, boundaryTerms, leapStats };

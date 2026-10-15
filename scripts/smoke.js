@@ -74,6 +74,18 @@ function driveDemos(file) {
   $('k-raga').value = 'mela65'; fire($('k-raga'), 'input'); $('k-end').value = '0'; fire($('k-end'), 'input');
   for (let s = 0; s < 6; s++) { click($('k-new')); const land = $('k-out').querySelector('.s.land'); check(land && ['Ṇ', 'R'].includes(land.textContent.trim()), 'Kalyani resuming on S lands on Ṇ or R, got ' + (land && land.textContent)); }
   const t0 = d.querySelector('[data-k*="|0|auto"]'); click(t0); check($('k-out').querySelectorAll('.s.nov').length === 0, 'T 0 uses only conventional devices');
+  // Kalyani at T 0 with a free ending: mostly attested phrases, each titled with its source
+  $('k-ending').value = 'free'; fire($('k-ending'), 'input');
+  const ph = $('k-out').querySelectorAll('.s.ph, .s.frag');
+  check(ph.length > 0 && /source S\d+/.test(ph[0].getAttribute('title') || ''), 'attested phrases are coloured and name their source');
+  check(/Phrases: \d+% of the slots from attested phrases/.test(text('k-audit')) && /\(S\d+ /.test(text('k-audit')) || /mela65#\d+, S\d+/.test(text('k-audit')), 'the audit lists the phrases used with their sources');
+  $('k-raga').value = 'mela1'; fire($('k-raga'), 'input');
+  check(/Phrase data: none for this raga/.test(text('k-audit')), 'ragas without phrase data say so');
+  // micro-benchmark (plan 8): 100 rounds of one Adi avartanam in under a second
+  const kal = w.VGEngine.allRagas().melakartas[64], tb = Date.now();
+  for (let s = 0; s < 100; s++) w.VGEngine.kalpana(kal, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: s % 3, seed: s + 1 });
+  const ms = Date.now() - tb; console.log('  100 Kalyani rounds in ' + ms + ' ms');
+  check(ms < 1000, '100 rounds under 1 s, took ' + ms + ' ms');
   // tabs
   click($('tab-jathi')); check(!$('p-jathi').hidden && $('p-ala').hidden, 'tabs switch');
   check(errors.length === 0, 'no script errors: ' + errors.join(' | '));

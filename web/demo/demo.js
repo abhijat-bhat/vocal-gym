@@ -397,6 +397,14 @@ function kalLeapText(L){
   const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
   return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
 }
+function kalPhraseText(r, st){
+  const pct = x => Math.round(x * 100) + '%';
+  if (st.profileCoverage !== 'phrases') return 'Phrase data: none for this raga' + (st.profileCoverage === 'roles-only' ? ' (its resting, jiva and avoid data still shape the round)' : '') + ', so the round uses generic devices only.';
+  if (!st.phrases.length) return 'Phrases: none in this round (' + pct(st.phraseShare) + ' of the slots).';
+  const kind = { phrase: 'phrase', 'phrase-fragment': 'fragment', 'phrase-variant': 'variant' };
+  const list = st.phrases.map(p => p.notes.map(x => swara(r, x, false)).join(' ') + ' (' + kind[p.kind] + ' of ' + p.phraseId + ', ' + p.source + (E.getSource(p.source) ? ' ' + E.getSource(p.source).title : '') + ')');
+  return 'Phrases: ' + pct(st.phraseShare) + ' of the slots from attested phrases and fragments, ' + pct(st.variantShare) + ' from variants. ' + list.join('; ') + '.';
+}
 function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
@@ -409,9 +417,10 @@ function kalRender(){
   }
   const slots = [], notes = [];
   res.units.forEach(u => {
-    const cls = u.kind === 'nov' ? 'nov' : u.kind === 'mora' ? 'mora' : '';
+    const cls = { nov: 'nov', mora: 'mora', phrase: 'ph', 'phrase-fragment': 'frag', 'phrase-variant': 'var' }[u.kind] || '';
+    const src = u.source ? E.getSource(u.source) : null, srcTxt = u.source ? ' · ' + u.phraseId + ', source ' + u.source + (src ? ': ' + src.title : '') : '';
     u.notes.forEach((n, j) => {
-      slots.push({ t: swara(r, n.p, false), cls: cls + (j === 0 ? ' cs' : ''), title: u.name + (u.dir > 0 ? ' (up)' : u.dir < 0 ? ' (down)' : '') });
+      slots.push({ t: swara(r, n.p, false), cls: cls + (j === 0 ? ' cs' : ''), title: u.name + (u.dir > 0 ? ' (up)' : u.dir < 0 ? ' (down)' : '') + srcTxt });
       for (let k = 1; k < n.dur; k++) slots.push({ t: ',', cls: 'k ' + cls });
       notes.push({ p: n.p, slots: n.dur });
     });
@@ -424,8 +433,9 @@ function kalRender(){
   const nearTxt = fin + ', the ' + (res.ending.approach === 'below' ? 'arohana swara just below ' + edp + ', so the line rises into the eduppu' : 'avarohana swara just above ' + edp + ', so the line descends into the eduppu');
   const endTxt = res.ending.type === 'mora' ? 'Mora ending: ' + res.ending.phrase.map(p => swara(r, p, false)).join(' ') + ' three times with ' + (res.ending.q ? res.ending.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
   $('k-audit').innerHTML = [
-    ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(st.convShare * 100) + '% from conventional ones', true],
+    ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices and phrase variants, ' + Math.round(st.convShare * 100) + '% from attested phrases and conventional devices', true],
     ['Devices: ' + (dev || 'single steps only'), true],
+    [kalPhraseText(r, st), true],
     [kalLeapText(st.leaps) + (st.relaxed ? ' The leap filter was relaxed one level to fit this short span.' : ''), true],
     [endTxt, true],
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],

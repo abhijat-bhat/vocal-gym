@@ -15,6 +15,11 @@ test('command line', () => {
   assert.equal(r.status, 0); assert.match(r.stdout, /→ eduppu/); assert.match(r.stdout, /lands on P/); assert.match(r.stdout, /--land is deprecated/);
   r = run('kalpana', '--raga', 'kalyani', '--tala', 'adi', '--aksharas', '8', '--eduppu-swara', 'S', '--temp', '0');
   assert.equal(r.status, 0); assert.match(r.stdout, /→ eduppu S/); assert.match(r.stdout, /^Leaps: (none|\d+, )/m); assert.match(r.stdout, /lands on (N₃, the swara just below|R₂, the swara just above) the eduppu S/);
+  assert.match(r.stdout, /attested · .*\[mela65#\d+, S\d+: /); assert.match(r.stdout, /% of swaras from attested phrases/);
+  r = run('kalpana', '--raga', 'bilahari', '--aksharas', '16', '--eduppu-swara', 'P', '--allow-exceptions', '--ending', 'free');
+  assert.equal(r.status, 0); assert.match(r.stdout, /direction-rule exceptions allowed/);
+  r = run('kalpana', '--raga', 'mela1', '--aksharas', '8', '--eduppu-swara', 'S');
+  assert.equal(r.status, 0); assert.match(r.stdout, /Phrase data: none for Kanakangi/);
   r = run('kalpana', '--raga', 'saveri', '--aksharas', '4', '--eduppu-swara', 'G');
   assert.equal(r.status, 0); assert.match(r.stdout, /lands on M₁, the swara just above the eduppu G₃/);
   r = run('kalpana', '--raga', 'kalyani', '--aksharas', '1', '--per', '1', '--eduppu-swara', "P'");

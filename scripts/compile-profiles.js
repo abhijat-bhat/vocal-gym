@@ -15,6 +15,7 @@
      exceptions  documented direction-rule exceptions (anya swaras, vakra steps), same fields plus
                  anya; used only with kalpana's allowExceptions option
      avoid       entries that name swaras: { pitches, strength }
+   SOURCES (a second export): { title, url, reliability } for every source a compiled phrase cites.
 
    Usage: node scripts/compile-profiles.js   (validates the JSON first; exit 1 on errors) */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -106,6 +107,13 @@ export function compileProfiles(doc) {
     lines[lines.length - 1] = lines[lines.length - 1].replace(/,$/, '');
     lines.push('  }' + (n < ids.length - 1 ? ',' : ''));
   });
+  lines.push('};');
+  // the sources the compiled phrases cite, so pages can name them
+  const cited = new Set();
+  ids.forEach(id => table[id].phrases.concat(table[id].exceptions).forEach(ph => cited.add(ph.source)));
+  const sids = Array.from(cited).sort((a, b) => +a.slice(1) - +b.slice(1));
+  lines.push('export const SOURCES = {');
+  sids.forEach((s, n) => lines.push('  ' + s + ': ' + J({ title: doc.sources[s].title, url: doc.sources[s].url, reliability: doc.sources[s].reliability }) + (n < sids.length - 1 ? ',' : '')));
   lines.push('};');
   return lines.join('\n') + '\n';
 }

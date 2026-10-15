@@ -17,7 +17,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
-import { SEMI, allRagas, makeProjector, mod12 } from '../src/engine/index.js';
+import { SEMI, allRagas } from '../src/engine/ragas.js';
+import { makeProjector, mod12 } from '../src/engine/projection.js';
 
 export const KALPANA_RANGE = [-5, 19];          // mandra Pa .. tara Pa, as kalpana() enforces
 const TOKEN = /^([SRGMPDN])([123])?(['.])?$/;
