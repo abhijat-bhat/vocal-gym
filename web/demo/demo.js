@@ -394,9 +394,12 @@ function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
   $('k-tv').textContent = T.toFixed(1);
-  const res = E.kalpana(r, { aksharas: K0, perAkshara: per, startPitch: sp, targetPitch: tp, T, seed: K.seed, ending });
-  $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · ' + K0 + ' aksharas × ' + per + ' = ' + K0 * per + ' slots, then the composition resumes at the eduppu · seed ' + K.seed;
-  if (!res){ $('k-out').innerHTML = ''; $('k-audit').innerHTML = '<li class="bad">This span is too short to move from ' + esc(swara(r, sp, true)) + ' to ' + esc(swara(r, tp, true)) + ' with legal devices. Lengthen it or pick closer swaras.</li>'; K.cache = null; return; }
+  const res = E.kalpanaRound(r, { aksharas: K0, perAkshara: per, startPitch: sp, eduppuPitch: tp, T, seed: K.seed, ending });
+  $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · ' + K0 + ' aksharas × ' + per + ' = ' + K0 * per + ' slots, then the composition resumes on ' + esc(swara(r, tp, true)) + ' at the eduppu · seed ' + K.seed;
+  if (res.error){
+    const nb = E.eduppuNeighbours(r, tp), near = [nb.lo, nb.hi].filter(p => p != null).map(p => swara(r, p, true)).join(' or ');
+    $('k-out').innerHTML = ''; $('k-audit').innerHTML = '<li class="bad">' + esc(res.code === 'unreachable' ? 'This span is too short to move from ' + swara(r, sp, true) + ' to ' + near + ' (next to ' + swara(r, tp, true) + ') with legal devices. Lengthen it or pick closer swaras.' : res.error) + '</li>'; K.cache = null; return;
+  }
   const slots = [], notes = [];
   res.units.forEach(u => {
     const cls = u.kind === 'nov' ? 'nov' : u.kind === 'mora' ? 'mora' : '';
@@ -406,12 +409,13 @@ function kalRender(){
       notes.push({ p: n.p, slots: n.dur });
     });
   });
-  let lastNote = slots.length - 1; while (lastNote > 0 && slots[lastNote].t === ',') lastNote--; slots[lastNote].cls += ' land';
+  let lastNote = slots.length - 1; while (lastNote > 0 && slots[lastNote].t === ',') lastNote--; slots[lastNote].cls += ' land'; slots[lastNote].title += ' · last swara, next to the eduppu';
   K.cache = { slots, tl, per, notes };
-  $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i+1) }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition line resumes</span></div>';
+  $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i+1) }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
   const st = res.stats, dev = Object.keys(st.devices).map(k => k + (st.devices[k] > 1 ? ' ×' + st.devices[k] : '')).join(', ');
-  const D = res.dial;
-  const endTxt = res.ending.type === 'mora' ? 'Mora ending: ' + res.ending.phrase.map(p => swara(r, p, false)).join(' ') + ' three times with ' + (res.ending.q ? res.ending.q + '-slot karvais' : 'no gaps') + ', landing on ' + swara(r, tp, true) : 'Free ending on ' + swara(r, tp, true) + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
+  const D = res.dial, fin = swara(r, res.ending.final, true), edp = swara(r, tp, true);
+  const nearTxt = fin + ', the ' + (res.ending.approach === 'below' ? 'arohana swara just below ' + edp + ', so the line rises into the eduppu' : 'avarohana swara just above ' + edp + ', so the line descends into the eduppu');
+  const endTxt = res.ending.type === 'mora' ? 'Mora ending: ' + res.ending.phrase.map(p => swara(r, p, false)).join(' ') + ' three times with ' + (res.ending.q ? res.ending.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
   $('k-audit').innerHTML = [
     ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(st.convShare * 100) + '% from conventional ones', true],
     ['Devices: ' + (dev || 'single steps only'), true],

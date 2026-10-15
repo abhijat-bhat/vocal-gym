@@ -62,7 +62,16 @@ function driveDemos(file) {
   $('j-src').value = 'tala: adi\n(tha ka'; click($('j-judge')); check(/Missing "\)"/.test(text('j-result')), 'syntax error shown');
   click($('j-mode-gen')); check(!$('j-gen').hidden, 'back to generate mode');
   // kalpana
-  d.querySelectorAll('[data-k]').forEach(b => { click(b); check($('k-out').querySelectorAll('.s').length > 0 && /Creativity at temperature/.test(text('k-audit')), 'kalpana preset ' + b.textContent.trim()); });
+  check(/Composition resumes on/.test(d.querySelector('label[for="k-end"]').textContent), 'kalpana asks where the composition resumes');
+  d.querySelectorAll('[data-k]').forEach(b => {
+    click(b);
+    const edp = $('k-end').options[$('k-end').selectedIndex].textContent.replace(/ .*/, '');
+    check($('k-out').querySelectorAll('.s').length > 0 && /Creativity at temperature/.test(text('k-audit')), 'kalpana preset ' + b.textContent.trim());
+    check(new RegExp('just (below|above) ' + edp).test(text('k-audit')) && /resumes on/.test(text('k-out')), 'kalpana preset lands next to the eduppu: ' + b.textContent.trim());
+  });
+  // Kalyani resuming on S: the last swara is N (below) or R (above), never S
+  $('k-raga').value = 'mela65'; fire($('k-raga'), 'input'); $('k-end').value = '0'; fire($('k-end'), 'input');
+  for (let s = 0; s < 6; s++) { click($('k-new')); const land = $('k-out').querySelector('.s.land'); check(land && ['Ṇ', 'R'].includes(land.textContent.trim()), 'Kalyani resuming on S lands on Ṇ or R, got ' + (land && land.textContent)); }
   const t0 = d.querySelector('[data-k*="|0|auto"]'); click(t0); check($('k-out').querySelectorAll('.s.nov').length === 0, 'T 0 uses only conventional devices');
   // tabs
   click($('tab-jathi')); check(!$('p-jathi').hidden && $('p-ala').hidden, 'tabs switch');

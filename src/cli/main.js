@@ -10,7 +10,7 @@ Usage
   vocal-gym talas                                   list the 35 suladi talas and the chapu talas
   vocal-gym sheet [--tala "misra jhampa"]           the 35 first lines from the tala alankara sheet
   vocal-gym alankara --raga <raga> --tala <tala> [--new N] [--temp T] [--seed S] [--span s] [--speed 1|2|4] [--numbers]
-  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--land P] [--ending auto|mora|free] [--temp T] [--seed S]
+  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free] [--temp T] [--seed S]
   vocal-gym jathi --tala <tala> [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam|end] [--temp T] [--seed S] [--script]
   vocal-gym judge <file.jathi | -> [--json]
   vocal-gym example <adi|short|chapu|speed>
@@ -19,11 +19,13 @@ Arguments
   <raga>   mela number (15), id (mela15, mohanam) or name (Mayamalavagowla, kalyani)
   <tala>   adi, rupaka, "misra jhampa", "khanda jati ata", "misra chapu", "custom 3+2+2"
   --temp   temperature 0 to 2, the performer's creativity (0 conventional, 2 adventurous)
+  --eduppu-swara  the swara the composition resumes on (S' tara, S. mandra); the round ends on
+           the raga's swara just below or just above it. --land X (deprecated) ends on X itself.
 
 Examples
   vocal-gym alankara --raga mohanam --tala "misra jhampa"
   vocal-gym alankara --raga 65 --tala adi --new 3 --temp 1.2
-  vocal-gym kalpana --raga kalyani --tala adi --aksharas 8 --land P --temp 0
+  vocal-gym kalpana --raga kalyani --tala adi --aksharas 8 --eduppu-swara P --temp 0
   vocal-gym jathi --tala "misra chapu" --eduppu -2 --yati gopuccha --script > my.jathi
   vocal-gym judge examples/short.jathi`;
 
@@ -60,11 +62,11 @@ function findTala(q, { suladiOnly } = {}) {
 function swaraPitch(raga, q, fallback) {
   if (q === undefined || q === true) return fallback;
   const s = String(q).trim();
-  const tara = /['’]$|^ṡ$/i.test(s), letter = s[0].toUpperCase();
+  const tara = /['’]$|^ṡ$/i.test(s), mandra = /\.$/.test(s), letter = s[0].toUpperCase();
   const pcs = Array.from(new Set(raga.aro.concat(raga.avaro).map(E.mod12)));
   const pc = pcs.find(p => (raga.labels[p] || '')[0] === letter);
   if (pc === undefined) fail(letter + ' is not a swara of ' + raga.name + '.');
-  return pc + (tara ? 12 : 0);
+  return pc + (tara ? 12 : mandra ? -12 : 0);
 }
 const num = (v, d) => v === undefined || v === true ? d : Number(v);
 const ragaHeader = r => r.name + ' · ' + (r.kind === 'melakarta' ? 'mela ' + r.mela + ' · ' + r.chakra + ' chakra' : 'janya of ' + r.parent + ' ' + E.MELA_NAMES[r.parent - 1]) + ' · ' + r.cls + '\n  arohana ' + scale(r, r.aro) + '   avarohana ' + scale(r, r.avaro);
@@ -110,16 +112,23 @@ function cmdAlankara(o, out) {
 function cmdKalpana(o, out) {
   const r = findRaga(o.raga), tl = findTala(o.tala || 'adi'), per = num(o.per, 2), K = num(o.aksharas, tl.total), T = num(o.temp, 1), seed = num(o.seed, 3);
   const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12)));
-  const start = swaraPitch(r, o.start, 0), land = swaraPitch(r, o.land, pcs.includes(7) ? 7 : 12);
-  const res = E.kalpana(r, { aksharas: K, perAkshara: per, startPitch: start, targetPitch: land, T, seed, ending: o.ending || 'auto' });
+  const start = swaraPitch(r, o.start, 0), legacy = o['eduppu-swara'] === undefined && o.land !== undefined;
+  const opts = { aksharas: K, perAkshara: per, startPitch: start, T, seed, ending: o.ending || 'auto' };
+  if (legacy) opts.targetPitch = swaraPitch(r, o.land);   // --land: deprecated, the last swara itself
+  else opts.eduppuPitch = swaraPitch(r, o['eduppu-swara'], pcs.includes(7) ? 7 : 12);
+  const res = E.kalpanaRound(r, opts);
   out(ragaHeader(r));
   out(tl.name + ' · ' + K + ' aksharas x ' + per + ' = ' + K * per + ' slots · T ' + T + ' · seed ' + seed + '\n');
-  if (!res) fail('No legal round moves from ' + swara(r, start) + ' to ' + swara(r, land) + ' in ' + K * per + ' slots. Lengthen it or pick closer swaras.');
-  out(layout(noteCells(r, res.notes), tl, per) + '  → eduppu\n');
+  if (res.error) fail(res.error);
+  out(layout(noteCells(r, res.notes), tl, per) + '  → eduppu' + (legacy ? '' : ' ' + swara(r, opts.eduppuPitch)) + '\n');
   out('Devices');
   res.units.forEach(u => out('  ' + u.notes.map(n => swara(r, n.p) + (n.dur > 1 ? ' ,'.repeat(n.dur - 1) : '')).join(' ').padEnd(26) + (u.kind === 'nov' ? 'unconventional · ' : u.kind === 'conv' ? 'conventional · ' : u.kind === 'mora' ? 'mora · ' : '') + u.name + (u.dir > 0 ? ' ↑' : u.dir < 0 ? ' ↓' : '')));
+  const end = res.notes[res.notes.length - 1].p;
+  const lands = legacy ? 'lands on ' + swara(r, end, true)
+    : 'lands on ' + swara(r, end, true) + ', the swara just ' + (res.ending.approach === 'below' ? 'below' : 'above') + ' the eduppu ' + swara(r, opts.eduppuPitch, true) + (res.ending.approach === 'below' ? ' (rising into it)' : ' (descending into it)');
   out('\n' + Math.round(res.stats.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(res.stats.convShare * 100) + '% from conventional ones · ' +
-    (res.ending.type === 'mora' ? 'mora ending, gap ' + res.ending.q : res.ending.fallbackFrom ? 'free ending (no mora fits)' : 'free ending') + ' · lands on ' + swara(r, land, true));
+    (res.ending.type === 'mora' ? 'mora ending, gap ' + res.ending.q : res.ending.fallbackFrom ? 'free ending (no mora fits)' : 'free ending') + ' · ' + lands);
+  if (legacy) out('(--land is deprecated: use --eduppu-swara, the swara the composition resumes on.)');
 }
 function cmdJathi(o, out) {
   const tl = findTala(o.tala || 'adi'), g = num(o.nadai, 4), N = num(o.avartanams, 2), off = num(o.eduppu, 0), T = num(o.temp, 1), seed = num(o.seed, 5);

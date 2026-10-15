@@ -12,7 +12,7 @@ export { mod12, makeProjector } from './projection.js';
 export { PDF_ALANKARA, PDF_JATI, PDF_FAM, parseSwaraLine, pdfEntry, pdfMotif, canonicalMotif } from './alankara/sheet.js';
 export { FAMILIAR, moveKeys, motifKeys, motifFamiliarity, pdfFamScores, motifReport, moveNovelty, moveScore, sampleMotif, generateMotif, enumerateMotifs, motifScore, motifSlots, hamming, motifKey, motifSpan, newMotif, alankaraSeries } from './alankara/motif.js';
 export { alankara } from './alankara/lines.js';
-export { CELL_DEFS, CELLS, kalpana } from './kalpana.js';
+export { CELL_DEFS, CELLS, kalpana, kalpanaRound, eduppuNeighbours } from './kalpana/index.js';
 export { getProfile, setProfiles } from './profiles.js';
 export { SOLLU, ALIAS, norm, KNOWN, HEAVY, CADENCE, LIB, idiomatic, splitCompound } from './sollu.js';
 export { TEER, yatiBlocks, jathi } from './jathi/generator.js';
