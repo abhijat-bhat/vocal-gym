@@ -1,19 +1,23 @@
-/* Build: bundle the engine for the browser, then expand the page templates in web/ into
-   self-contained HTML files in site/ (one file per page, no external scripts).
+/* Build: compile the raga profiles, bundle the engine for the browser, then expand the page
+   templates in web/ into self-contained HTML files in site/ (one file per page, no external scripts).
      <!-- @include path -->  and  /* @include path *\/  insert a file, relative to the template
      /* @engine *\/                                      inserts the engine bundle (global VGEngine) */
 import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeProfiles } from './compile-profiles.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = (...p) => path.join(root, ...p);
 const pkg = JSON.parse(fs.readFileSync(at('package.json'), 'utf8'));
 
+const prof = writeProfiles();
+console.log('src/engine/data/profiles.generated.js ' + (prof.bytes / 1024).toFixed(0).padStart(4) + ' KB (' + prof.ragas + ' ragas, ' + prof.phrases + ' phrases)');
+
 const bundle = await build({
   entryPoints: [at('src/engine/index.js')],
-  bundle: true, format: 'iife', globalName: 'VGEngine', target: 'es2020', write: false, legalComments: 'inline',
+  bundle: true, format: 'iife', globalName: 'VGEngine', target: 'es2020', write: false, legalComments: 'inline', metafile: true,
   banner: { js: `/* Vocal Gym engine ${pkg.version}: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */` }
 });
 const engine = bundle.outputFiles[0].text.trimEnd();
@@ -43,4 +47,5 @@ for (const [out, src] of Object.entries(pages)) {
   console.log('site/' + out.padEnd(20) + (html.length / 1024).toFixed(0).padStart(4) + ' KB');
 }
 fs.copyFileSync(at('dist/vocal-gym-engine.js'), at('site/vocal-gym-engine.js'));
-console.log('site/vocal-gym-engine.js ' + (engine.length / 1024).toFixed(0).padStart(4) + ' KB (also dist/)');
+const profIn = Object.entries(bundle.metafile.outputs)[0][1].inputs['src/engine/data/profiles.generated.js'];
+console.log('site/vocal-gym-engine.js ' + (engine.length / 1024).toFixed(0).padStart(4) + ' KB (also dist/; raga profiles ' + (profIn ? (profIn.bytesInOutput / 1024).toFixed(0) : '?') + ' KB of it)');

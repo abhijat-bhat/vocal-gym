@@ -16,10 +16,11 @@
     "node": ">=18"
   },
   "scripts": {
+    "profiles": "node scripts/compile-profiles.js",
     "test": "node --test test/*.test.js",
     "build": "node scripts/build.js",
     "smoke": "node scripts/smoke.js",
-    "check": "npm test && npm run build && npm run smoke"
+    "check": "npm run profiles && npm test && npm run build && npm run smoke"
   },
   "devDependencies": {
     "esbuild": "0.24.0",
