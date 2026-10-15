@@ -102,3 +102,52 @@ test('eduppu API: structured errors, null for old callers, eduppuPitch wins over
   ok(JSON.stringify(a) === JSON.stringify(b), 'same seed, same round');
   done();
 });
+
+test('reasoned jumps: few unlicensed leaps at low temperature, no forbidden ones below T 1.5 (plan 3.4)', t => {
+  const { ok, done } = checker(t);
+  const acc = {};
+  [0, 1, 2].forEach(T => {
+    const a = acc[T] = { rounds: 0, perEight: 0, leaps: 0, unresolved: 0, tritone: 0, wide: 0, double: 0, alpa: 0 };
+    ALL.forEach((r, ri) => {
+      const e = r.aro.map(E.mod12).includes(7) ? 7 : 12, P = E.makeProjector(r);
+      for (let s = 1; s <= 10; s++) {
+        const K = s % 2 ? 8 : 16;
+        const res = E.kalpanaRound(r, { aksharas: K, perAkshara: 2, startPitch: 0, eduppuPitch: e, T, seed: s + ri * 101 });
+        if (res.error) { ok(false, r.name + ': ' + res.error); continue; }
+        const L = res.stats.leaps;
+        a.rounds++; a.perEight += L.perEight; a.leaps += L.total; a.unresolved += L.unresolved;
+        Object.keys(L.outsidePhrases).forEach(k => { a[k] += L.outsidePhrases[k]; });
+        ok(L.total === L.licensed + L.unlicensed && L.list.length === L.total, 'leap counts add up');
+        ok(res.notes.reduce((x, n) => x + n.dur, 0) === K * 2, 'exact length');
+        for (let i = 1; i < res.notes.length; i++) ok(P.valid(res.notes[i - 1].p, res.notes[i].p), 'direction rule');
+      }
+    });
+    a.perEight /= a.rounds;
+  });
+  const row = T => { const a = acc[T]; return 'T ' + T + ': unlicensed per 8 slots ' + a.perEight.toFixed(3) + ', unresolved ' + (100 * a.unresolved / Math.max(1, a.leaps)).toFixed(1) + '% of ' + a.leaps + ' leaps, tritone ' + a.tritone + ', wider than an octave ' + a.wide + ', same-direction double ' + a.double + ', onto alpa ' + a.alpa; };
+  [0, 1, 2].forEach(T => t.diagnostic('acceptance 3.4 ' + row(T) + ' (' + acc[T].rounds + ' rounds)'));
+  ok(acc[0].perEight <= 0.25, row(0)); ok(acc[1].perEight <= 1.0, row(1)); ok(acc[2].perEight <= 3.0, row(2));
+  ok(acc[0].unresolved / acc[0].leaps <= 0.10, 'unresolved leaps at T 0: ' + row(0));
+  [0, 1].forEach(T => ok(acc[T].tritone === 0 && acc[T].wide === 0 && acc[T].double === 0 && acc[T].alpa === 0, 'no forbidden leaps: ' + row(T)));
+  ok(acc[0].leaps / acc[0].rounds < acc[2].leaps / acc[2].rounds, 'more leaps at higher temperature');
+  done();
+});
+
+test('leap filters relax one level instead of failing where unfiltered generation succeeds', t => {
+  const { ok, done } = checker(t);
+  let spans = 0, relaxed = 0;
+  ALL.forEach(r => {
+    const pcs = swaraPcs(r).concat([12]);
+    [1, 2, 3, 4].forEach(K => pcs.forEach(tp => {
+      const o = { aksharas: K, perAkshara: 1, startPitch: 0, targetPitch: tp, seed: 1 };
+      const strict = E.kalpanaRound(r, Object.assign({ T: 0 }, o)), free = E.kalpanaRound(r, Object.assign({ T: 2 }, o));
+      spans++;
+      ok(!!strict.error === !!free.error, r.name + ' ' + K + ' aksharas to ' + tp + ': T 0 fails only where T 2 fails');
+      if (!strict.error && strict.stats.relaxed) { relaxed++; ok(strict.stats.relaxed === 'leaps', 'relaxation is flagged'); }
+    }));
+  });
+  const r = byId('mela1'), res = E.kalpana(r, { aksharas: 3, perAkshara: 1, startPitch: 0, targetPitch: 9, T: 0, seed: 1 });
+  ok(res && res.stats.relaxed === 'leaps', 'Kanakangi S to D in 3 slots needs the relaxation');
+  t.diagnostic(spans + ' short spans; ' + relaxed + ' needed the leap filter relaxed; none failed that unfiltered generation could fill');
+  done();
+});

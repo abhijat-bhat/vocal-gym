@@ -390,6 +390,13 @@ function kalFillLen(){
   [[half, 'Half avartanam (' + half + ' aksharas)'], [tl.total, '1 avartanam (' + tl.total + ')'], [tl.total * 2, '2 avartanams (' + tl.total * 2 + ')']].forEach(([v, t]) => sel.appendChild(new Option(t, v)));
   sel.value = Array.from(sel.options).some(o => o.value === prev) ? prev : String(tl.total);
 }
+const LICENCE = { phrase: 'inside an attested phrase', structural: 'landing on S, P or a resting swara of the raga', consonant: 'a fourth, fifth or octave', arpeggio: 'inside an arpeggio', none: 'unlicensed' };
+function kalLeapText(L){
+  if (!L.total) return 'Leaps: none; every move is a step.';
+  const by = {}; L.list.forEach(x => { const k = x.licence || 'none'; by[k] = (by[k] || 0) + 1; });
+  const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
+  return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
+}
 function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
@@ -419,6 +426,7 @@ function kalRender(){
   $('k-audit').innerHTML = [
     ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(st.convShare * 100) + '% from conventional ones', true],
     ['Devices: ' + (dev || 'single steps only'), true],
+    [kalLeapText(st.leaps) + (st.relaxed ? ' The leap filter was relaxed one level to fit this short span.' : ''), true],
     [endTxt, true],
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],
     ['Every upward step lands on an arohana swara and every downward step on an avarohana swara', true]

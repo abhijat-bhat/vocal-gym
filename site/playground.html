@@ -2816,11 +2816,107 @@ var VGEngine = (() => {
     return F;
   }
 
+  // src/engine/kalpana/leaps.js
+  var CONSONANT = /* @__PURE__ */ new Set([5, 7, 12]);
+  var BUDGET = [[0, 0], [0.5, 0.5], [1, 1], [1.5, 2], [2, 3]];
+  function leapBudget(T) {
+    for (let k = 1; k < BUDGET.length; k++) {
+      const [t0, b0] = BUDGET[k - 1], [t1, b1] = BUDGET[k];
+      if (T <= t1) return b0 + (b1 - b0) * (T - t0) / (t1 - t0);
+    }
+    return BUDGET[BUDGET.length - 1][1];
+  }
+  function leapContext(profile, T, hard) {
+    const structural = /* @__PURE__ */ new Set([0, 7]);
+    if (profile) [profile.nyasa, profile.jiva, profile.landing].forEach((a) => (a || []).forEach((pc) => structural.add(pc)));
+    return { T, hard, structural, alpa: new Set(profile ? profile.alpa || [] : []), budget: leapBudget(T), regCap: T < 1 ? 9 : 12 };
+  }
+  var isLeap = (ia, ib) => Math.abs(ib - ia) >= 2;
+  function licence(LX, a, b, tag) {
+    if (tag && tag.phrase) return "phrase";
+    if (LX.structural.has(mod12(b))) return "structural";
+    if (CONSONANT.has(Math.abs(b - a))) return "consonant";
+    if (tag && tag.arp && LX.T >= 1) return "arpeggio";
+    return null;
+  }
+  function forbiddenLeap(LX, a, b) {
+    const s = Math.abs(b - a);
+    if (s === 6) return "tritone";
+    if (s > 12) return "wide";
+    if (LX.alpa.has(mod12(b))) return "alpa";
+    return null;
+  }
+  var inside = (seq, k) => seq[k].g != null && seq[k].g === seq[k - 1].g;
+  var tagOf = (seq, k) => inside(seq, k) ? { phrase: !!seq[k].phrase, arp: !!seq[k].arp } : null;
+  function resolved(seq, k) {
+    const d = seq[k].i - seq[k - 1].i;
+    if (seq[k].dur >= 2) return true;
+    for (let m = k + 1; m <= k + 2 && m < seq.length; m++) {
+      const e = seq[m].i - seq[m - 1].i;
+      if (m === k + 1 && e === 0) return true;
+      if (Math.abs(e) === 1 && Math.sign(e) === -Math.sign(d)) return true;
+    }
+    return false;
+  }
+  function leapTerms(LX, seq, from, countTo) {
+    let unl = 0, dbl = 0, unres = 0;
+    for (let k = 1; k < seq.length; k++) {
+      const d = seq[k].i - seq[k - 1].i;
+      if (Math.abs(d) < 2) continue;
+      const tag = tagOf(seq, k), ph = !!(tag && tag.phrase);
+      if (k >= from && k < countTo) {
+        if (!licence(LX, seq[k - 1].p, seq[k].p, tag)) unl++;
+        if (!ph && k >= 2) {
+          const d0 = seq[k - 1].i - seq[k - 2].i, t0 = tagOf(seq, k - 1);
+          if (Math.abs(d0) >= 2 && Math.sign(d0) === Math.sign(d) && !(t0 && t0.phrase)) dbl++;
+        }
+      }
+      if (ph) continue;
+      const close = k + 2;
+      if (close < seq.length && close >= from && !resolved(seq, k)) unres++;
+    }
+    return { unl, dbl, unres };
+  }
+  function leapStats(LX, line, after, slots) {
+    const seq = line.concat(after || []), list = [];
+    let licensed = 0, unlicensed = 0, unresolved = 0, tritone = 0, wide = 0, alpa = 0, double = 0;
+    for (let k = 1; k < line.length; k++) {
+      const d = seq[k].i - seq[k - 1].i;
+      if (Math.abs(d) < 2) continue;
+      const tag = tagOf(seq, k), ph = !!(tag && tag.phrase);
+      const lic = licence(LX, seq[k - 1].p, seq[k].p, tag);
+      const res = ph || k + 2 >= seq.length ? true : resolved(seq, k);
+      if (lic) licensed++;
+      else unlicensed++;
+      if (!res) unresolved++;
+      if (!ph) {
+        const f = forbiddenLeap(LX, seq[k - 1].p, seq[k].p);
+        if (f === "tritone") tritone++;
+        else if (f === "wide") wide++;
+        else if (f === "alpa") alpa++;
+        if (k >= 2) {
+          const d0 = seq[k - 1].i - seq[k - 2].i, t0 = tagOf(seq, k - 1);
+          if (Math.abs(d0) >= 2 && Math.sign(d0) === Math.sign(d) && !(t0 && t0.phrase)) double++;
+        }
+      }
+      list.push({ from: seq[k - 1].p, to: seq[k].p, at: k, licence: lic, resolved: res });
+    }
+    const total = list.length;
+    return { total, licensed, unlicensed, unresolved, perEight: slots ? unlicensed * 8 / slots : 0, outsidePhrases: { tritone, wide, alpa, double }, list };
+  }
+
   // src/engine/kalpana/index.js
   var fail = (code, error) => ({ error, code });
   var swaraName = (raga, p) => (raga.labels[mod12(p)] || "?") + (p >= 12 ? "'" : p < 0 ? "." : "");
   function kalpanaRound(raga, opts) {
-    const o = opts || {};
+    const o = opts || {}, D = dial(o.T == null ? 1 : o.T);
+    const strict = build(raga, o, D.T < 1.5);
+    if (!strict.error || strict.code !== "unreachable" || !(D.T < 1.5)) return strict;
+    const loose = build(raga, o, false);
+    if (!loose.error) loose.stats.relaxed = "leaps";
+    return loose;
+  }
+  function build(raga, o, hard) {
     const aksharas = o.aksharas, per = o.perAkshara, D = dial(o.T == null ? 1 : o.T), rand = rng(o.seed || 1);
     const slots = aksharas * per, startPitch = o.startPitch, ending = o.ending || "auto";
     const Pj = makeProjector(raga);
@@ -2848,34 +2944,45 @@ var VGEngine = (() => {
       if (ix(o.targetPitch) < 0) return fail("target-not-in-raga", "The landing swara is not a swara of " + raga.name + " inside the kalpana range.");
       targets = [{ p: o.targetPitch, approach: null }];
     }
+    const profile = getProfile(raga), LX = leapContext(profile, D.T, hard);
+    const badLeap = (ia, ib) => hard && isLeap(ia, ib) && !!forbiddenLeap(LX, notes[ia], notes[ib]);
+    const sameDirLeaps = (ia, ib, ic) => isLeap(ia, ib) && isLeap(ib, ic) && Math.sign(ib - ia) === Math.sign(ic - ib);
+    const cls = (ia, ib) => isLeap(ia, ib) ? ib > ia ? 1 : 2 : 0;
+    const clash = (m2, m22) => hard && m2 !== 0 && m2 === m22;
+    const NS = NN * 3;
     const app = CELLS.map((c) => {
       const row = new Array(NN);
       for (let i2 = 0; i2 < NN; i2++) {
-        let cur = i2, ok = true;
+        let cur = i2, back = -1, ok = true;
         const seq = [];
         for (const [dl, du] of c.shape) {
           const j = cur + dl;
-          if (j < 0 || j >= NN || !Pj.valid(notes[cur], notes[j])) {
+          if (j < 0 || j >= NN || !Pj.valid(notes[cur], notes[j]) || badLeap(cur, j) || hard && back >= 0 && sameDirLeaps(back, cur, j)) {
             ok = false;
             break;
           }
           seq.push({ j, dur: du });
+          back = cur;
           cur = j;
         }
-        row[i2] = ok ? { end: cur, seq } : null;
+        row[i2] = ok ? { end: cur, seq, mf: cls(i2, seq[0].j), me: cls(back, cur) } : null;
       }
       return row;
     });
-    const fwd = Array.from({ length: slots + 1 }, () => new Uint8Array(NN));
+    const fwd = Array.from({ length: slots + 1 }, () => new Uint8Array(NS));
     [1, 2].forEach((d02) => {
-      if (d02 <= slots) fwd[d02][s0] = 1;
+      if (d02 <= slots) fwd[d02][s0 * 3] = 1;
     });
-    for (let t2 = 1; t2 < slots; t2++) for (let i2 = 0; i2 < NN; i2++) if (fwd[t2][i2])
+    for (let t2 = 1; t2 < slots; t2++) for (let s = 0; s < NS; s++) if (fwd[t2][s]) {
+      const i2 = s / 3 | 0, m2 = s % 3;
       for (let ci = 0; ci < CELLS.length; ci++) {
         const a = app[ci][i2];
-        if (a && t2 + CELLS[ci].len <= slots) fwd[t2 + CELLS[ci].len][a.end] = 1;
+        if (a && t2 + CELLS[ci].len <= slots && !clash(m2, a.mf)) fwd[t2 + CELLS[ci].len][a.end * 3 + a.me] = 1;
       }
+    }
+    const reach = (t2, i2) => fwd[t2][i2 * 3] || fwd[t2][i2 * 3 + 1] || fwd[t2][i2 * 3 + 2];
     const moraAllowed = ending !== "free" && (ending === "mora" || aksharas >= 7) && slots >= 8;
+    const intoMora = (i2, m2, f, f1) => i2 !== f && Pj.valid(notes[i2], notes[f]) && !badLeap(i2, f) && !(hard && sameDirLeaps(i2, f, f1)) && !clash(m2, cls(i2, f));
     function moraOptions(tg2) {
       const moraOpts2 = [];
       if (!moraAllowed) return moraOpts2;
@@ -2895,16 +3002,37 @@ var VGEngine = (() => {
       phrases.forEach((ph) => {
         const f = ph[0], u = ph.length;
         if (f === tg2 || !Pj.valid(notes[tg2], notes[f])) return;
+        const cyc = ph.concat([f, ph[1]]);
+        let leapsOK = true, unl = 0;
+        for (let k = 1; k < cyc.length; k++) {
+          if (k <= u && isLeap(cyc[k - 1], cyc[k]) && !licence(LX, notes[cyc[k - 1]], notes[cyc[k]])) unl++;
+          if (badLeap(cyc[k - 1], cyc[k]) || hard && k >= 2 && sameDirLeaps(cyc[k - 2], cyc[k - 1], cyc[k])) leapsOK = false;
+        }
+        if (!leapsOK) return;
+        const two = ph.concat(ph), unresolvedAt = (q) => {
+          let n = 0;
+          for (let k = 1; k <= u; k++) {
+            const d = two[k] - two[k - 1];
+            if (Math.abs(d) < 2 || q > 0 && k === u - 1) continue;
+            let ok = false;
+            for (let m2 = k + 1; m2 <= k + 2 && m2 < two.length; m2++) {
+              const e2 = two[m2] - two[m2 - 1];
+              if (m2 === k + 1 && e2 === 0 || Math.abs(e2) === 1 && Math.sign(e2) === -Math.sign(d)) ok = true;
+            }
+            if (!ok) n++;
+          }
+          return n;
+        };
         for (let q = 0; q <= 2 * per; q++) {
           const total = 3 * u + 2 * q, B2 = slots - total;
           if (B2 < Math.max(2, per) || total > 0.6 * slots) continue;
           let feas = false;
-          for (let i2 = 0; i2 < NN && !feas; i2++) if (fwd[B2][i2] && i2 !== f && Pj.valid(notes[i2], notes[f])) feas = true;
+          for (let s = 0; s < NS && !feas; s++) if (fwd[B2][s] && intoMora(s / 3 | 0, s % 3, f, ph[1])) feas = true;
           if (!feas) continue;
           const steps = [];
           for (let k = 1; k < u; k++) steps.push(ph[k] - ph[k - 1]);
           const allStep = steps.every((s) => Math.abs(s) === 1), onBeat = B2 % per === 0 && (u + q) % per === 0;
-          const F = (allStep ? 0.8 : 0) + (onBeat ? 0.9 : 0) + (q <= per ? 0.3 : 0) + (u === 3 ? 0.3 : 0) + (notes[ph[u - 2]] < notes[tg2] ? 0.2 : 0);
+          const F = (allStep ? 0.8 : 0) + (onBeat ? 0.9 : 0) + (q <= per ? 0.3 : 0) + (u === 3 ? 0.3 : 0) + (notes[ph[u - 2]] < notes[tg2] ? 0.2 : 0) - 0.5 * unl - 0.6 * unresolvedAt(q);
           const N = (allStep ? 0 : 0.7) + (onBeat ? 0 : 0.7) + (notes[ph[u - 2]] > notes[tg2] ? 0.3 : 0);
           moraOpts2.push({ ph, q, B: B2, F, N });
         }
@@ -2913,7 +3041,7 @@ var VGEngine = (() => {
     }
     let cands = targets.map((x) => {
       const tg2 = ix(x.p);
-      return Object.assign({ tg: tg2, freeOK: !!fwd[slots][tg2], moraOpts: moraOptions(tg2) }, x);
+      return Object.assign({ tg: tg2, freeOK: !!reach(slots, tg2), moraOpts: moraOptions(tg2) }, x);
     });
     cands = cands.filter((x) => ending === "free" ? x.freeOK : x.freeOK || x.moraOpts.length);
     if (ending === "mora" && cands.some((x) => x.moraOpts.length)) cands = cands.filter((x) => x.moraOpts.length);
@@ -2921,7 +3049,6 @@ var VGEngine = (() => {
       const names = targets.map((x) => swaraName(raga, x.p)).join(" or ");
       return fail("unreachable", useEduppu ? "No legal round of " + slots + " slots moves from " + swaraName(raga, startPitch) + " to " + names + ", the neighbours of the eduppu swara " + swaraName(raga, e) + ". Lengthen the round or pick closer swaras." : "No legal round of " + slots + " slots moves from " + swaraName(raga, startPitch) + " to " + names + ". Lengthen the round or pick closer swaras.");
     }
-    const profile = getProfile(raga);
     const pick2 = cands.length === 1 ? cands[0] : cands[soft(cands.map((x) => (1 - D.c) * approachScore(e, x, profile)), D.tau, rand)];
     const { tg, freeOK, moraOpts } = pick2, targetPitch = pick2.p;
     let endType;
@@ -2932,35 +3059,73 @@ var VGEngine = (() => {
     else endType = "free";
     let mora = null, B = slots, inSet;
     if (endType === "mora") {
-      mora = moraOpts[soft(moraOpts.map((m) => (1 - D.c) * m.F + D.c * m.N), D.tau, rand)];
+      mora = moraOpts[soft(moraOpts.map((m2) => (1 - D.c) * m2.F + D.c * m2.N), D.tau, rand)];
       B = mora.B;
-      const f = mora.ph[0];
-      inSet = (i2) => i2 !== f && Pj.valid(notes[i2], notes[f]);
+      const f = mora.ph[0], f1 = mora.ph[1];
+      inSet = (i2, m2) => intoMora(i2, m2, f, f1);
     } else inSet = (i2) => i2 === tg;
-    const bwd = Array.from({ length: B + 1 }, () => new Uint8Array(NN));
-    for (let i2 = 0; i2 < NN; i2++) bwd[B][i2] = inSet(i2) ? 1 : 0;
-    for (let t2 = B - 1; t2 >= 1; t2--) for (let i2 = 0; i2 < NN; i2++) {
+    const bwd = Array.from({ length: B + 1 }, () => new Uint8Array(NS));
+    for (let s = 0; s < NS; s++) bwd[B][s] = inSet(s / 3 | 0, s % 3) ? 1 : 0;
+    for (let t2 = B - 1; t2 >= 1; t2--) for (let s = 0; s < NS; s++) {
+      const i2 = s / 3 | 0, m2 = s % 3;
       for (let ci = 0; ci < CELLS.length; ci++) {
         const a = app[ci][i2];
-        if (a && t2 + CELLS[ci].len <= B && bwd[t2 + CELLS[ci].len][a.end]) {
-          bwd[t2][i2] = 1;
+        if (a && t2 + CELLS[ci].len <= B && !clash(m2, a.mf) && bwd[t2 + CELLS[ci].len][a.end * 3 + a.me]) {
+          bwd[t2][s] = 1;
           break;
         }
       }
     }
-    const d0s = [1, 2].filter((d) => d <= B && bwd[d][s0]);
+    const d0s = [1, 2].filter((d) => d <= B && bwd[d][s0 * 3]);
     if (!d0s.length) return fail("unreachable", "No legal round of " + slots + " slots moves from " + swaraName(raga, startPitch) + " to " + swaraName(raga, targetPitch) + ". Lengthen the round or pick closer swaras.");
     const d0 = d0s[soft(d0s.map((d) => d === 1 ? (1 - D.c) * 0.5 : (1 - D.c) * 0.1 + D.c * 0.3), D.tau, rand)];
     const units = [{ kind: "start", base: "start", name: "opening swara", dir: 0, t: 0, notes: [{ p: startPitch, dur: d0 }] }];
+    const line = [{ p: startPitch, i: s0, dur: d0, pos: 0, g: 0 }];
+    const after = mora ? mora.ph.map((j) => ({ p: notes[j], i: j, dur: 1, g: -1 })) : useEduppu ? [{ p: e, i: ix(e), dur: 1, g: -2 }] : [];
     const centre = Math.max(2, Math.min(10, (startPitch + targetPitch) / 2 + 2));
-    let t = d0, i = s0, prev = null;
+    function registerExcess(cn) {
+      let ak = Math.floor(cn[0].pos / per), lo = Infinity, hi = -Infinity, ex = 0;
+      for (let k = line.length - 1; k >= 0 && Math.floor(line[k].pos / per) === ak; k--) {
+        lo = Math.min(lo, line[k].p);
+        hi = Math.max(hi, line[k].p);
+      }
+      for (const n of cn) {
+        const a = Math.floor(n.pos / per);
+        if (a !== ak) {
+          if (hi - lo > LX.regCap) ex += hi - lo - LX.regCap;
+          ak = a;
+          lo = hi = n.p;
+        } else {
+          lo = Math.min(lo, n.p);
+          hi = Math.max(hi, n.p);
+        }
+      }
+      if (hi - lo > LX.regCap) ex += hi - lo - LX.regCap;
+      return ex;
+    }
+    let t = d0, i = s0, m = 0, prev = null, unlSoFar = 0;
     while (t < B) {
-      const cand = [];
+      let cand = [];
       for (let ci = 0; ci < CELLS.length; ci++) {
         const c = CELLS[ci], a = app[ci][i];
-        if (a && t + c.len <= B && bwd[t + c.len][a.end]) cand.push({ c, a });
+        if (a && t + c.len <= B && !clash(m, a.mf) && bwd[t + c.len][a.end * 3 + a.me]) cand.push({ c, a });
       }
-      const scores = cand.map(({ c, a }) => {
+      const g = units.length, tail = line.slice(-3);
+      cand.forEach((x) => {
+        const cn = [];
+        let pos = t;
+        x.a.seq.forEach((s) => {
+          cn.push({ p: notes[s.j], i: s.j, dur: s.dur, pos, g, arp: x.c.base === "arp" });
+          pos += s.dur;
+        });
+        const last = t + x.c.len === B;
+        const seq = tail.concat(cn, last ? after : []);
+        const countTo = tail.length + cn.length + (last && mora ? 1 : 0);
+        x.cn = cn;
+        x.L = leapTerms(LX, seq, tail.length, countTo);
+        x.reg = per > 1 ? registerExcess(cn) : 0;
+      });
+      const scores = cand.map(({ c, a, L, reg }) => {
         const ps = a.seq.map((x) => notes[x.j]);
         let F = c.F0, N = c.N0;
         if (t % per === 0) F += 0.6;
@@ -2990,19 +3155,29 @@ var VGEngine = (() => {
           F -= 0.3;
         }
         if (prev && prev.dir && c.dir !== prev.dir) N += 0.3;
+        const allowed = Math.floor(LX.budget * (t + c.len) / 8 + 1e-9);
+        const over = Math.max(0, Math.min(L.unl, unlSoFar + L.unl - allowed));
+        F -= 1.5 * L.unl + 0.6 * L.unres + 2 * L.dbl + 1 * over + 0.8 * reg;
         return (1 - D.c) * F + D.c * N;
       });
       const ch = cand[soft(scores, D.tau, rand)];
       units.push({ kind: ch.c.kind, base: ch.c.base, id: ch.c.id, name: ch.c.name, dir: ch.c.dir, t, notes: ch.a.seq.map((x) => ({ p: notes[x.j], dur: x.dur })) });
+      ch.cn.forEach((n) => line.push(n));
+      unlSoFar += ch.L.unl;
       prev = { base: ch.c.base, id: ch.c.id, dir: ch.c.dir, startP: notes[ch.a.seq[0].j] };
       t += ch.c.len;
       i = ch.a.end;
+      m = ch.a.me;
     }
     if (mora) {
       for (let r = 0; r < 3; r++) {
         const ns = mora.ph.map((j, k) => ({ p: notes[j], dur: k === mora.ph.length - 1 && r < 2 ? 1 + mora.q : 1 }));
+        const g = units.length;
         units.push({ kind: "mora", base: "mora", name: "mora " + (r + 1) + " of 3", dir: 0, t, notes: ns });
-        t += ns.reduce((s, n) => s + n.dur, 0);
+        ns.forEach((n, k) => {
+          line.push({ p: n.p, i: mora.ph[k], dur: n.dur, pos: t, g });
+          t += n.dur;
+        });
       }
     }
     const notesOut = [];
@@ -3021,12 +3196,13 @@ var VGEngine = (() => {
     });
     const endInfo = mora ? { type: "mora", phrase: mora.ph.map((j) => notes[j]), q: mora.q, start: mora.B } : ending === "mora" ? { type: "free", fallbackFrom: "mora" } : { type: "free" };
     if (useEduppu) Object.assign(endInfo, { eduppu: e, final: targetPitch, approach: pick2.approach });
+    const leaps = leapStats(LX, line, useEduppu ? [{ p: e, i: ix(e), dur: 1, g: -2 }] : [], slots);
     return {
       notes: notesOut,
       slots,
       units,
       ending: endInfo,
-      stats: { novelShare: nov / slots, convShare: conv / slots, devices },
+      stats: { novelShare: nov / slots, convShare: conv / slots, devices, leaps },
       dial: D
     };
   }
@@ -4433,6 +4609,13 @@ function kalFillLen(){
   [[half, 'Half avartanam (' + half + ' aksharas)'], [tl.total, '1 avartanam (' + tl.total + ')'], [tl.total * 2, '2 avartanams (' + tl.total * 2 + ')']].forEach(([v, t]) => sel.appendChild(new Option(t, v)));
   sel.value = Array.from(sel.options).some(o => o.value === prev) ? prev : String(tl.total);
 }
+const LICENCE = { phrase: 'inside an attested phrase', structural: 'landing on S, P or a resting swara of the raga', consonant: 'a fourth, fifth or octave', arpeggio: 'inside an arpeggio', none: 'unlicensed' };
+function kalLeapText(L){
+  if (!L.total) return 'Leaps: none; every move is a step.';
+  const by = {}; L.list.forEach(x => { const k = x.licence || 'none'; by[k] = (by[k] || 0) + 1; });
+  const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
+  return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
+}
 function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
@@ -4462,6 +4645,7 @@ function kalRender(){
   $('k-audit').innerHTML = [
     ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(st.convShare * 100) + '% from conventional ones', true],
     ['Devices: ' + (dev || 'single steps only'), true],
+    [kalLeapText(st.leaps) + (st.relaxed ? ' The leap filter was relaxed one level to fit this short span.' : ''), true],
     [endTxt, true],
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],
     ['Every upward step lands on an arohana swara and every downward step on an avarohana swara', true]

@@ -68,6 +68,7 @@ function driveDemos(file) {
     const edp = $('k-end').options[$('k-end').selectedIndex].textContent.replace(/ .*/, '');
     check($('k-out').querySelectorAll('.s').length > 0 && /Creativity at temperature/.test(text('k-audit')), 'kalpana preset ' + b.textContent.trim());
     check(new RegExp('just (below|above) ' + edp).test(text('k-audit')) && /resumes on/.test(text('k-out')), 'kalpana preset lands next to the eduppu: ' + b.textContent.trim());
+    check(/Leaps: (none|\d+, )/.test(text('k-audit')), 'kalpana audit reports the leaps: ' + b.textContent.trim());
   });
   // Kalyani resuming on S: the last swara is N (below) or R (above), never S
   $('k-raga').value = 'mela65'; fire($('k-raga'), 'input'); $('k-end').value = '0'; fire($('k-end'), 'input');

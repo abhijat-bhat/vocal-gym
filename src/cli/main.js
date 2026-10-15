@@ -109,6 +109,13 @@ function cmdAlankara(o, out) {
     out('');
   });
 }
+const LICENCE = { phrase: 'inside an attested phrase', structural: 'landing on S, P or a resting swara of the raga', consonant: 'a fourth, fifth or octave', arpeggio: 'inside an arpeggio', none: 'unlicensed' };
+function leapText(L) {
+  if (!L.total) return 'Leaps: none; every move is a step.';
+  const by = {}; L.list.forEach(x => { const k = x.licence || 'none'; by[k] = (by[k] || 0) + 1; });
+  const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
+  return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
+}
 function cmdKalpana(o, out) {
   const r = findRaga(o.raga), tl = findTala(o.tala || 'adi'), per = num(o.per, 2), K = num(o.aksharas, tl.total), T = num(o.temp, 1), seed = num(o.seed, 3);
   const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12)));
@@ -128,6 +135,7 @@ function cmdKalpana(o, out) {
     : 'lands on ' + swara(r, end, true) + ', the swara just ' + (res.ending.approach === 'below' ? 'below' : 'above') + ' the eduppu ' + swara(r, opts.eduppuPitch, true) + (res.ending.approach === 'below' ? ' (rising into it)' : ' (descending into it)');
   out('\n' + Math.round(res.stats.novelShare * 100) + '% of swaras from unconventional devices, ' + Math.round(res.stats.convShare * 100) + '% from conventional ones · ' +
     (res.ending.type === 'mora' ? 'mora ending, gap ' + res.ending.q : res.ending.fallbackFrom ? 'free ending (no mora fits)' : 'free ending') + ' · ' + lands);
+  out(leapText(res.stats.leaps) + (res.stats.relaxed ? ' (the leap filter was relaxed to fit this short span)' : ''));
   if (legacy) out('(--land is deprecated: use --eduppu-swara, the swara the composition resumes on.)');
 }
 function cmdJathi(o, out) {
