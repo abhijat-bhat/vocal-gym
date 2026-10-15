@@ -10,7 +10,7 @@ Usage
   vocal-gym talas                                   list the 35 suladi talas and the chapu talas
   vocal-gym sheet [--tala "misra jhampa"]           the 35 first lines from the tala alankara sheet
   vocal-gym alankara --raga <raga> --tala <tala> [--new N] [--temp T] [--seed S] [--span s] [--speed 1|2|4] [--numbers]
-  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free] [--allow-exceptions] [--temp T] [--seed S]
+  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free] [--mora-style auto|shift|gopuccha|srotovaha|identical] [--allow-exceptions] [--temp T] [--seed S]
   vocal-gym jathi --tala <tala> [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam|end] [--temp T] [--seed S] [--script]
   vocal-gym judge <file.jathi | -> [--json]
   vocal-gym example <adi|short|chapu|speed>
@@ -120,7 +120,7 @@ function cmdKalpana(o, out) {
   const r = findRaga(o.raga), tl = findTala(o.tala || 'adi'), per = num(o.per, 2), K = num(o.aksharas, tl.total), T = num(o.temp, 1), seed = num(o.seed, 3);
   const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12)));
   const start = swaraPitch(r, o.start, 0), legacy = o['eduppu-swara'] === undefined && o.land !== undefined;
-  const opts = { aksharas: K, perAkshara: per, startPitch: start, T, seed, ending: o.ending || 'auto', allowExceptions: !!o['allow-exceptions'] };
+  const opts = { aksharas: K, perAkshara: per, startPitch: start, T, seed, ending: o.ending || 'auto', allowExceptions: !!o['allow-exceptions'], moraStyle: o['mora-style'] || 'auto' };
   if (legacy) opts.targetPitch = swaraPitch(r, o.land);   // --land: deprecated, the last swara itself
   else opts.eduppuPitch = swaraPitch(r, o['eduppu-swara'], pcs.includes(7) ? 7 : 12);
   const res = E.kalpanaRound(r, opts);
@@ -139,7 +139,7 @@ function cmdKalpana(o, out) {
   const lands = legacy ? 'lands on ' + swara(r, end, true)
     : 'lands on ' + swara(r, end, true) + ', the swara just ' + (res.ending.approach === 'below' ? 'below' : 'above') + ' the eduppu ' + swara(r, opts.eduppuPitch, true) + (res.ending.approach === 'below' ? ' (rising into it)' : ' (descending into it)');
   out(Math.round(res.stats.novelShare * 100) + '% of swaras from unconventional devices and phrase variants, ' + Math.round(res.stats.convShare * 100) + '% from conventional ones · ' +
-    (res.ending.type === 'mora' ? 'mora ending, gap ' + res.ending.q : res.ending.fallbackFrom ? 'free ending (no mora fits)' : 'free ending') + ' · ' + lands);
+    (res.ending.type === 'mora' ? res.ending.style + ' mora (' + (res.ending.template === 'generic' ? 'generic contour' : 'contour of ' + res.ending.templatePhrase) + '), gap ' + res.ending.q : res.ending.fallbackFrom ? 'free ending (no mora fits)' : 'free ending') + ' · ' + lands);
   out(leapText(res.stats.leaps) + (res.stats.relaxed ? ' (the leap filter was relaxed to fit this short span)' : ''));
   if (legacy) out('(--land is deprecated: use --eduppu-swara, the swara the composition resumes on.)');
 }

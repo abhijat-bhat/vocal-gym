@@ -3,6 +3,7 @@ import { makeProjector, mod12 } from '../projection.js';
 import { getProfile } from '../profiles.js';
 import { CELL_DEFS, CELLS, phraseDevices } from './devices.js';
 import { KALPANA_RANGE, eduppuNeighbours, approachScore } from './landing.js';
+import { moraOptions as gradedMora } from './mora.js';
 import { leapContext, isLeap, licence, forbiddenLeap, internalTerms, boundaryTerms, leapStats } from './leaps.js';
 
 /* Vocal Gym engine · kalpana swaras: device-based generation with a guaranteed landing
@@ -12,6 +13,7 @@ import { leapContext, isLeap, licence, forbiddenLeap, internalTerms, boundaryTer
                          on lo(e) or hi(e), so the step into the eduppu is legal. Wins over targetPitch.
    opts.targetPitch      deprecated: the last swara of the round itself (v0.2 meaning).
    opts.allowExceptions  also offer the profile's documented direction-rule exceptions, whole.
+   opts.moraStyle        'auto' (default: shift, gopuccha or srotovaha by score), or one of them, or 'identical'.
    Hard rules (length, direction, range, landing, hard avoid lists, and below T = 1.5 the leap
    prohibitions) live in the device tables and the reachability tables; everything else is a score.
    Devices are the generic cells (relative steps) plus anchored phrase devices from the raga profile. */
@@ -22,6 +24,7 @@ const GENERIC_FACTOR = { high: 0.5, medium: 0.7, low: 1.0, none: 1.0 };
 const JANTA = new Set(['janta', 'janta3']), DATTU = new Set(['dattu']);
 const JD_FACTOR = { avoid: 0.2, suits: 1.2 };
 const targetShare = T => 0.70 - 0.20 * T;
+const MORA_STYLES = ['auto', 'shift', 'gopuccha', 'srotovaha', 'identical'];
 
 /* does seq (pitches) contain pat as a contiguous run that ends at or after index from? */
 function containsRun(seq, pat, from) {
@@ -32,13 +35,24 @@ function containsRun(seq, pat, from) {
   return false;
 }
 
+/* does look ++ ps contain pat as a contiguous run that ends inside ps? (no allocation) */
+function runAcross(look, ps, pat) {
+  const L = look.length, n = L + ps.length, at = k => k < L ? look[k] : ps[k - L];
+  for (let s = Math.max(0, L - pat.length + 1); s + pat.length <= n; s++) {
+    let k = 0; while (k < pat.length && at(s + k) === pat[k]) k++;
+    if (k === pat.length) return true;
+  }
+  return false;
+}
+
 /* The device tables for a raga depend only on its profile and the mode (hard leap filters,
-   inversions, exceptions), so they are built once and kept per raga object (plan 2.1). */
+   inversions, exceptions), so they are built once and kept per raga object (plan 2.1). Mora
+   statement shapes do not depend on the mode and are shared by all of them. */
 const DEVICE_CACHE = new WeakMap();
 function cachedTables(raga, profile, key, make) {
   let ent = DEVICE_CACHE.get(raga);
-  if (!ent || ent.profile !== profile) { ent = { profile, map: new Map() }; DEVICE_CACHE.set(raga, ent); }
-  if (!ent.map.has(key)) ent.map.set(key, make());
+  if (!ent || ent.profile !== profile) { ent = { profile, map: new Map(), mora: new Map() }; DEVICE_CACHE.set(raga, ent); }
+  if (!ent.map.has(key)) ent.map.set(key, Object.assign(make(), { moraCache: ent.mora }));
   return ent.map.get(key);
 }
 
@@ -72,6 +86,7 @@ function build(raga, o, hard) {
   const pos = p => { const k = ix(p); if (k >= 0) return k; let n = 0; while (n < NN && notes[n] < p) n++; return n - 0.5; };
   const s0 = ix(startPitch);
   if (!(slots >= 1)) return fail('bad-length', 'The round needs at least one slot.');
+  if (o.moraStyle != null && !MORA_STYLES.includes(o.moraStyle)) return fail('bad-mora-style', 'Mora style must be one of ' + MORA_STYLES.join(', ') + '.');
   if (s0 < 0) return fail('start-not-in-raga', 'The opening swara is not a swara of ' + raga.name + ' inside the kalpana range (mandra Pa to tara Pa).');
 
   // the landing: next to the eduppu swara, or (deprecated) the target swara itself
@@ -107,7 +122,7 @@ function build(raga, o, hard) {
   const NS = NN * 3;
 
   const tables = cachedTables(raga, profile, (hard ? 'h' : '') + (D.T >= 1 ? 'i' : '') + (o.allowExceptions ? 'x' : ''), makeTables);
-  const { app, phr, G } = tables;
+  const { app, phr, G, gen, moraCache } = tables;
   const entryOK = (gp, i, m) => (gp.allow[m] >> i) & 1;
   // the device tables depend only on the raga, its profile and the mode, so they are built once
   function makeTables() {
@@ -163,7 +178,14 @@ function build(raga, o, hard) {
   const G = Array.from(groups.values());
   // the distinct (length, end state) pairs of a group, which is all the reachability tables need
   G.forEach(gp => { const seen = new Set(); gp.moves = []; gp.devs.forEach(a => { const k = a.len * 1000 + a.end * 3 + a.me; if (!seen.has(k)) { seen.add(k); gp.moves.push([a.len, a.end * 3 + a.me]); } }); });
-  return { app, phr, G };
+  // the generic moves open to each state: [length, end state], deduplicated
+  const gen = [];
+  for (let s = 0; s < NS; s++) {
+    const i = (s / 3) | 0, m = s % 3, seen = new Set(), mv = [];
+    CELLS.forEach((c, ci) => { const a = app[ci][i]; if (!a || clash(m, a.mf)) return; const k = c.len * 1000 + a.end * 3 + a.me; if (!seen.has(k)) { seen.add(k); mv.push(c.len, a.end * 3 + a.me); } });
+    gen.push(Int32Array.from(mv));
+  }
+  return { app, phr, G, gen };
   }
   // bitmasks of the swaras reachable in each arrival class at one slot
   const masks = row => { const b = [0, 0, 0]; for (let s = 0; s < NS; s++) if (row[s]) b[s % 3] |= 1 << ((s / 3) | 0); return b; };
@@ -177,7 +199,7 @@ function build(raga, o, hard) {
     for (let s = 0; s < NS; s++) if (F[s]) {
       anyState = true;
       const i = (s / 3) | 0, m = s % 3;
-      for (let ci = 0; ci < CELLS.length; ci++) { const a = app[ci][i]; if (a && t + CELLS[ci].len <= slots && !clash(m, a.mf)) fwd[t + CELLS[ci].len][a.end * 3 + a.me] = 1; }
+      const mv = gen[s]; for (let k = 0; k < mv.length; k += 2) if (t + mv[k] <= slots) fwd[t + mv[k]][mv[k + 1]] = 1;
     }
     if (!anyState) continue;
     const R = masks(F);
@@ -192,58 +214,26 @@ function build(raga, o, hard) {
   const moraAllowed = ending !== 'free' && (ending === 'mora' || aksharas >= 7) && slots >= 8;
   // the body's last swara i may step into the mora's first swara f (and on to its second, f1)
   const intoMora = (i, m, f, f1) => i !== f && Pj.valid(notes[i], notes[f]) && !badLeap(i, f) && !(hard && sameDirLeaps(i, f, f1)) && !clash(m, cls(i, f));
-  function moraOptions(tg) {
-    const moraOpts = [];
-    if (!moraAllowed) return moraOpts;
-    const phrases = [];
-    (function grow(seq) {
-      if (seq.length >= 3) phrases.push(seq.slice());   // a mora phrase has three or four swaras
-      if (seq.length === 4) return;
-      for (let dl = -2; dl <= 2; dl++) {
-        if (!dl) continue;
-        const j = seq[0] - dl;
-        if (j < 0 || j >= NN || !Pj.valid(notes[j], notes[seq[0]])) continue;
-        seq.unshift(j); grow(seq); seq.shift();
-      }
-    })([tg]);
-    phrases.forEach(ph => {
-      const f = ph[0], u = ph.length;
-      if (f === tg || !Pj.valid(notes[tg], notes[f])) return;
-      // the statements' moves, cyclically: inside a statement, then the junction into the next
-      const cyc = ph.concat([f, ph[1]]);
-      let leapsOK = true, unl = 0;
-      for (let k = 1; k < cyc.length; k++) {
-        if (k <= u && isLeap(cyc[k - 1], cyc[k]) && !licence(LX, notes[cyc[k - 1]], notes[cyc[k]])) unl++;
-        if (badLeap(cyc[k - 1], cyc[k]) || (hard && k >= 2 && sameDirLeaps(cyc[k - 2], cyc[k - 1], cyc[k]))) leapsOK = false;
-      }
-      if (!leapsOK) return;
-      if (hardAvoid.length && avoidsHard(ph.concat(ph).map(j => notes[j]), 0)) return;
-      // leaps inside a statement or at the junction that do not step back within two swaras
-      const two = ph.concat(ph), unresolvedAt = q => {
-        let n = 0;
-        for (let k = 1; k <= u; k++) {
-          const d = two[k] - two[k - 1];
-          if (Math.abs(d) < 2 || (q > 0 && k === u - 1)) continue;
-          let ok = false;
-          for (let m = k + 1; m <= k + 2 && m < two.length; m++) { const e2 = two[m] - two[m - 1]; if ((m === k + 1 && e2 === 0) || (Math.abs(e2) === 1 && Math.sign(e2) === -Math.sign(d))) ok = true; }
-          if (!ok) n++;
-        }
-        return n;
-      };
-      for (let q = 0; q <= 2 * per; q++) {
-        const total = 3 * u + 2 * q, B = slots - total;
-        if (B < Math.max(2, per) || total > 0.6 * slots) continue;
-        let feas = false; for (let s = 0; s < NS && !feas; s++) if (fwd[B][s] && intoMora((s / 3) | 0, s % 3, f, ph[1])) feas = true;
-        if (!feas) continue;
-        const steps = []; for (let k = 1; k < u; k++) steps.push(ph[k] - ph[k - 1]);
-        const allStep = steps.every(s => Math.abs(s) === 1), onBeat = B % per === 0 && (u + q) % per === 0;
-        const F = (allStep ? 0.8 : 0) + (onBeat ? 0.9 : 0) + (q <= per ? 0.3 : 0) + (u === 3 ? 0.3 : 0) + (notes[ph[u - 2]] < notes[tg] ? 0.2 : 0) - 0.5 * unl - 0.6 * unresolvedAt(q);
-        const N = (allStep ? 0 : 0.7) + (onBeat ? 0 : 0.7) + (notes[ph[u - 2]] > notes[tg] ? 0.3 : 0);
-        moraOpts.push({ ph, q, B, F, N });
-      }
-    });
-    return moraOpts;
+  // can the body, B slots long, end on a swara that steps into the mora's first swara f (then f1)?
+  // As bitmasks: enter[f][m] are the swaras i that may step into f after an arrival of class m.
+  const enter = [], leapInto = [];
+  for (let f = 0; f < NN; f++) {
+    enter.push([0, 1, 2].map(m => { let b = 0; for (let i = 0; i < NN; i++) if (i !== f && Pj.valid(notes[i], notes[f]) && !badLeap(i, f) && !clash(m, cls(i, f))) b |= 1 << i; return b; }));
+    let up = 0, down = 0; for (let i = 0; i < NN; i++) { if (f - i >= 2) up |= 1 << i; if (i - f >= 2) down |= 1 << i; }
+    leapInto.push([up, down]);
   }
+  const fwdMasks = new Map();
+  const feasibleInto = (B, f, f1) => {
+    if (!fwdMasks.has(B)) fwdMasks.set(B, masks(fwd[B]));
+    const R = fwdMasks.get(B), E3 = enter[f];
+    let excl = 0;   // below T 1.5, no leap into f in the same direction as the leap from f to f1
+    if (hard && isLeap(f, f1)) excl = f1 > f ? leapInto[f][0] : leapInto[f][1];
+    return !!(((R[0] & E3[0]) | (R[1] & E3[1]) | (R[2] & E3[2])) & ~excl);
+  };
+  const moraCtx = { notes, NN, valid: Pj.valid, repair: Pj.repair, hard, LX, licence, isLeap, badLeap, sameDirLeaps,
+    avoidsHard: ps => hardAvoid.length > 0 && avoidsHard(ps, 0), slots, per, D, e: useEduppu ? e : null,
+    phrases: profile ? profile.phrases : [], style: o.moraStyle || 'auto', feasibleInto, cache: moraCache };
+  function moraOptions(tg) { return moraAllowed ? gradedMora(moraCtx, tg) : []; }
 
   // which landings can finish under the requested ending
   let cands = targets.map(x => { const tg = ix(x.p); return Object.assign({ tg, freeOK: !!reach(slots, tg), moraOpts: moraOptions(tg) }, x); });
@@ -268,7 +258,7 @@ function build(raga, o, hard) {
   let mora = null, B = slots, inSet;
   if (endType === 'mora') {
     mora = moraOpts[soft(moraOpts.map(m => (1 - D.c) * m.F + D.c * m.N), D.tau, rand)];
-    B = mora.B; const f = mora.ph[0], f1 = mora.ph[1];
+    B = mora.B; const f = mora.stmts[0][0], f1 = mora.stmts[0][1];
     inSet = (i, m) => intoMora(i, m, f, f1);
   } else inSet = i => i === tg;
   // backward feasibility for the body
@@ -278,7 +268,7 @@ function build(raga, o, hard) {
     const W = bwd[t];
     for (let s = 0; s < NS; s++) {
       const i = (s / 3) | 0, m = s % 3;
-      for (let ci = 0; ci < CELLS.length; ci++) { const a = app[ci][i]; if (a && t + CELLS[ci].len <= B && !clash(m, a.mf) && bwd[t + CELLS[ci].len][a.end * 3 + a.me]) { W[s] = 1; break; } }
+      const mv = gen[s]; for (let k = 0; k < mv.length; k += 2) if (t + mv[k] <= B && bwd[t + mv[k]][mv[k + 1]]) { W[s] = 1; break; }
     }
     const add = [0, 0, 0];
     for (const gp of G) {
@@ -294,7 +284,7 @@ function build(raga, o, hard) {
   // the line so far, for the path-dependent leap, register and avoid terms
   const line = [{ p: startPitch, i: s0, dur: d0, pos: 0, g: 0 }];
   // what follows the body: the mora's first statement, or the eduppu (only for judging resolution)
-  const after = mora ? mora.ph.map(j => ({ p: notes[j], i: j, dur: 1, g: -1 }))
+  const after = mora ? mora.stmts[0].map(j => ({ p: notes[j], i: j, dur: 1, g: -1 }))
     : useEduppu ? [{ p: e, i: ix(e), dur: 1, g: -2 }] : [];
   const centre = Math.max(2, Math.min(10, (startPitch + targetPitch) / 2 + 2));
   // semitones by which the aksharas a candidate touches exceed the register cap
@@ -315,65 +305,63 @@ function build(raga, o, hard) {
   const jdF = (k, base) => JANTA.has(base) ? (JD_FACTOR[profile && profile.janta] || 1) : DATTU.has(base) ? (JD_FACTOR[profile && profile.dattu] || 1) : 1;
   const maxAvoid = Math.max(1, ...hardAvoid.concat(softAvoid).map(p => p.length));
   const used = new Set();
+  // the parts of a device's score that do not depend on where it is sung (kept on the device table)
+  function staticTerms(c, cn, ps) {
+    let F = 0, N = 0, end = 0; const held = [];
+    cn.forEach(n => {
+      end += n.dur;
+      if (n.dur >= 2) { const pc = mod12(n.p); held.push([end, pc]); if (restBad.has(pc)) F -= 0.4; if (alpa.has(pc)) F -= 0.3; }
+    });
+    F += Math.min(0.4, 0.2 * ps.filter(p => jiva.has(mod12(p))).length);
+    if (c.base === 'leap3' || c.base === 'leap4') N -= 0.3;
+    return { F, N, held, avg: ps.reduce((s2, p) => s2 + p, 0) / ps.length, outer: ps.some(p => p > 12 || p < 0) };
+  }
+  // ... plus the terms fixed within this round once the device's place in the akshara is known
+  const stamp = {};
+  function fixedTerms(c, cn, ps, isPh) {
+    const src = staticTerms(c, cn, ps);
+    let F = c.F0, N = c.N0 + src.N;
+    if (c.kind === 'conv') F *= gFactor;
+    F *= jdF(c.kind, c.base);
+    F += src.F;
+    if (ph0Of(c) === 0) F += 0.6; else { F -= 0.4; N += 0.5; }
+    if (c.len % per === 0) F += 0.4; else if (per > 1) N += 0.4;
+    // resting: held swaras on the profile's landing swaras (on a beat), not on swaras it says not to rest on
+    for (const [end, pc] of src.held) { if (landing.has(pc) && (curPh + end) % per === 0) F += 0.6; else N += 0.3; }
+    F -= 0.06 * Math.abs(src.avg - centre);
+    if (!isPh && src.outer) { N += 0.5; F -= 0.3; }
+    return { F, N };
+  }
+  let curPh = 0;
+  const ph0Of = () => curPh;
   let t = d0, i = s0, m = 0, prev = null, unlSoFar = 0, phraseSlots = 0;
   while (t < B) {
     let cand = [];
     for (let ci = 0; ci < CELLS.length; ci++) {
       const c = CELLS[ci], a = app[ci][i];
-      if (a && t + c.len <= B && !clash(m, a.mf) && bwd[t + c.len][a.end * 3 + a.me]) cand.push({ c, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
+      if (a && t + c.len <= B && !clash(m, a.mf) && bwd[t + c.len][a.end * 3 + a.me]) cand.push({ c, src: a, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
     }
     for (const gp of G) if (entryOK(gp, i, m)) for (const a of gp.devs)
-      if (t + a.len <= B && bwd[t + a.len][a.end * 3 + a.me]) cand.push({ c: a.dv, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
-    const g = units.length, tail = line.slice(-3), look = line.slice(-(maxAvoid - 1)).map(n => n.p);
-    cand.forEach(x => {
-      const cn = x.cn, ph = PHRASE_KINDS.has(x.c.kind);
-      const last = t + x.c.len === B;
-      // leap terms: the device's own moves (precomputed) plus its junctions; the junction into the mora counts
-      const bt = boundaryTerms(LX, tail, cn, last ? after : [], !!mora);
-      x.L = { unl: x.int.unl + bt.unl, dbl: x.int.dbl + bt.dbl, unres: x.int.unres + bt.unres };
-      // register: the span of each akshara the device touches (attested phrases carry their own)
-      x.reg = per > 1 && !ph ? registerExcess(cn, t) : 0;
-      if (hardAvoid.length || softAvoid.length) {
-        const run = look.concat(x.ps);
-        x.hardAvoid = hardAvoid.length && avoidsHard(run, look.length);
-        x.softAvoid = softAvoid.filter(p => containsRun(run, p, look.length)).length;
-      } else { x.hardAvoid = false; x.softAvoid = 0; }
-    });
-    // hard avoid lists are exact for one swara of look-behind; longer junctions are avoided whenever possible
-    if (hardAvoid.length && cand.some(x => !x.hardAvoid)) cand = cand.filter(x => !x.hardAvoid);
+      if (t + a.len <= B && bwd[t + a.len][a.end * 3 + a.me]) cand.push({ c: a.dv, src: a, cn: a.tpl, ps: a.ps, int: a.int, end: a.end, me: a.me });
+    const g = units.length, tail = line.slice(-3);
+    const hasAvoid = hardAvoid.length > 0 || softAvoid.length > 0, look = hasAvoid ? line.slice(-(maxAvoid - 1)).map(n => n.p) : null;
     const share = phraseSlots / t, target = targetShare(D.T), push = 0.8 * (target - share) * 4;
-    const scores = cand.map(({ c, ps, cn, L, reg, softAvoid: sa }) => {
-      const isPh = PHRASE_KINDS.has(c.kind), isVar = c.kind === 'phrase-variant', anchored = !!c.phraseId;
-      let F = c.F0, N = c.N0;
-      if (c.kind === 'conv') F *= gFactor;
-      F *= jdF(c.kind, c.base);
-      if (c.base === 'leap3' || c.base === 'leap4') N -= 0.3;
-      if (t % per === 0) F += 0.6; else { F -= 0.4; N += 0.5; }
-      if (c.len % per === 0) F += 0.4; else if (per > 1) N += 0.4;
+    /* Score in two passes. The first leaves out the junction-dependent penalties (leaps, register,
+       avoid lists), so it is an upper bound on the exact score; exact scores are computed in order of
+       that bound until the rest are more than 15 tau below the best, where their weight is negligible. */
+    const ph0 = t % per; curPh = ph0;
+    const ub = cand.map(x => {
+      const { c, ps } = x, isPh = PHRASE_KINDS.has(c.kind), isVar = c.kind === 'phrase-variant', anchored = !!c.phraseId;
+      // the terms fixed for this device in this round (and for this place in the akshara), cached per call
+      let fx = x.src.fx;
+      if (!fx || fx.stamp !== stamp) fx = x.src.fx = { stamp, by: [] };
+      let b = fx.by[ph0];
+      if (!b) b = fx.by[ph0] = fixedTerms(c, x.cn, ps, isPh);
+      let F = b.F, N = b.N;
       if (!anchored && prev && prev.base === c.base && prev.dir === c.dir) { F += 0.5; N -= 0.4; }
       if (prev && prev.id === c.id && prev.startP === ps[0]) { F += 0.2; N -= 1.0; }
       if (anchored && used.has(c.phraseId)) F -= 0.8;
-      // resting: held swaras on the profile's landing swaras, not on swaras it says not to rest on
-      let pt = t;
-      cn.forEach(n => {
-        if (n.dur >= 2) {
-          const pc = mod12(n.p);
-          if (landing.has(pc) && (pt + n.dur) % per === 0) F += 0.6; else N += 0.3;
-          if (restBad.has(pc)) F -= 0.4;
-          if (alpa.has(pc)) F -= 0.3;
-        }
-        pt += n.dur;
-      });
-      F += Math.min(0.4, 0.2 * ps.filter(p => jiva.has(mod12(p))).length);
-      F -= 1.0 * sa;
-      const avg = ps.reduce((s, p) => s + p, 0) / ps.length;
-      F -= 0.06 * Math.abs(avg - centre);
-      if (!isPh && ps.some(p => p > 12 || p < 0)) { N += 0.5; F -= 0.3; }
       if (prev && prev.dir && c.dir && c.dir !== prev.dir) N += 0.3;
-      // reasoned jumps (plan 3.2), all on F so they fade as c rises
-      const allowed = Math.floor(LX.budget * (t + c.len) / 8 + 1e-9);
-      const over = Math.max(0, Math.min(L.unl, unlSoFar + L.unl - allowed));
-      F -= 1.5 * L.unl + 0.6 * L.unres + 2.0 * L.dbl + 1.0 * over + 0.8 * reg;
       let score = (1 - D.c) * F + D.c * N;
       // the phrase-share controller: predominantly characteristic phrases, occasionally out-of-the-box ones
       // (the novelty side scales with c, so a round at T = 0 fills the rest with conventional devices)
@@ -381,7 +369,44 @@ function build(raga, o, hard) {
       else if (push < 0 && (isVar || c.kind === 'nov')) score -= push * D.c;
       return score;
     });
-    const ch = cand[soft(scores, D.tau, rand)], c = ch.c;
+    let lo = Infinity, hi = -Infinity; for (const v of ub) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    const order = cand.map((x, k) => k);
+    if (hi - lo > 15 * D.tau) order.sort((a, b) => ub[b] - ub[a] || a - b);
+    // away from the end, a device's junction terms depend only on its first three swaras
+    const memo = new Map();
+    const pickIx = [], scores = [];
+    let best = -Infinity, avoided = [];
+    for (const k of order) {
+      if (ub[k] < best - 15 * D.tau) break;
+      const x = cand[k], cn = x.cn, ph = PHRASE_KINDS.has(x.c.kind), last = t + x.c.len === B;
+      // leap terms: the device's own moves (precomputed) plus its junctions; the junction into the mora counts
+      let bt;
+      if (last) bt = boundaryTerms(LX, tail, cn, after, !!mora);
+      else {
+        const i1 = cn.length > 1 ? cn[1].i + 1 : 0, i2 = cn.length > 2 ? cn[2].i + 1 : 0;
+        const key = (((cn[0].i + 1) * 64 + i1) * 64 + i2) * 64 + Math.min(cn[0].dur, 15) * 4 + (cn[0].phrase ? 2 : 0) + (cn[0].arp ? 1 : 0);
+        bt = memo.get(key);
+        if (!bt) { bt = boundaryTerms(LX, tail, cn, [], false); memo.set(key, bt); }
+      }
+      x.L = { unl: x.int.unl + bt.unl, dbl: x.int.dbl + bt.dbl, unres: x.int.unres + bt.unres };
+      // register: the span of each akshara the device touches (attested phrases carry their own)
+      const reg = per > 1 && !ph ? registerExcess(cn, t) : 0;
+      let sa = 0;
+      if (hasAvoid) {
+        // hard avoid lists are exact for one swara of look-behind; longer junctions are avoided whenever possible
+        if (hardAvoid.length && hardAvoid.some(pat => runAcross(look, x.ps, pat))) { avoided.push(k); continue; }
+        for (const pat of softAvoid) if (runAcross(look, x.ps, pat)) sa++;
+      }
+      const allowed = Math.floor(LX.budget * (t + x.c.len) / 8 + 1e-9);
+      const over = Math.max(0, Math.min(x.L.unl, unlSoFar + x.L.unl - allowed));
+      // reasoned jumps (plan 3.2), all on F so they fade as c rises
+      const pen = 1.5 * x.L.unl + 0.6 * x.L.unres + 2.0 * x.L.dbl + 1.0 * over + 0.8 * reg + 1.0 * sa;
+      const sc = ub[k] - (1 - D.c) * pen;
+      pickIx.push(k); scores.push(sc);
+      if (sc > best) best = sc;
+    }
+    if (!pickIx.length) avoided.forEach(k => { pickIx.push(k); scores.push(ub[k]); });   // nothing else can finish
+    const ch = cand[pickIx[soft(scores, D.tau, rand)]], c = ch.c;
     const unit = { kind: c.kind, base: c.base, id: c.id, name: c.name, dir: c.dir, t, notes: ch.cn.map(n => ({ p: n.p, dur: n.dur })) };
     if (c.phraseId) Object.assign(unit, { phraseId: c.phraseId, source: c.source, type: c.type, variant: c.variant }, c.exception ? { exception: true } : {});
     units.push(unit);
@@ -394,10 +419,10 @@ function build(raga, o, hard) {
   }
   if (mora) {
     for (let r = 0; r < 3; r++) {
-      const ns = mora.ph.map((j, k) => ({ p: notes[j], dur: k === mora.ph.length - 1 && r < 2 ? 1 + mora.q : 1 }));
+      const st = mora.stmts[r], ns = st.map((j, k) => ({ p: notes[j], dur: k === st.length - 1 && r < 2 ? 1 + mora.q : 1 }));
       const g = units.length;
       units.push({ kind: 'mora', base: 'mora', name: 'mora ' + (r + 1) + ' of 3', dir: 0, t, notes: ns });
-      ns.forEach((n, k) => { line.push({ p: n.p, i: mora.ph[k], dur: n.dur, pos: t, g }); t += n.dur; });
+      ns.forEach((n, k) => { line.push({ p: n.p, i: st[k], dur: n.dur, pos: t, g }); t += n.dur; });
     }
   }
   const notesOut = []; units.forEach(u => u.notes.forEach(n => notesOut.push(n)));
@@ -410,7 +435,11 @@ function build(raga, o, hard) {
     if (u.kind !== 'start' && u.kind !== 'step' && u.kind !== 'mora') { const k = u.name + (u.dir > 0 ? ' ↑' : u.dir < 0 ? ' ↓' : ''); devices[k] = (devices[k] || 0) + 1; }
     if (u.phraseId) phrasesUsed.push({ phraseId: u.phraseId, source: u.source, kind: u.kind, variant: u.variant, type: u.type, notes: u.notes.map(n => n.p) });
   });
-  const endInfo = mora ? { type: 'mora', phrase: mora.ph.map(j => notes[j]), q: mora.q, start: mora.B } : (ending === 'mora' ? { type: 'free', fallbackFrom: 'mora' } : { type: 'free' });
+  const endInfo = mora ? {
+    type: 'mora', style: mora.style, statements: mora.stmts.map(st => st.map(j => notes[j])), q: mora.q, start: mora.B,
+    adjusted: mora.adjusted, template: mora.template, templatePhrase: mora.phraseId || null, direction: mora.delta > 0 ? 'down' : mora.delta < 0 ? 'up' : 'none',
+    phrase: mora.stmts[2].map(j => notes[j])   // deprecated: the last statement (v0.2 had one phrase three times)
+  } : (ending === 'mora' ? { type: 'free', fallbackFrom: 'mora' } : { type: 'free' });
   if (useEduppu) Object.assign(endInfo, { eduppu: e, final: targetPitch, approach: pick.approach });
   const leaps = leapStats(LX, line, useEduppu ? [{ p: e, i: ix(e), dur: 1, g: -2 }] : [], slots);
   return {

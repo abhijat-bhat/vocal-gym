@@ -407,9 +407,9 @@ function kalPhraseText(r, st){
 }
 function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
-  const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value;
+  const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value, moraStyle = $('k-mora').value;
   $('k-tv').textContent = T.toFixed(1);
-  const res = E.kalpanaRound(r, { aksharas: K0, perAkshara: per, startPitch: sp, eduppuPitch: tp, T, seed: K.seed, ending });
+  const res = E.kalpanaRound(r, { aksharas: K0, perAkshara: per, startPitch: sp, eduppuPitch: tp, T, seed: K.seed, ending, moraStyle });
   $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · ' + K0 + ' aksharas × ' + per + ' = ' + K0 * per + ' slots, then the composition resumes on ' + esc(swara(r, tp, true)) + ' at the eduppu · seed ' + K.seed;
   if (res.error){
     const nb = E.eduppuNeighbours(r, tp), near = [nb.lo, nb.hi].filter(p => p != null).map(p => swara(r, p, true)).join(' or ');
@@ -431,7 +431,8 @@ function kalRender(){
   const st = res.stats, dev = Object.keys(st.devices).map(k => k + (st.devices[k] > 1 ? ' ×' + st.devices[k] : '')).join(', ');
   const D = res.dial, fin = swara(r, res.ending.final, true), edp = swara(r, tp, true);
   const nearTxt = fin + ', the ' + (res.ending.approach === 'below' ? 'arohana swara just below ' + edp + ', so the line rises into the eduppu' : 'avarohana swara just above ' + edp + ', so the line descends into the eduppu');
-  const endTxt = res.ending.type === 'mora' ? 'Mora ending: ' + res.ending.phrase.map(p => swara(r, p, false)).join(' ') + ' three times with ' + (res.ending.q ? res.ending.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
+  const MS = { shift: 'shift mora: one contour, a scale step nearer the eduppu each time', gopuccha: 'gopuccha mora: one swara shorter each time', srotovaha: 'srotovaha mora: one swara longer each time', identical: 'identical mora: one statement three times' };
+  const en = res.ending, endTxt = en.type === 'mora' ? 'Mora ending, ' + MS[en.style] + ' (' + (en.template === 'generic' ? 'a generic contour' : 'the contour of ' + en.templatePhrase) + (en.adjusted ? '; one statement adjusted to keep the raga' : '') + '): ' + en.statements.map(st => st.map(p => swara(r, p, false)).join(' ')).join(' · ') + ', with ' + (en.q ? en.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
   $('k-audit').innerHTML = [
     ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices and phrase variants, ' + Math.round(st.convShare * 100) + '% from attested phrases and conventional devices', true],
     ['Devices: ' + (dev || 'single steps only'), true],
@@ -448,7 +449,7 @@ function kalInit(){
   $('k-raga').addEventListener('input', () => { kalFillNotes(true); kalRender(); });
   $('k-fam').addEventListener('change', () => { fillJati($('k-jati'), $('k-fam').value); kalFillLen(); kalRender(); });
   $('k-jati').addEventListener('input', () => { kalFillLen(); kalRender(); });
-  ['k-len','k-pa','k-start','k-end','k-ending'].forEach(id => $(id).addEventListener('input', kalRender));
+  ['k-len','k-pa','k-start','k-end','k-ending','k-mora'].forEach(id => $(id).addEventListener('input', kalRender));
   $('k-temp').addEventListener('input', () => { $('k-tv').textContent = (+$('k-temp').value).toFixed(1); });
   $('k-temp').addEventListener('change', kalRender);
   $('k-new').addEventListener('click', () => { K.seed++; kalRender(); });

@@ -20,6 +20,10 @@ test('command line', () => {
   assert.equal(r.status, 0); assert.match(r.stdout, /direction-rule exceptions allowed/);
   r = run('kalpana', '--raga', 'mela1', '--aksharas', '8', '--eduppu-swara', 'S');
   assert.equal(r.status, 0); assert.match(r.stdout, /Phrase data: none for Kanakangi/);
+  r = run('kalpana', '--raga', 'mayamalavagowla', '--aksharas', '16', '--eduppu-swara', 'S', '--ending', 'mora', '--mora-style', 'gopuccha', '--temp', '0');
+  assert.equal(r.status, 0); assert.match(r.stdout, /gopuccha mora \(/); assert.equal((r.stdout.match(/mora · mora \d of 3/g) || []).length, 3);
+  r = run('kalpana', '--raga', 'kalyani', '--mora-style', 'zigzag');
+  assert.equal(r.status, 2); assert.match(r.stderr, /Mora style must be one of/);
   r = run('kalpana', '--raga', 'saveri', '--aksharas', '4', '--eduppu-swara', 'G');
   assert.equal(r.status, 0); assert.match(r.stdout, /lands on M₁, the swara just above the eduppu G₃/);
   r = run('kalpana', '--raga', 'kalyani', '--aksharas', '1', '--per', '1', '--eduppu-swara', "P'");
