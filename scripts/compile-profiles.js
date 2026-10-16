@@ -15,6 +15,8 @@
      exceptions  documented direction-rule exceptions (anya swaras, vakra steps), same fields plus
                  anya; used only with kalpana's allowExceptions option
      avoid       entries that name swaras: { pitches, strength }
+     gamaka      gamakaRender resolved for the renderer: rules keyed by pitch class, targets as
+                 semitone offsets from the swara; ragas without data get the light default
    SOURCES (a second export): { title, url, reliability } for every source a compiled phrase cites.
 
    Usage: node scripts/compile-profiles.js   (validates the JSON first; exit 1 on errors) */
@@ -22,7 +24,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { mod12 } from '../src/engine/projection.js';
-import { parsePhrase, letterMap, engineRagas, validateProfiles } from './check-raga-profiles.js';
+import { parsePhrase, letterMap, engineRagas, validateProfiles, compileGamaka } from './check-raga-profiles.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const PROFILES_JSON = join(root, 'data', 'raga-profiles.json');
@@ -79,6 +81,7 @@ export function compileProfileTable(doc) {
       nyasa: pcsOf(raga, roles.nyasa), jiva: pcsOf(raga, roles.jiva), alpa: pcsOf(raga, roles.alpa), notNyasa: pcsOf(raga, roles.notNyasa),
       janta: p.janta, dattu: p.dattu,
       confidence: p.confidence.phrases,
+      gamaka: compileGamaka(raga, p.gamakaRender),
       phrases, exceptions, avoid
     };
   });
@@ -98,6 +101,7 @@ export function compileProfiles(doc) {
     lines.push('    landing: ' + J(e.landing) + ', avoidLanding: ' + J(e.avoidLanding) + ',');
     lines.push('    nyasa: ' + J(e.nyasa) + ', jiva: ' + J(e.jiva) + ', alpa: ' + J(e.alpa) + ', notNyasa: ' + J(e.notNyasa) + ',');
     lines.push('    janta: ' + J(e.janta) + ', dattu: ' + J(e.dattu) + ', confidence: ' + J(e.confidence) + ',');
+    lines.push('    gamaka: ' + J(e.gamaka) + ',');
     ['phrases', 'exceptions', 'avoid'].forEach(k => {
       if (!e[k].length) { lines.push('    ' + k + ': [],'); return; }
       lines.push('    ' + k + ': [');
@@ -111,6 +115,7 @@ export function compileProfiles(doc) {
   // the sources the compiled phrases cite, so pages can name them
   const cited = new Set();
   ids.forEach(id => table[id].phrases.concat(table[id].exceptions).forEach(ph => cited.add(ph.source)));
+  ids.forEach(id => table[id].gamaka.sources.forEach(s => cited.add(s)));
   const sids = Array.from(cited).sort((a, b) => +a.slice(1) - +b.slice(1));
   lines.push('export const SOURCES = {');
   sids.forEach((s, n) => lines.push('  ' + s + ': ' + J({ title: doc.sources[s].title, url: doc.sources[s].url, reliability: doc.sources[s].reliability }) + (n < sids.length - 1 ? ',' : '')));

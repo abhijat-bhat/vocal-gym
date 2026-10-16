@@ -5,6 +5,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"10":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S188","basis":"text","spec":0}]},"sources":["S188","S193"]},
     phrases: [
       {"id":"abheri#0","pitches":[5,7,12,10,10,10,9,9,7,7,5,5,3],"durs":[2,1,1,1,2,1,1,1,1,1,1,1,1],"type":"janta","weight":0.4,"octaveCertain":false,"source":"S183"},
       {"id":"abheri#1","pitches":[7,5,7,5,7,12,10,10,9,9,7,7,5,7,5,3,2,0],"durs":[1,1,1,1,1,1,1,1,1,1,2,1,1,3,1,2,1,1],"type":"ending","weight":0.4,"octaveCertain":false,"source":"S183"},
@@ -29,6 +30,7 @@ export default {
     landing: [0,2,3], avoidLanding: [],
     nyasa: [], jiva: [3], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"3":[{"when":{"dir":"up"},"onset":"nokku","body":"kampita","exit":"none","lo":0,"hi":2,"from":2,"end":"self","cycles":[1,1],"depth":0.5,"src":"S152","basis":"text","spec":1}]},"sources":["S152","S193"]},
     phrases: [
       {"id":"abhogi#0","pitches":[3,5,2,0],"durs":[1,1,1,1],"type":"signature","weight":0.7,"octaveCertain":true,"source":"S152"},
       {"id":"abhogi#1","pitches":[5,9,12,9,5,9,5,3,2,3,5,3,2,0],"durs":[1,1,1,2,1,1,1,1,2,1,1,1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S179"},
@@ -49,6 +51,7 @@ export default {
     landing: [0,2,7], avoidLanding: [4,11],
     nyasa: [2,7], jiva: [], alpa: [4,11], notNyasa: [],
     janta: "suits", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"2":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S158","basis":"text","spec":0}],"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,1],"dwell":"hi","depth":1,"src":"S158","basis":"text","spec":0}],"11":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,1],"dwell":"hi","depth":1,"src":"S158","basis":"text","spec":0}]},"sources":["S158","S193"]},
     phrases: [
       {"id":"arabhi#0","pitches":[7,5,4,2,0,2,5,4,2],"durs":[2,2,1,1,1,1,2,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S171"},
       {"id":"arabhi#1","pitches":[2,5,7,9],"durs":[1,1,1,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S171"},
@@ -70,6 +73,7 @@ export default {
     landing: [0,2,7,9], avoidLanding: [],
     nyasa: [2,7,9], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "low",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"bilahari#0","pitches":[4,7,9,12],"durs":[1,1,1,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S169"},
       {"id":"bilahari#1","pitches":[12,11,14,12,12,11,11,9,9],"durs":[1,1,1,1,1,1,1,1,1],"type":"janta","weight":0.8,"octaveCertain":true,"source":"S169"},
@@ -84,6 +88,7 @@ export default {
     landing: [0,2,4,7,11], avoidLanding: [],
     nyasa: [0,2,4,7,11], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"hamsadhwani#0","pitches":[4,2,4],"durs":[1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S166"},
       {"id":"hamsadhwani#1","pitches":[4,2,-1,-5],"durs":[1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S166"},
@@ -116,6 +121,7 @@ export default {
     landing: [0,3,5,8,10], avoidLanding: [],
     nyasa: [0,3,5,8,10], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"hindolam#0","pitches":[5,3,0],"durs":[1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S163"},
       {"id":"hindolam#1","pitches":[-2,0,3,5,3,0,-4],"durs":[1,1,1,1,1,1,1],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S163"},
@@ -140,6 +146,7 @@ export default {
     landing: [0,4,5,7,9], avoidLanding: [],
     nyasa: [4,5,7,9], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"9":[{"when":{"prev":{"pc":7,"rel":null}},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":3,"end":"self","cycles":[1,2],"depth":1,"src":"S75","basis":"text","spec":1},{"when":{"next":{"pc":0,"rel":"up"}},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":3,"end":"self","cycles":[1,2],"depth":1,"src":"S75","basis":"text","spec":1}],"10":[{"when":{},"onset":"jaru","body":"plain","exit":"none","end":"self","depth":1,"src":"S185","basis":"text","spec":0}]},"sources":["S75","S185","S193"]},
     phrases: [
       {"id":"kambhoji#0","pitches":[9,12,10,9],"durs":[1,1,2,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S168"},
       {"id":"kambhoji#1","pitches":[10,9,7],"durs":[1,1,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S168"},
@@ -165,6 +172,7 @@ export default {
     landing: [0,2,7], avoidLanding: [4,9],
     nyasa: [2,7], jiva: [], alpa: [4,9], notNyasa: [4,9],
     janta: "neutral", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,1],"dwell":"hi","depth":1,"src":"S186","basis":"text","spec":0}],"9":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,1],"dwell":"hi","depth":1,"src":"S186","basis":"text","spec":0}]},"sources":["S186","S193"]},
     phrases: [
       {"id":"kedaragowla#0","pitches":[2,5,7],"durs":[1,1,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S172"},
       {"id":"kedaragowla#1","pitches":[7,10,9,7,5,4,2,2],"durs":[1,1,1,1,1,1,2,1],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S172"},
@@ -188,6 +196,7 @@ export default {
     landing: [0,2,5,7], avoidLanding: [],
     nyasa: [0,2,5,7], jiva: [], alpa: [], notNyasa: [],
     janta: "suits", dattu: "suits", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"madhyamavati#0","pitches":[2,2],"durs":[1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S164"},
       {"id":"madhyamavati#1","pitches":[2,7,5,2,0],"durs":[1,1,1,2,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S164"},
@@ -216,6 +225,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "suits", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"5":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S184","basis":"text","spec":0}],"8":[{"when":{"janta":true},"onset":"sphurita","body":"plain","exit":"none","end":"self","depth":1,"src":"S184","basis":"text","spec":1}]},"sources":["S184","S193"]},
     phrases: [
       {"id":"malahari#0","pitches":[8,7,5,4,1,0],"durs":[1,1,1,1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S181"},
       {"id":"malahari#1","pitches":[1,5,7,8,5,7],"durs":[1,1,1,1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S181"},
@@ -248,6 +258,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -256,6 +267,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -264,6 +276,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -272,6 +285,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"3":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":1,"src":"S35","basis":"text-vague","spec":1}],"10":[{"when":{},"onset":"nokku","body":"plain","exit":"none","from":1,"end":"self","depth":1,"src":"S35","basis":"text","spec":0}]},"sources":["S35","S193"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -280,6 +294,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -288,6 +303,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -296,6 +312,7 @@ export default {
     landing: [0,5,7], avoidLanding: [1,8],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"heavy","basis":"text","maxChain":4,"rules":{"0":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S40","basis":"text","spec":0}],"1":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S40","basis":"text","spec":0}],"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,2],"dwell":"hi","depth":1,"src":"S40","basis":"text","spec":0}],"5":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S40","basis":"text","spec":0}],"7":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S40","basis":"text","spec":0}],"8":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S40","basis":"text","spec":0}],"11":[{"when":{"dir":"up","next":{"pc":0,"rel":"up"}},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S40","basis":"text","spec":2}]},"sources":["S40","S193"]},
     phrases: [
       {"id":"mela15#0","pitches":[5,4,5,4,5,4],"durs":[2,1,2,1,2,1],"type":"signature","weight":0.7,"octaveCertain":true,"source":"S40"},
       {"id":"mela15#1","pitches":[0,1,1,4,5,7],"durs":[2,1,1,1,1,1],"type":"ending","weight":0.64,"octaveCertain":false,"source":"S55"},
@@ -321,6 +338,7 @@ export default {
     landing: [0,1,5,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"1":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S41","basis":"text","spec":0}],"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":1,"end":"hi","cycles":[1,1],"dwell":"hi","depth":0.5,"src":"S41","basis":"text","spec":0}],"5":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S41","basis":"text","spec":0}]},"sources":["S41","S193"]},
     phrases: [
       {"id":"mela16#0","pitches":[5,5,4,1,0,4,5,7],"durs":[1,1,1,1,1,1,1,1],"type":"ending","weight":0.5,"octaveCertain":false,"source":"S56"},
       {"id":"mela16#1","pitches":[9,9,12,10,10,9,7],"durs":[1,1,1,1,1,1,1],"type":"ending","weight":0.5,"octaveCertain":false,"source":"S56"},
@@ -347,6 +365,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -355,6 +374,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -363,6 +383,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -371,6 +392,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -379,6 +401,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"3":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S61","basis":"text-vague","spec":0}],"10":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S61","basis":"text-vague","spec":0}]},"sources":["S61","S193"]},
     phrases: [
       {"id":"mela20#0","pitches":[7,5,3,2,0],"durs":[1,1,1,1,1],"type":"ending","weight":0.2,"octaveCertain":true,"source":"S61"},
       {"id":"mela20#1","pitches":[5,7,8,10,8,7],"durs":[1,1,1,1,1,1],"type":"ending","weight":0.2,"octaveCertain":true,"source":"S61"},
@@ -394,6 +417,7 @@ export default {
     landing: [0,2,5,7,11], avoidLanding: [],
     nyasa: [0,2,5,7,11], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela21#0","pitches":[7,8,11,12,14,15,14,12],"durs":[1,1,1,1,1,1,1,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S60"},
       {"id":"mela21#1","pitches":[11,14,11,8,7,5],"durs":[1,1,1,1,1,2],"type":"dattu","weight":0.8,"octaveCertain":true,"source":"S60"},
@@ -418,6 +442,7 @@ export default {
     landing: [0,2,3,7,9,10], avoidLanding: [],
     nyasa: [2,3,9,10], jiva: [2,3,9,10], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"2":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":0.6,"src":"S52","basis":"text-vague","spec":1}],"3":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.6,"src":"S52","basis":"text-vague","spec":1}],"9":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":0.6,"src":"S52","basis":"text-vague","spec":1}],"10":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.6,"src":"S52","basis":"text-vague","spec":1}]},"sources":["S52","S193"]},
     phrases: [
       {"id":"mela22#0","pitches":[2,3,2,0,-2,-3,-2,0,2,2,0,-2,0],"durs":[2,1,2,3,2,2,2,1,2,1,1,1,1],"type":"ending","weight":0.64,"octaveCertain":false,"source":"S58"},
       {"id":"mela22#1","pitches":[9,10,9,7,5,9,10,9,7,12,10,10,9,7,5],"durs":[2,1,2,3,2,2,1,2,2,1,1,1,1,1,1],"type":"dattu","weight":0.64,"octaveCertain":false,"source":"S58"},
@@ -431,6 +456,7 @@ export default {
     landing: [0,2,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"heavy","basis":"text","maxChain":4,"rules":{"2":[{"when":{"janta":true},"onset":"sphurita","body":"plain","exit":"none","end":"self","depth":1,"src":"S53","basis":"text","spec":1},{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S53","basis":"text","spec":0}],"3":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":2,"end":"self","cycles":[1,2],"depth":1,"src":"S53","basis":"text","spec":0}],"5":[{"when":{"inPhrase":[5,7,9,11,0]},"onset":"nokku","body":"kampita","exit":"none","lo":-2,"hi":0,"from":2,"end":"self","cycles":[1,1],"depth":1,"src":"S53","basis":"text","spec":1},{"when":{"next":{"pc":3,"rel":null}},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S53","basis":"text","spec":1},{"when":{"prev":{"pc":3,"rel":null}},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S53","basis":"text","spec":1}],"9":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S53","basis":"text-vague","spec":0}]},"sources":["S53","S193"]},
     phrases: [
       {"id":"mela23#0","pitches":[3,7,5,3,2,2,0,0,-3,-1,0],"durs":[1,1,1,1,1,1,1,3,1,2,1],"type":"ending","weight":0.48,"octaveCertain":false,"source":"S53"},
       {"id":"mela23#1","pitches":[5,7,9,11,12],"durs":[1,1,1,1,1],"type":"ending","weight":0.6,"octaveCertain":true,"source":"S53"},
@@ -460,6 +486,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -468,6 +495,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -476,6 +504,7 @@ export default {
     landing: [0,4,7,8], avoidLanding: [],
     nyasa: [0,4,7,8], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S84","basis":"text-vague","spec":0}],"10":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S84","basis":"text-vague","spec":0}]},"sources":["S84","S193"]},
     phrases: [
       {"id":"mela26#0","pitches":[7,8,5,7,5,4],"durs":[1,1,1,1,2,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S81"},
       {"id":"mela26#1","pitches":[2,4,5,4,2,0,-4],"durs":[1,1,1,1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S81"},
@@ -505,6 +534,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -513,6 +543,7 @@ export default {
     landing: [0,4,9,10], avoidLanding: [],
     nyasa: [4,9,10], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "unknown", confidence: "high",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"5":[{"when":{"prev":{"pc":4,"rel":null}},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S75","basis":"text","spec":1}],"9":[{"when":{"prev":{"pc":7,"rel":null}},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S75","basis":"text","spec":1}],"10":[{"when":{"prev":{"pc":0,"rel":"up"}},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":2,"end":"self","cycles":[1,2],"depth":1,"src":"S75","basis":"text","spec":1},{"when":{"prev":{"pc":9,"rel":null}},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.3,"src":"S75","basis":"text","spec":1}]},"sources":["S75","S193"]},
     phrases: [
       {"id":"mela28#0","pitches":[4,5,7,9,10,9,7],"durs":[1,1,1,1,2,2,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S80"},
       {"id":"mela28#1","pitches":[7,5,4,2],"durs":[1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S80"},
@@ -545,6 +576,7 @@ export default {
     landing: [0,4,5,7], avoidLanding: [2,9,11],
     nyasa: [0,4,5,7], jiva: [4,5,7,11], alpa: [], notNyasa: [2,9,11],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"heavy","basis":"text","maxChain":4,"rules":{"2":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S76","basis":"text-vague","spec":0}],"4":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S76","basis":"text","spec":0}],"5":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S76","basis":"text-vague","spec":0}],"9":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S76","basis":"text-vague","spec":0}],"11":[{"when":{},"onset":"jaru","body":"plain","exit":"none","end":"self","depth":1,"src":"S76","basis":"text","spec":0}]},"sources":["S76","S193"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -553,6 +585,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -561,6 +594,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -569,6 +603,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"3":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-3,"hi":0,"end":"self","cycles":[1,1],"depth":1,"src":"S77","basis":"text-vague","spec":0}],"8":[{"when":{},"onset":"jaru","body":"plain","exit":"none","end":"self","depth":1,"src":"S77","basis":"text","spec":0}],"9":[{"when":{},"onset":"jaru","body":"plain","exit":"none","end":"self","depth":1,"src":"S77","basis":"text","spec":0}]},"sources":["S77","S193"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -577,6 +612,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -585,6 +621,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -593,6 +630,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -601,6 +639,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -609,6 +648,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -617,6 +657,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -625,6 +666,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -633,6 +675,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -641,6 +684,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -649,6 +693,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -657,6 +702,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -665,6 +711,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -673,6 +720,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -681,6 +729,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -689,6 +738,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -697,6 +747,7 @@ export default {
     landing: [0,6,7,9,10], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela46#0","pitches":[10,9,7,6,3,1,1,0,-2,-3,-2,0,1,3,6],"durs":[1,1,1,1,2,1,1,2,1,1,1,1,1,2,1],"type":"connective","weight":0.64,"octaveCertain":false,"source":"S102"},
       {"id":"mela46#1","pitches":[7,9,10,9,7,9,10,9,7,6,3,1,1,0],"durs":[1,1,1,1,1,1,1,1,1,1,2,1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S102"},
@@ -713,6 +764,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -721,6 +773,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -729,6 +782,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -737,6 +791,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -745,6 +800,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -753,6 +809,7 @@ export default {
     landing: [0,1,7,8], avoidLanding: [4],
     nyasa: [], jiva: [], alpa: [], notNyasa: [4],
     janta: "unknown", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"4":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S115","basis":"text","spec":0}],"8":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S115","basis":"text","spec":0}]},"sources":["S115","S193"]},
     phrases: [
       {"id":"mela51#0","pitches":[-1,0,1,0,-1,0,1,0,-1,0,1,0],"durs":[1,1,1,2,1,1,1,2,1,1,1,1],"type":"signature","weight":0.58,"octaveCertain":false,"source":"S115"},
       {"id":"mela51#1","pitches":[12,13,16,18,16,13,12],"durs":[1,1,1,1,1,1,1],"type":"ending","weight":0.48,"octaveCertain":false,"source":"S115"},
@@ -779,6 +836,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -787,6 +845,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: [
@@ -799,6 +858,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -807,6 +867,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -815,6 +876,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela56#0","pitches":[12,14,12,8,14,12,8,12,8,7,6,3,6,7],"durs":[1,1,2,2,1,1,2,1,2,1,1,1,1,1],"type":"ending","weight":0.5,"octaveCertain":true,"source":"S127"},
       {"id":"mela56#1","pitches":[7,6,7,8,10],"durs":[5,2,1,1,1],"type":"connective","weight":0.5,"octaveCertain":true,"source":"S127"},
@@ -850,6 +912,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "low",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela57#0","pitches":[7,6,8,12,11,12],"durs":[1,1,1,1,1,1],"type":"ending","weight":0.15,"octaveCertain":false,"source":"S121"},
       {"id":"mela57#1","pitches":[6,7,3,2,0],"durs":[1,1,1,1,1],"type":"ending","weight":0.15,"octaveCertain":true,"source":"S121"},
@@ -863,6 +926,7 @@ export default {
     landing: [0,2,7,9], avoidLanding: [],
     nyasa: [2,9], jiva: [], alpa: [], notNyasa: [],
     janta: "suits", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela58#0","pitches":[9,10,9,7],"durs":[1,2,1,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S123"},
       {"id":"mela58#1","pitches":[6,7,9,10,9,7,6,3,2],"durs":[1,1,1,1,1,1,1,2,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S123"},
@@ -887,6 +951,7 @@ export default {
     landing: [0,2,6,7,11], avoidLanding: [3,9],
     nyasa: [0,2,6,7,11], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela59#0","pitches":[7,6,9,7,6,3,2],"durs":[1,1,2,1,1,2,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S124"},
       {"id":"mela59#1","pitches":[2,3,6,7,9,11,12,11,9,7,6,3,2],"durs":[1,1,1,1,1,1,1,1,1,1,1,2,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S124"},
@@ -908,6 +973,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -916,6 +982,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -924,6 +991,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -932,6 +1000,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -940,6 +1009,7 @@ export default {
     landing: [0,4,7,11], avoidLanding: [],
     nyasa: [4,7,11], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "suits", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela63#0","pitches":[11,8,7],"durs":[1,1,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S141"},
       {"id":"mela63#1","pitches":[6,8,7,6,4,2,4],"durs":[1,1,1,1,1,2,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S141"},
@@ -965,6 +1035,7 @@ export default {
     landing: [0,2,4,7,9], avoidLanding: [],
     nyasa: [0,2,4,7,9], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "neutral", confidence: "high",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"mela64#0","pitches":[9,10,9,7,6,4,2,4],"durs":[1,1,1,2,1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S142"},
       {"id":"mela64#1","pitches":[2,4,6,9,7,6,4,2,0],"durs":[1,1,1,1,1,1,1,2,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S142"},
@@ -990,6 +1061,7 @@ export default {
     landing: [0,2,4,7,11], avoidLanding: [],
     nyasa: [0,2,4,7,11], jiva: [2,4], alpa: [], notNyasa: [],
     janta: "suits", dattu: "suits", confidence: "high",
+    gamaka: {"style":"heavy","basis":"text","maxChain":4,"rules":{"0":[{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}],"2":[{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}],"4":[{"when":{"dir":"down"},"onset":"nokku","body":"kampita","exit":"none","lo":-2,"hi":2,"from":2,"end":"self","cycles":[1,1],"depth":1,"src":"S144","basis":"text","spec":1},{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":2,"end":"self","cycles":[1,2],"depth":1,"src":"S144","basis":"text","spec":0}],"6":[{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":1,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}],"7":[{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}],"9":[{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}],"11":[{"when":{"next":{"pc":0,"rel":"up"}},"onset":"nokku","body":"plain","exit":"none","from":1,"end":"self","depth":1,"src":"S144","basis":"text","spec":1},{"when":{"prev":{"pc":9,"rel":null}},"onset":"odukkal","body":"plain","exit":"none","from":-2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1},{"when":{"prev":{"pc":7,"rel":null}},"onset":"odukkal","body":"plain","exit":"none","from":-2,"end":"self","depth":1,"src":"S144","basis":"text","spec":1},{"when":{"dir":"down"},"onset":"nokku","body":"plain","exit":"none","from":1,"end":"self","depth":1,"src":"S144","basis":"text","spec":1}]},"sources":["S144","S193"]},
     phrases: [
       {"id":"mela65#0","pitches":[4,9,7,6,7,4,2,0,-1,2],"durs":[1,1,1,1,1,2,1,1,1,2],"type":"signature","weight":0.9,"octaveCertain":true,"source":"S143"},
       {"id":"mela65#1","pitches":[4,11,9,11,9,7,6],"durs":[1,1,1,2,1,1,2],"type":"dattu","weight":0.8,"octaveCertain":true,"source":"S143"},
@@ -1025,6 +1097,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1033,6 +1106,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1041,6 +1115,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1049,6 +1124,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1057,6 +1133,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1065,6 +1142,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1073,6 +1151,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1081,6 +1160,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1089,6 +1169,7 @@ export default {
     landing: [0,1,5,7,8], avoidLanding: [3,10],
     nyasa: [0,1,5,7,8], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "suits", confidence: "high",
+    gamaka: {"style":"heavy","basis":"text","maxChain":4,"rules":{"0":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S37","basis":"text","spec":0}],"1":[{"when":{},"onset":"odukkal","body":"plain","exit":"none","from":-1,"end":"self","depth":1,"src":"S37","basis":"text","spec":0}],"3":[{"when":{"minSec":0.35},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":2,"end":"self","cycles":[1,3],"depth":1,"src":"S37","basis":"text","spec":1},{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":2,"end":"self","cycles":[1,1],"depth":1,"src":"S37","basis":"text","spec":0}],"5":[{"when":{"dir":"up"},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":2,"end":"self","cycles":[1,1],"depth":1,"src":"S37","basis":"text","spec":1},{"when":{"dir":"down"},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S37","basis":"text","spec":1}],"7":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S37","basis":"text","spec":0}],"8":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,2],"depth":1,"src":"S37","basis":"text","spec":0}],"10":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-2,"hi":2,"end":"self","cycles":[1,3],"depth":1,"src":"S37","basis":"text","spec":0}]},"sources":["S37","S193"]},
     phrases: [
       {"id":"mela8#0","pitches":[3,3,1,1],"durs":[4,1,1,2],"type":"janta","weight":0.8,"octaveCertain":true,"source":"S36"},
       {"id":"mela8#1","pitches":[3,5,3,1,0],"durs":[1,1,2,1,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S36"},
@@ -1130,6 +1211,7 @@ export default {
     landing: [0,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "none",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"3":[{"when":{},"onset":"none","body":"plain","exit":"none","end":"self","depth":1,"src":"S33","basis":"text","spec":0}]},"sources":["S33","S193"]},
     phrases: [],
     exceptions: [],
     avoid: []
@@ -1138,6 +1220,7 @@ export default {
     landing: [0,2,4,7,9], avoidLanding: [],
     nyasa: [4,7,9], jiva: [2,4,9], alpa: [], notNyasa: [],
     janta: "suits", dattu: "suits", confidence: "high",
+    gamaka: {"style":"medium","basis":"text","maxChain":4,"rules":{"9":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":0,"hi":3,"end":"self","cycles":[1,2],"depth":1,"src":"S174","basis":"text","spec":0}]},"sources":["S174","S193"]},
     phrases: [
       {"id":"mohanam#0","pitches":[4,7,9,12],"durs":[1,1,1,1],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S162"},
       {"id":"mohanam#1","pitches":[12,9,14,12,9,7],"durs":[1,1,1,1,2,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S162"},
@@ -1163,6 +1246,7 @@ export default {
     landing: [0,1,5,7], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "neutral", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"4":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-3,"hi":0,"end":"self","cycles":[1,1],"depth":0.4,"src":"S170","basis":"text-vague","spec":0}],"11":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-3,"hi":0,"end":"self","cycles":[1,1],"depth":0.4,"src":"S170","basis":"text-vague","spec":0}]},"sources":["S170","S193"]},
     phrases: [
       {"id":"saveri#1","pitches":[0,1,5,5],"durs":[1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S170"},
       {"id":"saveri#2","pitches":[1,5,7,8,7,8,5],"durs":[1,1,1,1,2,1,2],"type":"dattu","weight":0.8,"octaveCertain":true,"source":"S170"},
@@ -1181,6 +1265,7 @@ export default {
     landing: [0,2,7,9], avoidLanding: [],
     nyasa: [2,7,9], jiva: [], alpa: [], notNyasa: [],
     janta: "suits", dattu: "neutral", confidence: "medium",
+    gamaka: {"style":"light","basis":"default","maxChain":4,"rules":{},"sources":["S193","S198"]},
     phrases: [
       {"id":"shuddhasaveri#0","pitches":[9,12,9,7],"durs":[1,1,2,2],"type":"ending","weight":0.8,"octaveCertain":true,"source":"S165"},
       {"id":"shuddhasaveri#1","pitches":[7,5,9,7,5,2,0,2],"durs":[1,1,1,2,1,1,1,2],"type":"connective","weight":0.8,"octaveCertain":true,"source":"S165"},
@@ -1197,6 +1282,7 @@ export default {
     landing: [0,5], avoidLanding: [],
     nyasa: [], jiva: [], alpa: [], notNyasa: [],
     janta: "unknown", dattu: "unknown", confidence: "medium",
+    gamaka: {"style":"light","basis":"text","maxChain":4,"rules":{"3":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-1,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S190","basis":"text-vague","spec":0}],"9":[{"when":{},"onset":"none","body":"kampita","exit":"none","lo":-4,"hi":0,"end":"self","cycles":[1,1],"depth":0.5,"src":"S190","basis":"text-vague","spec":0}]},"sources":["S190","S193"]},
     phrases: [
       {"id":"sriranjani#0","pitches":[9,10,9,5,5,9,5,3,2,3,5,3,3,2,2,0],"durs":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"type":"ending","weight":0.64,"octaveCertain":false,"source":"S180"},
       {"id":"sriranjani#1","pitches":[5,2,3,2,2,0,-2,0,2,3],"durs":[2,2,2,1,1,3,1,1,1,2],"type":"connective","weight":0.64,"octaveCertain":false,"source":"S180"},
@@ -1216,9 +1302,13 @@ export default {
 };
 export const SOURCES = {
   S31: {"title":"musicmaster.in: Era napai varnam (Todi) transcription","url":"https://musicmaster.in/blog/era-napai-varnam-thodi-raagam/","reliability":"medium"},
+  S33: {"title":"rasikas.org: Dhenuka thread","url":"https://rasikas.org/forums/viewtopic.php?p=353155","reliability":"medium"},
+  S35: {"title":"guruguha.org: Rupavati","url":"https://guruguha.org/?p=2542","reliability":"high"},
   S36: {"title":"Darbar Raga Explorer: Todi","url":"https://darbar.org/raga/todi","reliability":"high"},
   S37: {"title":"M. Subramanian, \"Carnatic Ragam Thodi: Pitch Analysis of Notes and Gamakams\", Sangeet Natak XLI(1), 2007","url":"https://icvtesting.nvli.in/system/files/indculturePDFs/JSNA-41%281%29%2003-20.pdf","reliability":"high"},
   S40: {"title":"Wikipedia: Mayamalavagowla","url":"https://en.wikipedia.org/wiki/Mayamalavagowla","reliability":"medium"},
+  S41: {"title":"Wikipedia: Chakravakam (raga)","url":"https://en.wikipedia.org/wiki/Chakravakam_(raga)","reliability":"medium"},
+  S52: {"title":"Ragasurabhi: Priyamaana Kharaharapriya","url":"https://ragasurabhi.com/carnatic-music/surabhi-post/post--post0013--myriad-hues-of-ragas-priyamaana-kharaharapriya.html","reliability":"medium"},
   S53: {"title":"rasikas.org: Gourimanohari thread (SrinathK)","url":"https://www.rasikas.org/forums/viewtopic.php?p=362597","reliability":"medium"},
   S55: {"title":"shivkumar.org: Deva Deva Kalayami (Swati Tirunal) notation","url":"https://www.shivkumar.org/music/devadeva.htm","reliability":"high"},
   S56: {"title":"shivkumar.org: Gajananayutham (Dikshitar, Semmangudi version) notation","url":"https://www.shivkumar.org/music/gajananayutham.htm","reliability":"high"},
@@ -1228,9 +1318,12 @@ export const SOURCES = {
   S60: {"title":"Darbar Raga Explorer: Keeravani","url":"https://darbar.org/raga/keeravani/","reliability":"high"},
   S61: {"title":"Shankar Mahadevan Academy: Natabhairavi","url":"https://shankarmahadevanacademy.com/raga/natabhairavi/","reliability":"low"},
   S75: {"title":"rasikas.org: Harikambhoji vs Khamas / Kambhoji thread","url":"https://www.rasikas.org/forums/viewtopic.php?p=298177","reliability":"medium"},
+  S76: {"title":"Ragasurabhi: Samrat Shankarabaranam","url":"https://ragasurabhi.com/carnatic-music/surabhi-post/post--post0008--myriad-hues-of-ragas-samrat-shankarabaranam.html","reliability":"medium"},
+  S77: {"title":"guruguha.org: Kalavati (SSP)","url":"https://guruguha.org/?p=1535","reliability":"high"},
   S80: {"title":"Darbar Raga Explorer: Harikambhoji","url":"https://darbar.org/raga/harikambhoji/","reliability":"high"},
   S81: {"title":"Darbar Raga Explorer: Charukesi","url":"https://darbar.org/raga/charukesi/","reliability":"high"},
   S82: {"title":"shivkumar.org: Ada modi (Tyagaraja) notation","url":"https://www.shivkumar.org/music/adamodi.htm","reliability":"high"},
+  S84: {"title":"Shankar Mahadevan Academy: Charukesi","url":"https://shankarmahadevanacademy.com/raga/charukesi/","reliability":"low"},
   S102: {"title":"shivkumar.org: Antaranga bhakti (Koteeswara Iyer) notation","url":"https://www.shivkumar.org/music/antarangabhakti.htm","reliability":"high"},
   S115: {"title":"rasikas.org: Raga Bhava - Pantuvarali (ratanabhinav)","url":"https://rasikas.org/forums/viewtopic.php?p=313317","reliability":"medium"},
   S119: {"title":"musicmaster.in: Shanmugapriya","url":"https://musicmaster.in/blog/delve-into-shanmugapriya-carnatic-raagam/","reliability":"low"},
@@ -1245,6 +1338,7 @@ export const SOURCES = {
   S143: {"title":"Darbar Raga Explorer: Kalyani","url":"https://darbar.org/raga/kalyani/","reliability":"high"},
   S144: {"title":"Rajan Parrikar: Kalyani (Carnatic)","url":"https://www.parrikar.org/carnatic/kalyani/","reliability":"high"},
   S152: {"title":"Wikipedia: Abhogi","url":"https://en.wikipedia.org/wiki/Abhogi","reliability":"medium"},
+  S158: {"title":"Wikipedia: Arabhi","url":"https://en.wikipedia.org/wiki/Arabhi","reliability":"medium"},
   S162: {"title":"Darbar Raga Explorer: Mohana","url":"https://darbar.org/raga/mohana/","reliability":"high"},
   S163: {"title":"Darbar Raga Explorer: Hindola","url":"https://darbar.org/raga/hindola/","reliability":"high"},
   S164: {"title":"Darbar Raga Explorer: Madhyamavati","url":"https://darbar.org/raga/madhyamavati/","reliability":"high"},
@@ -1255,6 +1349,7 @@ export const SOURCES = {
   S170: {"title":"Darbar Raga Explorer: Saveri","url":"https://darbar.org/raga/saveri/","reliability":"high"},
   S171: {"title":"Darbar Raga Explorer: Arabhi","url":"https://darbar.org/raga/arabhi/","reliability":"high"},
   S172: {"title":"Darbar Raga Explorer: Kedaragaula","url":"https://darbar.org/raga/kedaragaula/","reliability":"high"},
+  S174: {"title":"rasikas.org: Continuity of gamakas (beginner post)","url":"https://rasikas.org/forums/viewtopic.php?p=309353","reliability":"low"},
   S176: {"title":"NIOS Carnatic Music textbook, KCM-6","url":"https://www.nios.ac.in/media/documents/Carnatic_Music_243/carnaticmusicbook2/KCM-6.pdf","reliability":"medium"},
   S179: {"title":"shivkumar.org: Evvari Bodhana (Patnam Subramania Iyer) varnam notation","url":"https://www.shivkumar.org/music/varnams/evvaribodhana.htm","reliability":"high"},
   S180: {"title":"shivkumar.org: Brochevarevare (Tyagaraja) notation","url":"https://www.shivkumar.org/music/brochevarevare.htm","reliability":"high"},
@@ -1263,5 +1358,9 @@ export const SOURCES = {
   S183: {"title":"shivkumar.org: Bhajare re manasa (Mysore Vasudevachar) notation","url":"https://www.shivkumar.org/music/bhajare-re-manasa.htm","reliability":"medium"},
   S184: {"title":"guruguha.org: Kannada Bangala & Malahari, the conjoined twins","url":"https://guruguha.org/?p=1971","reliability":"high"},
   S185: {"title":"guruguha.org: The mystery about Kambhoji, part 2","url":"https://guruguha.org/the-mystery-about-kambhoji-part-2/","reliability":"high"},
-  S190: {"title":"Shankar Mahadevan Academy: Sriranjani","url":"https://shankarmahadevanacademy.com/raga/sriranjani/","reliability":"low"}
+  S186: {"title":"guruguha.org: Narayanagaula and allied ragas","url":"https://guruguha.org/?p=1518","reliability":"high"},
+  S188: {"title":"rasikas.org: AbhEri - Old and New","url":"https://rasikas.org/forums/viewtopic.php?p=354088","reliability":"medium"},
+  S190: {"title":"Shankar Mahadevan Academy: Sriranjani","url":"https://shankarmahadevanacademy.com/raga/sriranjani/","reliability":"low"},
+  S193: {"title":"Viraraghavan, Aravind, Murthy, \"A statistical analysis of gamakas in Carnatic music\", ISMIR 2017","url":"https://archives.ismir.net/ismir2017/paper/000082.pdf","reliability":"high"},
+  S198: {"title":"Wikipedia: Gamaka (music)","url":"https://en.wikipedia.org/wiki/Gamaka_(music)","reliability":"medium"}
 };

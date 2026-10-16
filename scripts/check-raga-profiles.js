@@ -13,6 +13,7 @@
      node scripts/check-raga-profiles.js          validate data/raga-profiles.json, exit 1 on errors
      node scripts/check-raga-profiles.js --fix    also rewrite the computed fields
                                                   (features, directionRuleOk, inEngineRange, anyaSwaras)
+                                                  and checks gamakaRender (rules, targets, sources)
 */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -120,6 +121,137 @@ export function engineRagas() {
   return byId;
 }
 
+/* ---------- gamakaRender: structured gamaka rules (docs/plans/gamaka-audio.md §1) ----------
+   Rules are keyed by swara letter. Targets (lo, hi, from) are raga notes: 'self', a letter with an
+   optional octave mark ("M", "S'", "N."), '+1' / '-1' (the next raga swara up or down), or '±Nc'
+   (cents, for measured data). compileGamaka() resolves them to semitone offsets from the swara. */
+export const GAMAKA_WHEN = ['dir', 'minSec', 'maxSec', 'prev', 'next', 'janta', 'inPhrase', 'octave'];
+export const GAMAKA_MAX_OFFSET = 7;
+const TARGET = /^([SRGMPDN])(['.])?$/;
+
+/* Semitone offset of a target from the swara with pitch class selfPc, or { error }. */
+export function resolveTarget(raga, selfPc, spec) {
+  if (spec == null || spec === 'self') return 0;
+  const s = String(spec);
+  const union = Array.from(new Set(raga.aro.concat(raga.avaro).map(mod12))).sort((a, b) => a - b);
+  if (s === '+1' || s === '-1') {
+    const up = s === '+1';
+    let best = null;
+    for (const pc of union) for (const o of [-12, 0, 12]) {
+      const off = pc + o - selfPc;
+      if (up ? off > 0 : off < 0) if (best === null || Math.abs(off) < Math.abs(best)) best = off;
+    }
+    return best === null ? { error: 'no swara ' + (up ? 'above' : 'below') } : best;
+  }
+  const c = /^([+-]\d+)c$/.exec(s);
+  if (c) return +c[1] / 100;
+  const m = TARGET.exec(s);
+  if (!m) return { error: 'bad target "' + s + '"' };
+  const lm = letterMap(raga), pc = lm[m[1]];
+  if (pc == null) return { error: m[1] + ' is not a swara of ' + raga.name };
+  let off = pc - selfPc;
+  if (m[2] === "'") { while (off <= 0) off += 12; }
+  else if (m[2] === '.') { while (off >= 0) off -= 12; }
+  else { if (off > 6) off -= 12; if (off < -6) off += 12; }
+  return off;
+}
+
+/* A neighbour condition ("G", "S'", "N.") as { pc, rel }: rel 'up' / 'down' when an octave mark says
+   the neighbour lies above or below the note. */
+function resolveNeighbour(raga, spec) {
+  const m = TARGET.exec(String(spec));
+  if (!m) return { error: 'bad swara "' + spec + '"' };
+  const pc = letterMap(raga)[m[1]];
+  if (pc == null) return { error: m[1] + ' is not a swara of ' + raga.name };
+  return { pc, rel: m[2] === "'" ? 'up' : m[2] === '.' ? 'down' : null };
+}
+
+/* Validate one raga's gamakaRender against the enums and sources. Returns error strings. */
+export function validateGamaka(raga, gr, doc) {
+  const errs = [], EN = doc.enums || {}, id = raga.id;
+  const inEnum = (k, v) => !EN[k] || EN[k].includes(v);
+  const srcOk = s => !!(doc.sources && doc.sources[s]);
+  if (!gr || typeof gr !== 'object') return [id + ': gamakaRender must be an object'];
+  if (!inEnum('gamakaStyle', gr.style)) errs.push(id + ': gamakaRender.style ' + gr.style);
+  if (!inEnum('gamakaBasis', gr.basis)) errs.push(id + ': gamakaRender.basis ' + gr.basis);
+  const lm = letterMap(raga);
+  Object.entries(gr.rules || {}).forEach(([L, list]) => {
+    if (lm[L] == null) { errs.push(id + ': gamaka rule for ' + L + ', which is not a swara of ' + raga.name); return; }
+    if (!Array.isArray(list) || !list.length) { errs.push(id + ' ' + L + ': rules must be a non-empty list'); return; }
+    list.forEach((r, k) => {
+      const where = id + ' ' + L + '[' + k + ']';
+      if (!r.src || !srcOk(r.src)) errs.push(where + ': unknown or missing src ' + r.src);
+      if (r.basis != null && !inEnum('gamakaBasis', r.basis)) errs.push(where + ': basis ' + r.basis);
+      if (!inEnum('gamakaBody', r.body || 'plain')) errs.push(where + ': body ' + r.body);
+      if (!inEnum('gamakaOnset', r.onset || 'none')) errs.push(where + ': onset ' + r.onset);
+      if (!inEnum('gamakaExit', r.exit || 'none')) errs.push(where + ': exit ' + r.exit);
+      if (r.end != null && !inEnum('gamakaEnd', r.end)) errs.push(where + ': end ' + r.end);
+      if (r.dwell != null && !inEnum('gamakaDwell', r.dwell)) errs.push(where + ': dwell ' + r.dwell);
+      if (r.depth != null && !(r.depth >= 0 && r.depth <= 1)) errs.push(where + ': depth must be in [0, 1]');
+      if (r.cycles != null && !(Array.isArray(r.cycles) && r.cycles.length === 2 && r.cycles.every(Number.isInteger) && r.cycles[0] >= 1 && r.cycles[0] <= r.cycles[1])) errs.push(where + ': cycles must be [min, max] with 1 <= min <= max');
+      const w = r.when || {};
+      Object.keys(w).forEach(kk => { if (!GAMAKA_WHEN.includes(kk)) errs.push(where + ': unknown condition ' + kk); });
+      if (w.dir != null && !inEnum('gamakaDir', w.dir)) errs.push(where + ': dir ' + w.dir);
+      ['prev', 'next'].forEach(kk => { if (w[kk] != null) { const n = resolveNeighbour(raga, w[kk]); if (n.error) errs.push(where + ' ' + kk + ': ' + n.error); } });
+      if (w.inPhrase != null) { const ph = parsePhrase(raga, w.inPhrase); if (ph.error) errs.push(where + ' inPhrase: ' + ph.error); }
+      const off = {};
+      ['lo', 'hi', 'from'].forEach(kk => {
+        if (r[kk] == null) return;
+        const v = resolveTarget(raga, lm[L], r[kk]);
+        if (typeof v !== 'number') { errs.push(where + ' ' + kk + ': ' + v.error); return; }
+        if (Math.abs(v) > GAMAKA_MAX_OFFSET) errs.push(where + ' ' + kk + ': target ' + r[kk] + ' is ' + Math.abs(v) + ' semitones away (at most ' + GAMAKA_MAX_OFFSET + ')');
+        off[kk] = v;
+      });
+      if (r.body === 'kampita' || r.body === 'andolita') {
+        const lo = off.lo != null ? off.lo : 0, hi = off.hi != null ? off.hi : 0;
+        if (!(lo < hi)) errs.push(where + ': lo must be below hi once resolved (' + r.lo + ', ' + r.hi + ')');
+      }
+    });
+  });
+  (gr.global || []).forEach((g, k) => {
+    if (!srcOk(g.src)) errs.push(id + ' global[' + k + ']: unknown or missing src ' + g.src);
+    if (g.maxChain != null && !(Number.isInteger(g.maxChain) && g.maxChain >= 1)) errs.push(id + ' global[' + k + ']: maxChain must be a positive integer');
+  });
+  return errs;
+}
+
+/* The engine form: rules keyed by pitch class, every target a semitone offset from the swara. Ragas
+   without gamakaRender get the conservative default (§4): style light, basis default. */
+export const GAMAKA_DEFAULT_SOURCES = ['S193', 'S198'];
+export function compileGamaka(raga, gr) {
+  if (!gr) return { style: 'light', basis: 'default', maxChain: 4, rules: {}, sources: GAMAKA_DEFAULT_SOURCES.slice() };
+  const lm = letterMap(raga), rules = {}, sources = new Set();
+  Object.entries(gr.rules || {}).forEach(([L, list]) => {
+    const pc = lm[L];
+    rules[pc] = list.map(r => {
+      const w = r.when || {}, cw = {};
+      if (w.dir != null && w.dir !== 'any') cw.dir = w.dir;
+      if (w.minSec != null) cw.minSec = w.minSec;
+      if (w.maxSec != null) cw.maxSec = w.maxSec;
+      if (w.prev != null) cw.prev = resolveNeighbour(raga, w.prev);
+      if (w.next != null) cw.next = resolveNeighbour(raga, w.next);
+      if (w.janta) cw.janta = true;
+      if (w.inPhrase != null) cw.inPhrase = parsePhrase(raga, w.inPhrase).pitches.map(mod12);
+      if (w.octave != null) cw.octave = w.octave;
+      const out = { when: cw, onset: r.onset || 'none', body: r.body || 'plain', exit: r.exit || 'none' };
+      ['lo', 'hi', 'from'].forEach(k => { if (r[k] != null) out[k] = resolveTarget(raga, pc, r[k]); });
+      if (out.body !== 'plain') { if (out.lo == null) out.lo = 0; if (out.hi == null) out.hi = 0; }
+      if ((out.onset === 'nokku' || out.onset === 'odukkal') && out.from == null) out.from = resolveTarget(raga, pc, out.onset === 'nokku' ? '+1' : '-1');
+      out.end = r.end || 'self';
+      if (r.cycles) out.cycles = r.cycles.slice();
+      if (r.dwell) out.dwell = r.dwell;
+      out.depth = r.depth != null ? r.depth : 1;
+      out.src = r.src; out.basis = r.basis || gr.basis || 'text';
+      out.spec = Object.keys(cw).length;
+      sources.add(r.src);
+      return out;
+    });
+  });
+  const mc = (gr.global || []).find(g => g.maxChain != null);
+  (gr.global || []).forEach(g => sources.add(g.src));
+  return { style: gr.style, basis: gr.basis, maxChain: mc ? mc.maxChain : 4, rules, sources: Array.from(sources).sort((a, b) => +a.slice(1) - +b.slice(1)) };
+}
+
 /* Validate a whole profile document. Returns a list of error strings (empty when valid). */
 export function validateProfiles(doc, { fix = false } = {}) {
   const errs = [], E = engineRagas();
@@ -147,6 +279,7 @@ export function validateProfiles(doc, { fix = false } = {}) {
       if (a.swaras != null) { const c = parsePhrase(raga, a.swaras); if (c.error) errs.push(id + ' avoid "' + a.swaras + '": ' + c.error); }
       if (!srcOk(a.source)) errs.push(id + ' avoid: unknown source ' + a.source);
     });
+    if (p.gamakaRender != null) validateGamaka(raga, p.gamakaRender, doc).forEach(e => errs.push(e));
   });
   return errs;
 }

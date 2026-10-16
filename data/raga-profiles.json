@@ -81,6 +81,53 @@
     "alliedBasis": [
       "source",
       "structural"
+    ],
+    "gamakaStyle": [
+      "heavy",
+      "medium",
+      "light",
+      "plain",
+      "default"
+    ],
+    "gamakaBasis": [
+      "text",
+      "text-vague",
+      "measured",
+      "default"
+    ],
+    "gamakaOnset": [
+      "none",
+      "jaru",
+      "nokku",
+      "odukkal",
+      "sphurita",
+      "pratyahata"
+    ],
+    "gamakaBody": [
+      "plain",
+      "kampita",
+      "andolita"
+    ],
+    "gamakaExit": [
+      "none",
+      "orikkai",
+      "jaru"
+    ],
+    "gamakaDir": [
+      "up",
+      "down",
+      "turn",
+      "any"
+    ],
+    "gamakaEnd": [
+      "self",
+      "lo",
+      "hi"
+    ],
+    "gamakaDwell": [
+      "even",
+      "hi",
+      "lo"
     ]
   },
   "melakartaNotes": {
@@ -1442,6 +1489,55 @@
       "reliability": "low",
       "note": "Scale only.",
       "key": "artium-malahari"
+    },
+    "S193": {
+      "title": "Viraraghavan, Aravind, Murthy, \"A statistical analysis of gamakas in Carnatic music\", ISMIR 2017",
+      "url": "https://archives.ismir.net/ismir2017/paper/000082.pdf",
+      "reliability": "high",
+      "note": "Constant-pitch notes and stationary points; transient chain lengths; expert identification of ragas from transients.",
+      "key": "viraraghavan-ismir2017"
+    },
+    "S194": {
+      "title": "Viraraghavan et al., \"Data-driven measurement of precision of components of pitch curves in Carnatic music\", ISMIR 2018",
+      "url": "https://ismir2018.ismir.net/doc/pdfs/120_Paper.pdf",
+      "reliability": "high",
+      "note": "Cosine and linear interpolation judged alike; STA tolerance about 60 cents, CPN about 20 cents; precision model.",
+      "key": "viraraghavan-ismir2018"
+    },
+    "S195": {
+      "title": "Viraraghavan et al., \"Non-uniform time-scaling of Carnatic music transients\" (arXiv 1711.02318)",
+      "url": "https://arxiv.org/abs/1711.02318",
+      "reliability": "medium",
+      "note": "CPNs stretch three to four times more than transients when tempo changes.",
+      "key": "viraraghavan-timescaling"
+    },
+    "S196": {
+      "title": "Sankaranarayanan & Weinberg, \"Gamaka Synthesis for Kalpitha Swaras in Carnatic music\", ISMIR 2022 LBD",
+      "url": "https://archives.ismir.net/ismir2022/latebreaking/000019.pdf",
+      "reliability": "medium",
+      "note": "GamakaNet; gamaka complexity falls as tempo rises.",
+      "key": "gamakanet"
+    },
+    "S197": {
+      "title": "Plaja-Roglans et al., Saraga-Carnatic-Melody-Synth (TISMIR 2023)",
+      "url": "https://zenodo.org/records/5553925",
+      "reliability": "high",
+      "note": "CC BY 4.0 pitch tracks, for later calibration.",
+      "key": "scms"
+    },
+    "S198": {
+      "title": "Wikipedia: Gamaka (music)",
+      "url": "https://en.wikipedia.org/wiki/Gamaka_(music)",
+      "reliability": "medium",
+      "note": "Names of the gamaka types (kampita, jaru, nokku, odukkal, orikkai, sphurita, pratyahata, andolita).",
+      "key": "wp-gamaka"
+    },
+    "S199": {
+      "title": "Modelling of Gamakas for Karnatic Flute Music Synthesis (NITK thesis)",
+      "url": "https://idr.nitk.ac.in/items/7390eb8f-02e5-4725-a6f4-829559996cac",
+      "reliability": "medium",
+      "note": "Gamaka presence and type predicted from neighbouring notes.",
+      "key": "nitk-flute"
     }
   },
   "ragas": {
@@ -2059,6 +2155,115 @@
         "general": "Without gamaka Todi drifts toward Sindhubhairavi or Hindustani Bhairavi; R, G, D and N are generally held with gamaka.",
         "sources": [
           "S37"
+        ]
+      },
+      "gamakaRender": {
+        "style": "heavy",
+        "basis": "text",
+        "rules": {
+          "S": [
+            {
+              "body": "plain",
+              "src": "S37"
+            }
+          ],
+          "R": [
+            {
+              "onset": "odukkal",
+              "from": "S",
+              "body": "plain",
+              "src": "S37",
+              "interpretation": "\"a single oscillation from S or from below\" read as a touch from S before a plain R."
+            }
+          ],
+          "G": [
+            {
+              "when": {
+                "minSec": 0.35
+              },
+              "body": "kampita",
+              "lo": "R",
+              "hi": "M",
+              "end": "self",
+              "cycles": [
+                1,
+                3
+              ],
+              "src": "S37"
+            },
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S37"
+            }
+          ],
+          "M": [
+            {
+              "when": {
+                "dir": "up"
+              },
+              "body": "kampita",
+              "lo": "self",
+              "hi": "P",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S37",
+              "interpretation": "\"one quick upward oscillation in ascent\" read as a single swing up to P."
+            },
+            {
+              "when": {
+                "dir": "down"
+              },
+              "body": "plain",
+              "src": "S37"
+            }
+          ],
+          "P": [
+            {
+              "body": "plain",
+              "src": "S37"
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "P",
+              "hi": "self",
+              "end": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S37"
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "D",
+              "hi": "S'",
+              "end": "self",
+              "cycles": [
+                1,
+                3
+              ],
+              "src": "S37",
+              "interpretation": "\"invariably held with gamaka\"; the D and S' targets are the neighbours, as the source does not name them."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -2717,6 +2922,25 @@
           "S33"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "plain",
+              "src": "S33",
+              "interpretation": "\"usually sung plain, unlike Todi; shakes are minimal\"."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [],
       "avoid": [],
       "allied": [
@@ -2968,6 +3192,44 @@
         "general": "Jaru used profusely in Dikshitar's kriti, not necessarily native to the raga.",
         "sources": [
           "S35"
+        ]
+      },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S35",
+              "interpretation": "Dikshitar school: \"sometimes oscillated with kampita\"; no target named.",
+              "when": {
+                "minSec": 0.35
+              }
+            }
+          ],
+          "D": [
+            {
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S35",
+              "interpretation": "Dikshitar school: rendered emphatically with nokku, a stress from the note above."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -3304,6 +3566,86 @@
         "N": "Occasionally held flat before ascending to S, a rule-breaking effect.",
         "sources": [
           "S40"
+        ]
+      },
+      "gamakaRender": {
+        "style": "heavy",
+        "basis": "text",
+        "rules": {
+          "S": [
+            {
+              "body": "plain",
+              "src": "S40"
+            }
+          ],
+          "R": [
+            {
+              "body": "kampita",
+              "lo": "S",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S40"
+            }
+          ],
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S40",
+              "interpretation": "\"M,G M,G M,G\": the time sits on M, so the oscillation dwells on M and comes to rest there."
+            }
+          ],
+          "M": [
+            {
+              "body": "plain",
+              "src": "S40"
+            }
+          ],
+          "P": [
+            {
+              "body": "plain",
+              "src": "S40"
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "P",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S40"
+            }
+          ],
+          "N": [
+            {
+              "when": {
+                "next": "S'",
+                "dir": "up"
+              },
+              "body": "plain",
+              "src": "S40",
+              "interpretation": "\"occasionally held flat before ascending to S\"; applied always, as a rule cannot say \"occasionally\"."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -3711,6 +4053,55 @@
         "N": "Handled similarly to Harikambhoji.",
         "sources": [
           "S41"
+        ]
+      },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "body": "kampita",
+              "lo": "S",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "depth": 0.5,
+              "src": "S41",
+              "interpretation": "\"somewhat flatter than in Mayamalavagowla\": the Mayamalavagowla rule at half depth."
+            }
+          ],
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                1
+              ],
+              "depth": 0.5,
+              "src": "S41",
+              "interpretation": "As R."
+            }
+          ],
+          "M": [
+            {
+              "body": "plain",
+              "src": "S41",
+              "interpretation": "Mayamalavagowla M is plain; \"flatter\" keeps it plain."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -4311,6 +4702,48 @@
           "S61"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S61",
+              "interpretation": "\"gentle oscillation\" (low-reliability source); no target named.",
+              "depth": 0.5
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S61",
+              "interpretation": "As G.",
+              "depth": 0.5
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "P M G R S",
@@ -4834,6 +5267,90 @@
           "S47"
         ]
       },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S52",
+              "interpretation": "Swaras may be sung \"with or without gamakam\": only longer notes oscillate, with no target named.",
+              "when": {
+                "minSec": 0.35
+              },
+              "depth": 0.6
+            }
+          ],
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S52",
+              "interpretation": "As R.",
+              "when": {
+                "minSec": 0.35
+              },
+              "depth": 0.6
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S52",
+              "interpretation": "As R.",
+              "when": {
+                "minSec": 0.35
+              },
+              "depth": 0.6
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S52",
+              "interpretation": "As R.",
+              "when": {
+                "minSec": 0.35
+              },
+              "depth": 0.6
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "R , G R , S , , N. , D. , N. , S R , R S N. S",
@@ -5016,6 +5533,90 @@
         "D": "Wider range of motion than D1.",
         "sources": [
           "S53"
+        ]
+      },
+      "gamakaRender": {
+        "style": "heavy",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "when": {
+                "janta": true
+              },
+              "onset": "sphurita",
+              "body": "plain",
+              "src": "S53"
+            },
+            {
+              "body": "plain",
+              "src": "S53"
+            }
+          ],
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "R",
+              "hi": "M",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S53",
+              "interpretation": "\"almost always sung with oscillations\"; R and M taken as the neighbours."
+            }
+          ],
+          "M": [
+            {
+              "when": {
+                "inPhrase": "M P D N S'"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "kampita",
+              "lo": "G",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S53"
+            },
+            {
+              "when": {
+                "next": "G"
+              },
+              "body": "plain",
+              "src": "S53"
+            },
+            {
+              "when": {
+                "prev": "G"
+              },
+              "body": "plain",
+              "src": "S53"
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "basis": "text-vague",
+              "src": "S53",
+              "interpretation": "\"wider range of motion than D1\"; no target named."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -5632,6 +6233,48 @@
           "S84"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S84",
+              "interpretation": "\"gentle gamaka\" (low-reliability source).",
+              "depth": 0.5
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S84",
+              "interpretation": "As G.",
+              "depth": 0.5
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "P D M P M , G ,",
@@ -6109,6 +6752,68 @@
           "S75"
         ]
       },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "M": [
+            {
+              "when": {
+                "prev": "G"
+              },
+              "body": "plain",
+              "src": "S75",
+              "interpretation": "\"avoid an oscillating stop on M after G\" (a Khamas marker)."
+            }
+          ],
+          "D": [
+            {
+              "when": {
+                "prev": "P"
+              },
+              "body": "plain",
+              "src": "S75",
+              "interpretation": "\"no wide Kambhoji-style swing in the P-D-S context\": kept plain."
+            }
+          ],
+          "N": [
+            {
+              "when": {
+                "prev": "S'"
+              },
+              "body": "kampita",
+              "lo": "D",
+              "hi": "S'",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S75"
+            },
+            {
+              "when": {
+                "prev": "D"
+              },
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "depth": 0.3,
+              "src": "S75",
+              "interpretation": "\"oscillates only within its own position\": a narrow swing."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "G M P D N , D , P ,",
@@ -6551,6 +7256,75 @@
           "S76"
         ]
       },
+      "gamakaRender": {
+        "style": "heavy",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "basis": "text-vague",
+              "src": "S76",
+              "interpretation": "\"permits strong gamaka\"; no target named."
+            }
+          ],
+          "G": [
+            {
+              "body": "plain",
+              "src": "S76",
+              "interpretation": "\"highly flat and plain; the most characteristic feature\": no condition makes it move."
+            }
+          ],
+          "M": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "basis": "text-vague",
+              "src": "S76",
+              "interpretation": "As R."
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "basis": "text-vague",
+              "src": "S76",
+              "interpretation": "As R."
+            }
+          ],
+          "N": [
+            {
+              "onset": "jaru",
+              "body": "plain",
+              "src": "S76",
+              "interpretation": "\"very little gamaka; always accompanied by neighbouring notes\": a slide in from the neighbour."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [],
       "avoid": [
         {
@@ -6756,6 +7530,46 @@
         "general": "Dikshitar-school raganga; the kriti is \"svara-oriented\" with sparse gamaka in the SSP notation.",
         "sources": [
           "S77"
+        ]
+      },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S77",
+              "interpretation": "Kalavati (Dikshitar raganga): \"kampita on R3\"; no target named."
+            }
+          ],
+          "D": [
+            {
+              "onset": "jaru",
+              "body": "plain",
+              "src": "S77"
+            }
+          ],
+          "N": [
+            {
+              "onset": "jaru",
+              "body": "plain",
+              "src": "S77"
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -8707,6 +9521,32 @@
         "D": "Held flat; can sometimes be shaken; takes jaru in some phrases.",
         "sources": [
           "S115"
+        ]
+      },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "plain",
+              "src": "S115",
+              "interpretation": "\"short when touched; never elongated\"."
+            }
+          ],
+          "D": [
+            {
+              "body": "plain",
+              "src": "S115",
+              "interpretation": "\"held flat\"; the occasional shake and jaru are left out."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -11668,6 +12508,141 @@
           "S144"
         ]
       },
+      "gamakaRender": {
+        "style": "heavy",
+        "basis": "text",
+        "rules": {
+          "S": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ],
+          "R": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ],
+          "G": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "kampita",
+              "lo": "R",
+              "hi": "M",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S144",
+              "interpretation": "Orikkai in descent plus G's own oscillation \"g(r)/(m)g\"."
+            },
+            {
+              "body": "kampita",
+              "lo": "R",
+              "hi": "M",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S144"
+            }
+          ],
+          "M": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ],
+          "P": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ],
+          "D": [
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ],
+          "N": [
+            {
+              "when": {
+                "next": "S'"
+              },
+              "onset": "nokku",
+              "from": "S'",
+              "body": "plain",
+              "src": "S144",
+              "interpretation": "\"next to tara S approached from S' or R'\"."
+            },
+            {
+              "when": {
+                "prev": "D"
+              },
+              "onset": "odukkal",
+              "from": "D",
+              "body": "plain",
+              "src": "S144",
+              "interpretation": "\"p (d) n\": in Parrikar's notation (x)y is y touched from x."
+            },
+            {
+              "when": {
+                "prev": "P"
+              },
+              "onset": "odukkal",
+              "from": "D",
+              "body": "plain",
+              "src": "S144"
+            },
+            {
+              "when": {
+                "dir": "down"
+              },
+              "onset": "nokku",
+              "from": "+1",
+              "body": "plain",
+              "src": "S144"
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "G D P M P G , R S N. R ,",
@@ -12670,6 +13645,32 @@
         "sources": [
           "S174",
           "S177"
+        ]
+      },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "S'",
+              "end": "self",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S174",
+              "interpretation": "\"da - sa - da - sa - da\", from a beginner's forum question (low weight)."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -14232,6 +15233,37 @@
           "S152"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "when": {
+                "dir": "up"
+              },
+              "onset": "nokku",
+              "from": "M",
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "cycles": [
+                1,
+                1
+              ],
+              "depth": 0.5,
+              "src": "S152",
+              "interpretation": "\"approached from M in ascent with a slight oscillation\": M is above G, so a touch from above; \"slight\" is depth 0.5."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "G M R S",
@@ -14750,6 +15782,36 @@
           "S184"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "M": [
+            {
+              "body": "plain",
+              "src": "S184",
+              "interpretation": "Kampita on M belongs to Kannada Bangala, not Malahari."
+            }
+          ],
+          "D": [
+            {
+              "when": {
+                "janta": true
+              },
+              "onset": "sphurita",
+              "body": "plain",
+              "src": "S184",
+              "interpretation": "\"janta dhaivata, repeated and stressed\"."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "D P M G R S",
@@ -15179,6 +16241,48 @@
           "S170"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S170",
+              "interpretation": "\"sometimes intoned slightly diminished (flat or oscillated)\": a narrow swing from below.",
+              "depth": 0.4
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S170",
+              "interpretation": "As G.",
+              "depth": 0.4
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "P , D P M G , R S R G R R ,",
@@ -15564,6 +16668,55 @@
           "S178"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "R": [
+            {
+              "body": "plain",
+              "src": "S158",
+              "interpretation": "\"not fluctuated\"."
+            }
+          ],
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S158",
+              "interpretation": "\"ma ga ri sounds like ma ma ri\": G dwells on M. The sources conflict on how much gamaka Arabhi uses, so the style is light."
+            }
+          ],
+          "N": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "S'",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S158",
+              "interpretation": "\"sa ni da sounds like sa sa da\": N dwells on S."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "P , M , G R S R M , G R ,",
@@ -15828,6 +16981,48 @@
         "D": "Intoned close to N.",
         "sources": [
           "S186"
+        ]
+      },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "M",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S186",
+              "interpretation": "\"intoned close to M\"."
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "self",
+              "hi": "N",
+              "end": "hi",
+              "dwell": "hi",
+              "cycles": [
+                1,
+                1
+              ],
+              "src": "S186",
+              "interpretation": "\"intoned close to N\"."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -16097,6 +17292,25 @@
         "general": "Old D1 form: D1 can be held as a sustained note.",
         "sources": [
           "S188"
+        ]
+      },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "N": [
+            {
+              "body": "plain",
+              "src": "S188",
+              "interpretation": "From the old D1 form (\"N mostly plain\"); kept because nothing contradicts it in the current form."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [
@@ -16498,6 +17712,48 @@
           "S190"
         ]
       },
+      "gamakaRender": {
+        "style": "light",
+        "basis": "text",
+        "rules": {
+          "G": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S190",
+              "interpretation": "\"gentle gamaka\" (low-reliability source).",
+              "depth": 0.5
+            }
+          ],
+          "D": [
+            {
+              "body": "kampita",
+              "lo": "-1",
+              "hi": "self",
+              "cycles": [
+                1,
+                1
+              ],
+              "basis": "text-vague",
+              "src": "S190",
+              "interpretation": "As G.",
+              "depth": 0.5
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
+        ]
+      },
       "phrases": [
         {
           "swaras": "D N D M M D M G R G M G G R R S",
@@ -16791,6 +18047,55 @@
         "sources": [
           "S75",
           "S185"
+        ]
+      },
+      "gamakaRender": {
+        "style": "medium",
+        "basis": "text",
+        "rules": {
+          "D": [
+            {
+              "when": {
+                "prev": "P"
+              },
+              "body": "kampita",
+              "lo": "P",
+              "hi": "S'",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S75",
+              "interpretation": "\"swings widely in the P-D-S context\"."
+            },
+            {
+              "when": {
+                "next": "S'"
+              },
+              "body": "kampita",
+              "lo": "P",
+              "hi": "S'",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S75"
+            }
+          ],
+          "N": [
+            {
+              "onset": "jaru",
+              "body": "plain",
+              "src": "S185",
+              "interpretation": "\"a passing colour in a S'-to-P glide, not a held note\"."
+            }
+          ]
+        },
+        "global": [
+          {
+            "maxChain": 4,
+            "src": "S193"
+          }
         ]
       },
       "phrases": [

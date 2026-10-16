@@ -24,7 +24,8 @@ The file is checked by `test/raga-profiles.test.js` (run by `npm test`) and by `
 | Phrases whose octave was inferred (`octaveCertain: false`) | 139 |
 | Phrases that break the engine's direction rule (`directionRuleOk: false`) | 13, in Malahari, Saveri, Bilahari, Abheri and Kambhoji |
 | Avoid entries | 40 (5 hard) |
-| Sources | 192 |
+| Sources | 199 (S193–S199 for gamaka rendering) |
+| Ragas with gamaka render rules (`gamakaRender`) | 23 |
 | Ragas with no phrases | 50 (47 of them have no swara-role data either) |
 
 ## 2. Notation
@@ -53,7 +54,7 @@ Top level:
 | `generatorGuidance` | How each field should drive the generator (section 4). |
 | `enums` | Allowed values of every enumerated field. |
 | `melakartaNotes` | Vivadi pairs, Dikshitar-school counterparts, the Koteeswara Iyer series. |
-| `sources` | `S1` … `S192`: `title`, `url`, `reliability` (`high`, `medium`, `low`), `note`, and `key` (the stable build key). |
+| `sources` | `S1` … `S199`: `title`, `url`, `reliability` (`high`, `medium`, `low`), `note`, and `key` (the stable build key). |
 | `ragas` | One profile per engine id. |
 
 Per raga (`ragas.<id>`):
@@ -67,7 +68,8 @@ Per raga (`ragas.<id>`):
 | `scaleNotes` | Variants and disputes: Kambhoji's vakra ascent and N3, Abheri's D1 vs D2, Dikshitar-school scales. |
 | `vivadiPairs` | Melakartas only: `R1-G1`, `R3-G3`, `D1-N1`, `D3-N3` pairs present. |
 | `swaraRoles` | Sourced roles, as swara letters: `jiva`, `nyasa`, `chaya` (ragachaya), `prominent` (called focal or most important without a technical term), `graha`, `dirgha`, `alpa`, `notNyasa`; plus `note` (vadi–samvadi, disagreements) and `sources`. |
-| `gamaka` | Per-letter descriptions, an optional `general`, and `sources`. Descriptive only. |
+| `gamaka` | Per-letter descriptions, an optional `general`, and `sources`. Descriptive; the evidence for `gamakaRender`. |
+| `gamakaRender` | Optional: the gamaka text transcribed into render rules (below). |
 | `phrases` | See below. |
 | `avoid` | `{ swaras?, rule?, reason, strength, source }`. `swaras` is a parseable phrase; `rule` is prose for things like "do not hold P long". `strength` is `hard` or `soft`. |
 | `allied` | `{ raga, distinguish, basis, source? }`. `basis: structural` marks the mela twin with the other madhyama, added for every melakarta; everything else is `basis: source`. |
@@ -97,6 +99,27 @@ Per phrase:
 | `note` | Source notation, caveats, overrides. |
 
 `confidence.phrases` is computed: `none` without phrases; `low` with fewer than 6 phrases of weight ≥ 0.4; `high` with at least 12 such phrases of which at least 8 have a certain octave; `medium` otherwise. `confidence.roles` was set by hand from the strength of the role and gamaka sources (`none` when there are none).
+
+### `gamakaRender`: gamaka as render rules
+
+`gamakaRender` sits next to `gamaka` in the 23 ragas whose `gamaka` has text. The text stays as the evidence; `gamakaRender` transcribes it into rules for the gamaka renderer (`docs/plans/gamaka-audio.md`), and every rule cites the source its text came from. It changes only how a round **sounds**, never which notes the generator writes. Ragas without it get the conservative default (`style: light`, `basis: default`) from the compiler.
+
+| Field | Meaning |
+| --- | --- |
+| `style` | `heavy` (per-swara rules carry the raga), `medium` (gamaka is pervasive but the text gives little detail), `light` (sparse or conflicting evidence), `plain` (opt-in) or `default`. Swaras without a rule fall back to the style. |
+| `basis` | `text`; also `text-vague` on a rule whose text names no target ("permits strong gamaka"), `measured` for calibrated data, `default` for the compiler's fallback. |
+| `rules.<letter>` | An ordered list for that swara. The most specific rule whose `when` holds wins; ties go to list order. |
+| `when` | `dir` (`up`, `down`, `turn`, `any`), `minSec`, `maxSec`, `prev`, `next` (swara letters, with `'` or `.` for a neighbour above or below), `janta: true`, `inPhrase` (a phrase string), `octave`. |
+| `onset` | `none`, `jaru` (slide in), `nokku` (stress from above), `odukkal` (from below), `sphurita` (second note of a janta, struck from below), `pratyahata`. |
+| `body` | `plain`, `kampita` (oscillation between `lo` and `hi`), `andolita` (a slower swing). |
+| `exit` | `none`, `orikkai` (a flick up at the end), `jaru`. |
+| `lo`, `hi`, `from` | Targets as raga notes: `self`, a letter (`M`, `S'`, `N.`), `+1` / `-1` (the next raga swara up or down), or `±Nc` (cents, measured data only). At most 7 semitones from the swara; `lo` below `hi`. |
+| `end`, `dwell` | Where the oscillation rests (`self`, `lo`, `hi`) and which end gets the longer stay (`even`, `hi`, `lo`). |
+| `cycles`, `depth` | `[min, max]` oscillation cycles before time-fitting; a 0–1 scale on the width ("slight", "gentle"). |
+| `src`, `interpretation` | Required source id; a note wherever the transcription needed judgement, for a musician to review. |
+| `global` | Raga-wide settings with sources: `maxChain` (the longest run of non-plain notes before a plain one, from ISMIR 2017, S193). |
+
+Coverage: 5 ragas `heavy` (Todi, Mayamalavagowla, Gourimanohari, Sankarabharanam, Kalyani), 6 `medium`, 12 `light`; the other 63 use the default. The gamaka research sources are S193–S199. `scripts/check-raga-profiles.js` checks every rule (letters in the raga, enums, sources, cycles, target distance and order), and `scripts/compile-profiles.js` resolves the letters to semitone offsets with each raga's own swarasthanas, so the engine never parses letters while rendering.
 
 ## 4. How the generator should use it
 
