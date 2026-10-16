@@ -60,3 +60,92 @@ test('gamakaRender: the transcriptions validate, compile, and bad inputs are rej
   t.diagnostic(withRules.length + ' ragas with gamaka rules (' + Object.entries(styles).map(([k, v]) => v + ' ' + k).join(', ') + '), ' + defaults + ' on the light default');
   done();
 });
+
+/* ---------- Phase 1: geometry, with hand-written shapes ---------- */
+import { buildContour } from '../src/engine/gamaka/contour.js';
+import { CPN_MIN, MAX_RATE_HZ, SAMPLE_SEC } from '../src/engine/gamaka/constants.js';
+
+const SHAPES = [
+  null,
+  { onset: 'none', body: 'kampita', lo: -2, hi: 2, cycles: [1, 3], end: 'self' },
+  { onset: 'none', body: 'kampita', lo: 0, hi: 1, cycles: [1, 2], end: 'hi', dwell: 'hi' },
+  { onset: 'nokku', from: 2, body: 'plain' },
+  { onset: 'odukkal', from: -1, body: 'kampita', lo: -1, hi: 0, cycles: [1, 1] },
+  { onset: 'jaru', body: 'plain' },
+  { onset: 'none', body: 'andolita', lo: -2, hi: 0, cycles: [1, 3] },
+  { onset: 'sphurita', from: -1, body: 'plain', exit: 'orikkai', exitTo: 2 },
+  { onset: 'none', body: 'plain', exit: 'jaru' }
+];
+/* seeded sequences of notes: pitches in range, steps and leaps up to an octave, 1 to 4 slots */
+function sequences(count) {
+  const out = [];
+  for (let s = 1; s <= count; s++) {
+    const r = E.rng(s * 97), items = [];
+    let p = 0;
+    const n = 6 + Math.floor(r() * 10);
+    for (let k = 0; k < n; k++) {
+      const leap = r() < 0.15 ? (r() < 0.5 ? 12 : -12) : Math.floor(r() * 9) - 4;
+      p = Math.max(-5, Math.min(19, p + leap));
+      items.push({ p, dur: 1 + Math.floor(r() * 4), shape: SHAPES[Math.floor(r() * SHAPES.length)] });
+    }
+    items[items.length - 1].landing = true;
+    out.push(items);
+  }
+  return out;
+}
+
+test('gamaka geometry: depth 0 is plain, timing is exact, no jumps, anchors and rate cap (plan tests 2-4, 6, 7)', t => {
+  const { ok, done } = checker(t);
+  let notes = 0, contours = 0, maxStep = 0, minCycle = Infinity;
+  sequences(60).forEach(items => [0.125, 0.1875, 0.25, 0.375].forEach(slotSec => {
+    const total = items.reduce((s, it) => s + it.dur, 0) * slotSec;
+    // test 2: depth 0 reproduces plain playback, boundaries on the grid
+    const z = buildContour(items, { slotSec, depth: 0 });
+    z.points.forEach(pt => {
+      const n = z.notes.find(x => pt.t >= x.t0 - 1e-9 && (pt.t < x.t1 - 1e-9 || x.i === items.length - 1));
+      ok(n && n.p === pt.p, 'depth 0: every point is its note\'s pitch');
+    });
+    const c = buildContour(items, { slotSec, depth: 1 });
+    contours++;
+    // test 3: exact timing
+    ok(Math.abs(c.points[0].t) < 1e-12 && Math.abs(c.points[c.points.length - 1].t - total) < 1e-9, 'contour runs from 0 to the total length');
+    let acc = 0;
+    c.notes.forEach((n, k) => { ok(Math.abs(n.t0 - acc * slotSec) < 1e-9, 'note ' + k + ' starts on its grid time'); acc += items[k].dur; });
+    ok(JSON.stringify(c.notes.map(n => n.p)) === JSON.stringify(items.map(it => it.p)), 'the renderer never changes the notes');
+    // test 4: no unintended jumps inside a legato group
+    c.groups.forEach(g => { for (let k = 1; k < g.points.length; k++) { const d = Math.abs(g.points[k].p - g.points[k - 1].p); if (g.points[k].t - g.points[k - 1].t <= SAMPLE_SEC + 1e-9) { maxStep = Math.max(maxStep, d); ok(d <= 1.5, '|Δp| ≤ 1.5 semitones per 5 ms sample, got ' + d.toFixed(2)); } } });
+    c.notes.forEach(n => {
+      notes++;
+      const sec = n.t1 - n.t0;
+      // test 6: anchor rule
+      if (sec >= 0.2) ok(n.targets.some(x => x.kind === 'cpn' && x.dur >= CPN_MIN - 1e-9), 'a note of ' + sec.toFixed(3) + ' s keeps a CPN of at least 80 ms');
+      // test 7: rate cap, from one hi stationary point to the next
+      const his = n.targets.filter(x => x.role === 'hi');
+      for (let k = 1; k < his.length; k++) { const dt = his[k].t - his[k - 1].t; minCycle = Math.min(minCycle, dt); ok(dt >= 1 / MAX_RATE_HZ - 1e-9, 'oscillation no faster than ' + MAX_RATE_HZ + ' Hz'); }
+      // targets stay inside the note's window
+      n.targets.forEach(x => ok(x.t >= n.t0 - 1e-9 && x.t + x.dur <= n.t1 + 1e-9 && x.dur >= -1e-12, 'targets inside the note'));
+    });
+  }));
+  t.diagnostic(contours + ' contours, ' + notes + ' notes; largest step per 5 ms sample ' + maxStep.toFixed(2) + ' semitones; fastest oscillation ' + (1 / minCycle).toFixed(2) + ' Hz');
+  done();
+});
+
+test('gamaka geometry: the degradation ladder lightens faster tempos (plan test 8)', t => {
+  const { ok, done } = checker(t);
+  const rows = [];
+  sequences(40).forEach((items, s) => {
+    let lastSta = Infinity, lastDeg = -1;
+    const deg = [];
+    [60, 90, 120, 180].forEach(bpm => {
+      const c = buildContour(items, { slotSec: 60 / bpm / 2, depth: 1 });
+      ok(c.stats.staCount <= lastSta, 'sequence ' + s + ': STAs do not increase at ' + bpm + ' BPM');
+      ok(c.stats.degradedShare >= lastDeg - 1e-12, 'sequence ' + s + ': degradation does not fall at ' + bpm + ' BPM');
+      lastSta = c.stats.staCount; lastDeg = c.stats.degradedShare; deg.push(c.stats.degradedShare);
+    });
+    rows.push(deg);
+  });
+  const mean = k => rows.reduce((s, r) => s + r[k], 0) / rows.length;
+  ok(mean(3) > mean(0), 'degradation rises from 60 to 180 BPM');
+  t.diagnostic('mean degradedShare at 60, 90, 120, 180 BPM (second speed): ' + [0, 1, 2, 3].map(k => mean(k).toFixed(3)).join(', '));
+  done();
+});
