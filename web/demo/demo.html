@@ -93,10 +93,12 @@
         <label for="k-mora">Mora style<select id="k-mora"><option value="auto">Auto (shift, gopuccha or srotovaha)</option><option value="shift">Shift: same contour, one step nearer each time</option><option value="gopuccha">Gopuccha: one swara shorter each time</option><option value="srotovaha">Srotovaha: one swara longer each time</option><option value="identical">Identical (v0.2)</option></select></label>
         <label for="k-temp">Temperature (creativity) <span id="k-tv">1.0</span><input id="k-temp" type="range" min="0" max="2" step="0.1" value="1"></label>
       </div>
-      <div class="btnrow"><button class="btn primary" type="button" id="k-new">New variation</button><button class="btn" type="button" id="k-play">Play</button><button class="btn" type="button" id="k-copy">Copy notation</button></div>
+      <div class="btnrow"><button class="btn primary" type="button" id="k-new">New variation</button><button class="btn" type="button" id="k-play">Play</button><button class="btn" type="button" id="k-wav">Download WAV</button><button class="btn" type="button" id="k-copy">Copy notation</button></div>
       <p class="info" id="k-info"></p>
       <div class="notation" id="k-out" aria-live="polite"></div>
       <div class="legend"><span style="color:var(--saffron)">attested phrase</span><span style="color:var(--saffron);opacity:.72">phrase fragment</span><span style="color:var(--violet);font-style:italic">phrase variant</span><span style="color:var(--fg)">generic device</span><span style="color:var(--violet)">unconventional device</span><span style="color:var(--teal)">mora</span><span>│ device boundary</span><span style="font-weight:700;text-decoration:underline">last swara, next to the eduppu</span></div>
+      <p class="info" id="k-gamaka"></p>
+      <div class="pitch" id="k-pitch"></div>
       <ul class="audit" id="k-audit"></ul>
     </div>
     <div class="panel" style="border-top:1px solid var(--line-2);padding-top:12px">
@@ -104,6 +106,7 @@
         <label for="snd-sa">Sa for playback<select id="snd-sa"></select></label>
         <label for="snd-bpm">Tempo (aksharas per minute) <span id="snd-bv">72</span><input id="snd-bpm" type="range" min="40" max="140" step="2" value="72"></label>
         <label for="snd-drone">Tanpura drone<select id="snd-drone"><option value="1">On</option><option value="0">Off</option></select></label>
+        <label for="snd-gamaka">Gamaka (kalpana playback)<select id="snd-gamaka"><option value="0">Off: plain tones</option><option value="0.5" selected>Light</option><option value="1">Full</option></select></label>
       </div>
       <p class="tempnote">Playback uses equal temperament and plain tones, so it shows swaras and timing, not gamakas. Temperature is creativity: 0 keeps to the most recognisable choices, 2 favours unconventional ones. The rules hold at every setting.</p>
     </div>

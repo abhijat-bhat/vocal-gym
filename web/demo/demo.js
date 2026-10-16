@@ -145,6 +145,126 @@ function playPitched(btn, notes, tl, per){
   });
 }
 
+/* ---- gamaka playback (docs/plans/gamaka-audio.md §5): one continuous voice per legato group ----
+   The contour from E.renderGamaka drives the oscillator with one setValueCurveAtTime per group
+   (overlapping automation is not allowed for value curves); articulation dips live on a separate
+   gain node. The timbre is a few harmonics through two "aa" formants, with no vibrato: plain
+   Carnatic notes are steady, and vibrato would blur the plain/oscillated contrast. */
+const GAMAKA_KEY = 'vg.gamaka';
+function gamakaDepth(){ const v = +$('snd-gamaka').value; return v > 0 ? v : 0; }
+function voiceWave(ac){
+  const n = 9, re = new Float32Array(n), im = new Float32Array(n);
+  for (let h = 1; h < n; h++) im[h] = 1 / Math.pow(h, 1.2);
+  return ac.createPeriodicWave(re, im);
+}
+/* resample a group's points onto an even grid, as setValueCurveAtTime spreads values evenly */
+function evenCurve(points, t0, t1, step, toHz){
+  const n = Math.max(2, Math.round((t1 - t0) / step) + 1), out = new Float32Array(n);
+  let k = 0;
+  for (let j = 0; j < n; j++){
+    const t = t0 + (t1 - t0) * j / (n - 1);
+    while (k < points.length - 2 && points[k + 1].t < t) k++;
+    const a = points[k], b = points[Math.min(k + 1, points.length - 1)];
+    const u = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 0;
+    out[j] = toHz(a.p + (b.p - a.p) * u);
+  }
+  return out;
+}
+function scheduleGamaka(ac, out, t0, contour, sa){
+  const wave = voiceWave(ac), toHz = p => sa * Math.pow(2, p / 12);
+  contour.groups.forEach(g => {
+    const start = t0 + g.t0, dur = g.t1 - g.t0;
+    const osc = ac.createOscillator(), env = ac.createGain(), art = ac.createGain(), dry = ac.createGain(), mix = ac.createGain();
+    osc.setPeriodicWave(wave);
+    osc.frequency.setValueCurveAtTime(evenCurve(g.points, g.t0, g.t1, 0.005, toHz), start, dur);
+    // envelope: a soft attack, a steady level, a short release
+    env.gain.setValueAtTime(0.0001, start); env.gain.exponentialRampToValueAtTime(0.26, start + 0.03); env.gain.setValueAtTime(0.26, start + Math.max(0.04, dur - 0.06)); env.gain.exponentialRampToValueAtTime(0.0001, start + dur + 0.04);
+    // articulation: each swara is spoken, except where a jaru glides into it
+    art.gain.setValueAtTime(1, start);
+    g.notes.forEach((i, k) => {
+      if (k === 0) return;
+      const n = contour.notes[i];
+      if (n.shape && n.shape.indexOf('jaru') >= 0) return;
+      const tb = t0 + n.t0;
+      art.gain.setValueAtTime(1, tb - 0.0125); art.gain.linearRampToValueAtTime(0.75, tb); art.gain.linearRampToValueAtTime(1, tb + 0.0125);
+    });
+    const f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter();
+    f1.type = 'bandpass'; f1.frequency.value = 700; f1.Q.value = 4;
+    f2.type = 'bandpass'; f2.frequency.value = 1150; f2.Q.value = 5;
+    dry.gain.value = 0.5; mix.gain.value = 1.1;
+    osc.connect(env).connect(art);
+    art.connect(dry).connect(out); art.connect(f1).connect(mix); art.connect(f2).connect(mix); mix.connect(out);
+    osc.start(start); osc.stop(start + dur + 0.08);
+  });
+  return t0 + (contour.groups.length ? contour.groups[contour.groups.length - 1].t1 : 0);
+}
+function kalContour(c, depth){
+  const beat = 60 / +$('snd-bpm').value;
+  return E.renderGamaka(c.res.notes, { raga: c.raga, slotSec: beat / c.per, depth, units: c.res.units, seed: K.seed });
+}
+function playKalpana(btn){
+  const c = K.cache; if (!c) return;
+  const depth = gamakaDepth();
+  if (!depth) { playPitched(btn, c.notes, c.tl, c.per); return; }   // off: the plain tones, unchanged
+  const contour = kalContour(c, depth);
+  startPlayback(btn, (ac, out, t0) => {
+    const beat = 60 / +$('snd-bpm').value, end = scheduleGamaka(ac, out, t0, contour, saHz());
+    const totalSlots = c.notes.reduce((s, n) => s + n.slots, 0), aks = Math.ceil(totalSlots / c.per);
+    const starts = new Set(); let a0 = 0; c.tl.angas.forEach(a => { starts.add(a0); a0 += a.len; });
+    for (let k = 0; k < aks; k++){ const inCyc = k % c.tl.total; click(ac, out, t0 + k * beat, inCyc === 0 || starts.has(inCyc)); }
+    drone(ac, out, t0, end - t0);
+    return end;
+  });
+}
+/* a 16-bit mono WAV of the round with its gamaka, rendered offline through the same graph */
+function wavBytes(buf){
+  const ch = buf.getChannelData(0), n = ch.length, dv = new DataView(new ArrayBuffer(44 + n * 2));
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); dv.setUint32(16, 16, true);
+  dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, buf.sampleRate, true); dv.setUint32(28, buf.sampleRate * 2, true);
+  dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); str(36, 'data'); dv.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) dv.setInt16(44 + i * 2, Math.max(-1, Math.min(1, ch[i])) * 32767, true);
+  return dv.buffer;
+}
+function downloadWav(btn){
+  const c = K.cache; if (!c) return;
+  const Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!Off) { btn.textContent = 'WAV unavailable'; return; }
+  const contour = kalContour(c, gamakaDepth() || 1), sr = 44100, len = Math.ceil(sr * (contour.points[contour.points.length - 1].t + 1));
+  const ac = new Off(1, len, sr), out = ac.createGain(); out.gain.value = 0.9; out.connect(ac.destination);
+  const end = scheduleGamaka(ac, out, 0.05, contour, saHz()); drone(ac, out, 0.05, end - 0.05);
+  btn.textContent = 'Rendering…';
+  ac.startRendering().then(buf => {
+    const url = URL.createObjectURL(new Blob([wavBytes(buf)], { type: 'audio/wav' })), a = document.createElement('a');
+    a.href = url; a.download = 'kalpana-' + c.raga.id + '-seed' + K.seed + '.wav'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000); btn.textContent = 'Download WAV';
+  }, () => { btn.textContent = 'WAV failed'; });
+}
+/* the pitch view: the contour against the raga's swara lines, a tooltip per swara with its rule */
+function kalPitchView(r, contour){
+  const pts = contour.points; if (!pts.length) return '';
+  const T = pts[pts.length - 1].t, ps = pts.map(p => p.p), lo = Math.floor(Math.min.apply(null, ps)) - 1, hi = Math.ceil(Math.max.apply(null, ps)) + 1;
+  const W = 900, H = 200, L = 34, x = t => L + (W - L - 6) * t / T, y = p => 8 + (H - 16) * (hi - p) / (hi - lo);
+  const pcs = new Set(r.aro.concat(r.avaro).map(E.mod12));
+  let svg = '<svg class="pitchview" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Pitch contour with gamaka">';
+  for (let p = lo; p <= hi; p++) if (pcs.has(E.mod12(p))) svg += '<line x1="' + L + '" x2="' + (W - 6) + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" class="pv-line' + (E.mod12(p) === 0 ? ' pv-sa' : '') + '"/><text x="' + (L - 6) + '" y="' + (y(p) + 4).toFixed(1) + '" class="pv-lab">' + esc(swara(r, p, false)) + '</text>';
+  contour.notes.forEach(n => { if (n.p == null) return; svg += '<rect x="' + x(n.t0).toFixed(1) + '" y="0" width="' + Math.max(1, x(n.t1) - x(n.t0)).toFixed(1) + '" height="' + H + '" class="pv-note"><title>' + esc(swara(r, n.p, true) + ': ' + n.rule + (n.src ? ' · ' + n.src + (n.source ? ' ' + n.source.title : '') : '') + (n.why ? ' · ' + n.why : '')) + '</title></rect>'; });
+  let d = ''; contour.groups.forEach(g => g.points.forEach((p, k) => { d += (k ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.p).toFixed(1); }));
+  return svg + '<path d="' + d + '" class="pv-path"/></svg>';
+}
+function kalGamakaBadge(r){
+  const g = E.getProfile(r).gamaka, src = (g.sources || []).join(', ');
+  if (g.basis === 'default') return 'Generic gamaka: no raga-specific data yet (light default: S and P plain, gentle swings on long notes). <a href="../docs/research/raga-profiles-report.md">Research gaps</a>';
+  const vague = Object.values(g.rules).some(list => list.some(x => x.basis === 'text-vague'));
+  return (vague ? 'Gamaka from text, partly interpreted' : 'Raga-specific gamaka') + ' (sources: ' + esc(src) + '; style ' + esc(g.style) + '). Hover the pitch view for each swara\'s rule.';
+}
+function kalGamakaView(){
+  const c = K.cache; if (!c) return;
+  const depth = gamakaDepth(), contour = kalContour(c, depth || 1);
+  $('k-gamaka').innerHTML = kalGamakaBadge(c.raga) + (depth ? '' : ' Playback is set to plain tones; the view shows full gamaka.');
+  $('k-pitch').innerHTML = kalPitchView(c.raga, contour);
+}
+
 /* ================= Alankara tab ================= */
 const A = { hist: {}, idx: {}, seed: 1 };
 function alaKey(){ return $('a-raga').value + '|' + $('a-fam').value + $('a-jati').value; }
@@ -413,7 +533,7 @@ function kalRender(){
   $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · ' + K0 + ' aksharas × ' + per + ' = ' + K0 * per + ' slots, then the composition resumes on ' + esc(swara(r, tp, true)) + ' at the eduppu · seed ' + K.seed;
   if (res.error){
     const nb = E.eduppuNeighbours(r, tp), near = [nb.lo, nb.hi].filter(p => p != null).map(p => swara(r, p, true)).join(' or ');
-    $('k-out').innerHTML = ''; $('k-audit').innerHTML = '<li class="bad">' + esc(res.code === 'unreachable' ? 'This span is too short to move from ' + swara(r, sp, true) + ' to ' + near + ' (next to ' + swara(r, tp, true) + ') with legal devices. Lengthen it or pick closer swaras.' : res.error) + '</li>'; K.cache = null; return;
+    $('k-out').innerHTML = ''; $('k-audit').innerHTML = '<li class="bad">' + esc(res.code === 'unreachable' ? 'This span is too short to move from ' + swara(r, sp, true) + ' to ' + near + ' (next to ' + swara(r, tp, true) + ') with legal devices. Lengthen it or pick closer swaras.' : res.error) + '</li>'; K.cache = null; $('k-pitch').innerHTML = ''; $('k-gamaka').innerHTML = ''; return;
   }
   const slots = [], notes = [];
   res.units.forEach(u => {
@@ -426,7 +546,7 @@ function kalRender(){
     });
   });
   let lastNote = slots.length - 1; while (lastNote > 0 && slots[lastNote].t === ',') lastNote--; slots[lastNote].cls += ' land'; slots[lastNote].title += ' · last swara, next to the eduppu';
-  K.cache = { slots, tl, per, notes };
+  K.cache = { slots, tl, per, notes, res, raga: r };
   $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i+1) }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
   const st = res.stats, dev = Object.keys(st.devices).map(k => k + (st.devices[k] > 1 ? ' ×' + st.devices[k] : '')).join(', ');
   const D = res.dial, fin = swara(r, res.ending.final, true), edp = swara(r, tp, true);
@@ -442,6 +562,7 @@ function kalRender(){
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],
     ['Every upward step lands on an arohana swara and every downward step on an avarohana swara', true]
   ].map(([t, ok]) => '<li' + (ok ? '' : ' class="bad"') + '>' + esc(t) + '</li>').join('');
+  kalGamakaView();
 }
 function kalInit(){
   fillRagaSelect($('k-raga')); $('k-raga').value = 'mela65';
@@ -453,7 +574,8 @@ function kalInit(){
   $('k-temp').addEventListener('input', () => { $('k-tv').textContent = (+$('k-temp').value).toFixed(1); });
   $('k-temp').addEventListener('change', kalRender);
   $('k-new').addEventListener('click', () => { K.seed++; kalRender(); });
-  $('k-play').addEventListener('click', e => { const c = K.cache; if (c) playPitched(e.currentTarget, c.notes, c.tl, c.per); });
+  $('k-play').addEventListener('click', e => playKalpana(e.currentTarget));
+  $('k-wav').addEventListener('click', e => downloadWav(e.currentTarget));
   $('k-copy').addEventListener('click', e => { const c = K.cache; if (c) copyText(gridText(c.slots, c.tl, c.per), e.currentTarget); });
   document.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => {
     const [rid, fam, L, len, pa, sp, tp, T, ending] = b.dataset.k.split('|');
@@ -481,6 +603,9 @@ function tabs(){
 SA.forEach(([n], i) => $('snd-sa').appendChild(new Option('Sa = ' + n, i)));
 $('snd-sa').value = '0';
 $('snd-bpm').addEventListener('input', () => { $('snd-bv').textContent = $('snd-bpm').value; });
+try { const g = localStorage.getItem(GAMAKA_KEY); if (g != null && Array.from($('snd-gamaka').options).some(o => o.value === g)) $('snd-gamaka').value = g; } catch (e) {}
+$('snd-gamaka').addEventListener('change', () => { try { localStorage.setItem(GAMAKA_KEY, $('snd-gamaka').value); } catch (e) {} kalGamakaView(); });
+$('snd-bpm').addEventListener('change', kalGamakaView);
 alaInit(); jathiInit(); kalInit(); tabs();
 if ($('pdf-table')) pdfTable();
 if ($('ex-adi')) $('ex-adi').textContent = E.JATHI_EXAMPLES.adi;

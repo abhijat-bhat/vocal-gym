@@ -9,6 +9,25 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
 const check = (cond, msg) => { if (!cond) { failures++; console.log('  FAIL ' + msg); } };
 
+/* A Web Audio stand-in that records what playback schedules (jsdom has no audio). */
+function stubAudio(w) {
+  const log = w.__audio = { curves: [], oscillators: 0, sets: 0 };
+  const param = v => ({ value: v, setValueAtTime() { log.sets++; }, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {},
+    setValueCurveAtTime(curve, t, d) { log.curves.push({ curve, t, d }); } });
+  const node = extra => Object.assign({ connect(n) { return n; }, disconnect() {} }, extra || {});
+  class Ctx {
+    constructor() { this.currentTime = 0; this.sampleRate = 44100; this.state = 'running'; this.destination = node(); }
+    resume() {}
+    createOscillator() { log.oscillators++; return node({ type: 'sine', frequency: param(440), setPeriodicWave() {}, start() {}, stop() {} }); }
+    createGain() { return node({ gain: param(1) }); }
+    createBiquadFilter() { return node({ type: 'lowpass', frequency: param(350), Q: param(1) }); }
+    createPeriodicWave(re, im) { return { re, im }; }
+    createBuffer(c, n) { return { getChannelData: () => new Float32Array(n) }; }
+    createBufferSource() { return node({ buffer: null, start() {} }); }
+  }
+  w.AudioContext = Ctx;
+}
+
 function load(file) {
   const html = fs.readFileSync(path.join(root, 'site', file), 'utf8');
   const errors = [];
@@ -18,6 +37,7 @@ function load(file) {
       w.addEventListener('error', e => errors.push(e.message));
       w.console.error = (...a) => errors.push(a.join(' '));
       w.HTMLElement.prototype.scrollIntoView = function () {};
+      stubAudio(w);
     }
   });
   return { dom, w: dom.window, d: dom.window.document, errors };
@@ -90,6 +110,29 @@ function driveDemos(file) {
     check(mo.length > 0 && new RegExp(st + ' mora').test(text('k-audit')), 'mora style ' + st + ' shown in the notation and the audit');
   });
   $('k-mora').value = 'auto'; fire($('k-mora'), 'input');
+  // gamaka playback (gamaka plan test 17): the select, the pitch view, and one pitch curve per legato group
+  check(!!$('snd-gamaka') && $('snd-gamaka').options.length === 3, 'gamaka select with off, light and full');
+  $('k-raga').value = 'mela65'; fire($('k-raga'), 'input'); $('k-len').value = '8'; fire($('k-len'), 'input'); $('k-ending').value = 'auto'; fire($('k-ending'), 'input');
+  const pv = $('k-pitch').querySelector('svg');
+  check(pv && pv.querySelector('path.pv-path') && pv.querySelectorAll('rect.pv-note title').length > 0, 'the pitch view draws the contour with per-swara rules');
+  check(/Raga-specific gamaka|Gamaka from text/.test(text('k-gamaka')), 'Kalyani shows its gamaka sources');
+  ['0.5', '1'].forEach(v => {
+    $('snd-gamaka').value = v; fire($('snd-gamaka'), 'change');
+    w.__audio.curves.length = 0;
+    click($('k-play'));
+    const curves = w.__audio.curves;
+    check(curves.length === 1 && curves.every(c => c.curve instanceof w.Float32Array || c.curve instanceof Float32Array) && curves.every(c => Array.from(c.curve).every(Number.isFinite) && c.d > 0),
+      'gamaka ' + v + ': one finite pitch curve per legato group, got ' + curves.length);
+    click($('k-play'));   // stop
+  });
+  $('snd-gamaka').value = '0'; fire($('snd-gamaka'), 'change');
+  w.__audio.curves.length = 0; click($('k-play'));
+  check(w.__audio.curves.length === 0, 'gamaka off plays the plain tones, with no pitch curves');
+  click($('k-play'));
+  check(/view shows full gamaka/.test(text('k-gamaka')), 'with gamaka off the view says it shows full gamaka');
+  $('k-raga').value = 'mela1'; fire($('k-raga'), 'input');
+  check(/Generic gamaka: no raga-specific data yet/.test(text('k-gamaka')), 'data-less ragas say their gamaka is generic');
+  $('snd-gamaka').value = '0.5'; fire($('snd-gamaka'), 'change');
   // micro-benchmark (plan 8): 100 rounds of one Adi avartanam in under a second
   // (warm, best of three runs, so a moment of load elsewhere on the machine does not decide it)
   const kal = w.VGEngine.allRagas().melakartas[64], opts = s => ({ aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: s % 3, seed: s + 1 });

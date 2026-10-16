@@ -131,6 +131,14 @@ textarea.src{display:block;width:100%;font-family:var(--font-mono);font-size:.86
 .s.ph{color:var(--saffron)}
 .s.frag{color:var(--saffron);opacity:.72}
 .s.var{color:var(--violet);font-style:italic}
+.pitch{margin:.6rem 0 0;overflow-x:auto}
+.pitchview{width:100%;min-width:520px;height:auto;display:block}
+.pv-line{stroke:var(--line-2);stroke-width:1}
+.pv-sa{stroke:var(--muted)}
+.pv-lab{fill:var(--muted);font:11px var(--font-mono);text-anchor:end}
+.pv-note{fill:transparent}
+.pv-note:hover{fill:var(--saffron-soft)}
+.pv-path{fill:none;stroke:var(--saffron);stroke-width:2;stroke-linejoin:round}
 .s.cs{box-shadow:inset 1px 0 0 var(--line)}
 .s.sub{min-width:.9ch}
 .scorehead{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:14px 0 4px;font-size:.92rem;color:var(--fg-2)}
