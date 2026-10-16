@@ -120,3 +120,56 @@ test('direction-rule exceptions only with allowExceptions, and then whole (plan 
   t.diagnostic('exceptions off: ' + offAnya + ' rounds with an anya swara; on: ' + onExc + ' exception phrases in ' + onRounds + ' rounds');
   done();
 });
+
+/* moves the raga's own phrases make, plus its scale steps: pitch class to pitch class, up or down */
+function idiomOf(r) {
+  const key = (a, b) => E.mod12(a) * 26 + E.mod12(b) * 2 + (b > a ? 1 : 0), set = new Set();
+  E.getProfile(r).phrases.forEach(ph => { for (let k = 1; k < ph.pitches.length; k++) if (ph.pitches[k] !== ph.pitches[k - 1]) set.add(key(ph.pitches[k - 1], ph.pitches[k])); });
+  const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12))).sort((a, b) => a - b), notes = [];
+  for (let o = -1; o <= 1; o++) pcs.forEach(pc => { const x = pc + 12 * o; if (x >= -5 && x <= 19) notes.push(x); });
+  notes.sort((a, b) => a - b);
+  const P = E.makeProjector(r);
+  for (let k = 1; k < notes.length; k++) { if (P.valid(notes[k - 1], notes[k])) set.add(key(notes[k - 1], notes[k])); if (P.valid(notes[k], notes[k - 1])) set.add(key(notes[k], notes[k - 1])); }
+  return { has: (a, b) => set.has(key(a, b)), notes };
+}
+
+test('no erratic jumps: leap sizes capped, and moves follow the raga\'s own phrases', t => {
+  const { ok, done } = checker(t);
+  const acc = {};
+  [0, 0.5, 1, 1.4, 2].forEach(T => {
+    const a = acc[T] = { moves: 0, idiom: 0, leaps: 0, leapIdiom: 0, overFifth: 0, overSixth: 0, abs: 0 };
+    ALL.forEach((r, ri) => {
+      const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12))), id = E.getProfile(r).phrases.length ? idiomOf(r) : null;
+      for (let s = 1; s <= 6; s++) {
+        const res = E.kalpana(r, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: pcs.includes(7) ? 7 : 12, T, seed: s + ri * 11, ending: 'free' });
+        const L = res.stats.leaps;
+        if (!res.stats.relaxed) {
+          a.overFifth += L.outsidePhrases.overFifth;
+          // leaps outside attested phrases wider than a major sixth (the octave excepted) are never allowed
+          const flat = []; res.units.forEach(u => u.notes.forEach((n, k) => flat.push({ p: n.p, inside: (u.kind === 'phrase' || u.kind === 'phrase-fragment') && k > 0 })));
+          for (let k = 1; k < flat.length; k++) { const d = Math.abs(flat[k].p - flat[k - 1].p); if (!flat[k].inside && d > 9 && d !== 12) a.overSixth++; }
+        }
+        const ps = res.notes.map(n => n.p);
+        for (let k = 1; k < ps.length; k++) {
+          a.abs += Math.abs(ps[k] - ps[k - 1]);
+          if (!id || ps[k] === ps[k - 1]) continue;
+          a.moves++; const yes = id.has(ps[k - 1], ps[k]); if (yes) a.idiom++;
+          if (Math.abs(id.notes.indexOf(ps[k]) - id.notes.indexOf(ps[k - 1])) >= 2) { a.leaps++; if (yes) a.leapIdiom++; }
+        }
+      }
+    });
+  });
+  const row = T => { const a = acc[T]; return 'T ' + T + ': moves in the raga\'s idiom ' + (100 * a.idiom / a.moves).toFixed(1) + '%, leaps in idiom ' + (100 * a.leapIdiom / a.leaps).toFixed(1) + '%, leaps wider than a fifth outside phrases ' + a.overFifth + ', wider than a sixth ' + a.overSixth; };
+  [0, 0.5, 1, 1.4, 2].forEach(T => t.diagnostic(row(T)));
+  [0, 0.5, 1, 1.4].forEach(T => ok(acc[T].overFifth === 0, 'below T 1.5 no leap outside a phrase is wider than a fifth: ' + row(T)));
+  [0, 0.5, 1, 1.4, 2].forEach(T => ok(acc[T].overSixth === 0, 'no leap outside a phrase is wider than a major sixth, except the octave: ' + row(T)));
+  ok(acc[0].idiom / acc[0].moves >= 0.93 && acc[0].leapIdiom / acc[0].leaps >= 0.7, 'T 0 follows the raga\'s idiom: ' + row(0));
+  ok(acc[1].idiom / acc[1].moves >= 0.85, 'T 1 mostly follows the raga\'s idiom: ' + row(1));
+  // the reported openings: Kalyani jumping from S straight up to N (or tara N), then into a fragment
+  const k = byId('mela65');
+  for (let s = 1; s <= 60; s++) [0, 0.5, 1, 1.2].forEach(T => ['auto', 'free', 'mora'].forEach(ending => {
+    const res = E.kalpana(k, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T, seed: s, ending });
+    ok(!(res.notes[0].p === 0 && [11, 23].includes(res.notes[1].p)), 'Kalyani no longer opens S → N (T ' + T + ', seed ' + s + ')');
+  }));
+  done();
+});

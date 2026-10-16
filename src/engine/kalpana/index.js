@@ -4,7 +4,7 @@ import { getProfile } from '../profiles.js';
 import { CELL_DEFS, CELLS, phraseDevices } from './devices.js';
 import { KALPANA_RANGE, eduppuNeighbours, approachScore } from './landing.js';
 import { moraOptions as gradedMora } from './mora.js';
-import { leapContext, isLeap, licence, forbiddenLeap, internalTerms, boundaryTerms, leapStats } from './leaps.js';
+import { leapContext, isLeap, licence, blocked, internalTerms, boundaryTerms, leapStats } from './leaps.js';
 
 /* Vocal Gym engine · kalpana swaras: device-based generation with a guaranteed landing
    kalpanaRound(raga, opts) returns a round or { error, code }; kalpana(raga, opts) returns the
@@ -65,16 +65,20 @@ function profileCoverage(profile, phraseCount) {
 }
 
 function kalpanaRound(raga, opts) {
-  const o = opts || {}, D = dial(o.T == null ? 1 : o.T);
-  const strict = build(raga, o, D.T < 1.5);
-  if (!strict.error || strict.code !== 'unreachable' || !(D.T < 1.5)) return strict;
-  // a leap filter made the span infeasible: relax it one level rather than fail where v0.2 succeeded
-  const loose = build(raga, o, false);
-  if (!loose.error) loose.stats.relaxed = 'leaps';
-  return loose;
+  const o = opts || {}, D = dial(o.T == null ? 1 : o.T), top = D.T < 1.5 ? 2 : 1;
+  let res;
+  // when a leap filter makes the span infeasible, relax it a level at a time rather than fail where v0.2 succeeded
+  for (let level = top; level >= 0; level--) {
+    res = build(raga, o, level);
+    if (!res.error || res.code !== 'unreachable') break;
+  }
+  if (!res.error && res.level < top) res.stats.relaxed = 'leaps';
+  if (!res.error) delete res.level;
+  return res;
 }
 
-function build(raga, o, hard) {
+function build(raga, o, level) {
+  const hard = level >= 2;
   const aksharas = o.aksharas, per = o.perAkshara, D = dial(o.T == null ? 1 : o.T), rand = rng(o.seed || 1);
   const slots = aksharas * per, startPitch = o.startPitch, ending = o.ending || 'auto';
   const Pj = makeProjector(raga);
@@ -104,7 +108,7 @@ function build(raga, o, hard) {
     targets = [{ p: o.targetPitch, approach: null }];
   }
 
-  const profile = getProfile(raga), LX = leapContext(profile, D.T, hard);
+  const profile = getProfile(raga), LX = leapContext(profile, D.T, level);
   const landing = new Set(profile ? profile.landing : [0, 7]);
   const restBad = new Set(profile ? profile.avoidLanding.concat(profile.notNyasa) : []);
   const alpa = new Set(profile ? profile.alpa : []), jiva = new Set(profile ? profile.jiva : []);
@@ -112,7 +116,7 @@ function build(raga, o, hard) {
   const softAvoid = profile ? profile.avoid.filter(a => a.strength !== 'hard').map(a => a.pitches) : [];
   const avoidsHard = (seq, from) => hardAvoid.some(p => containsRun(seq, p, from));
   // a move the hard leap filter forbids (state-independent: interval size, tritone, alpa target)
-  const badLeap = (ia, ib) => hard && isLeap(ia, ib) && !!forbiddenLeap(LX, notes[ia], notes[ib]);
+  const badLeap = (ia, ib) => isLeap(ia, ib) && blocked(LX, notes[ia], notes[ib]);
   const sameDirLeaps = (ia, ib, ic) => isLeap(ia, ib) && isLeap(ib, ic) && Math.sign(ib - ia) === Math.sign(ic - ib);
   /* The reachability tables track the swara and the class of the move that arrived on it
      (0 a step or none, 1 a leap up, 2 a leap down), so that below T = 1.5 no two leaps in a row
@@ -121,8 +125,15 @@ function build(raga, o, hard) {
   const clash = (m, m2) => hard && m !== 0 && m === m2;
   const NS = NN * 3;
 
-  const tables = cachedTables(raga, profile, (hard ? 'h' : '') + (D.T >= 1 ? 'i' : '') + (o.allowExceptions ? 'x' : ''), makeTables);
-  const { app, phr, G, gen, moraCache } = tables;
+  const tables = cachedTables(raga, profile, level + (D.T >= 1 ? 'i' : '') + (o.allowExceptions ? 'x' : ''), makeTables);
+  const { app, phr, G, gen, moraCache, idiom, idiomKey } = tables;
+  // familiarity of one move under the raga's idiom: unattested leaps cost the most
+  // and, in every raga, a cost for size: 0.15 per semitone a leap spans beyond a major third (the octave excepted)
+  const moveIdiom = (a, b) => {
+    const s = Math.abs(b - a), size = s > 4 && s !== 12 && isLeap(pos(a), pos(b)) ? -0.15 * (s - 4) : 0;
+    if (!idiom || a === b || idiom.has(idiomKey(a, b))) return size;
+    return size + (s > 2 && isLeap(pos(a), pos(b)) ? -0.8 : -0.15);
+  };
   const entryOK = (gp, i, m) => (gp.allow[m] >> i) & 1;
   // the device tables depend only on the raga, its profile and the mode, so they are built once
   function makeTables() {
@@ -185,7 +196,14 @@ function build(raga, o, hard) {
     CELLS.forEach((c, ci) => { const a = app[ci][i]; if (!a || clash(m, a.mf)) return; const k = c.len * 1000 + a.end * 3 + a.me; if (!seen.has(k)) { seen.add(k); mv.push(c.len, a.end * 3 + a.me); } });
     gen.push(Int32Array.from(mv));
   }
-  return { app, phr, G, gen };
+  // the raga's idiom: every move (pitch class to pitch class, up or down) that its attested phrases
+  // make, plus the steps of its scale. Moves outside it cost familiarity (plan 2: use the profile).
+  const idiom = new Set(), idiomKey = (a, b) => mod12(a) * 26 + mod12(b) * 2 + (b > a ? 1 : 0);
+  (profile ? profile.phrases : []).forEach(ph => { for (let k = 1; k < ph.pitches.length; k++) if (ph.pitches[k] !== ph.pitches[k - 1]) idiom.add(idiomKey(ph.pitches[k - 1], ph.pitches[k])); });
+  const hasIdiom = idiom.size > 0;
+  // (ragas without phrases still get the size cost through moveIdiom)
+  for (let k = 1; k < NN; k++) { if (Pj.valid(notes[k - 1], notes[k])) idiom.add(idiomKey(notes[k - 1], notes[k])); if (Pj.valid(notes[k], notes[k - 1])) idiom.add(idiomKey(notes[k], notes[k - 1])); }
+  return { app, phr, G, gen, idiom: hasIdiom ? idiom : null, idiomKey };
   }
   // bitmasks of the swaras reachable in each arrival class at one slot
   const masks = row => { const b = [0, 0, 0]; for (let s = 0; s < NS; s++) if (row[s]) b[s % 3] |= 1 << ((s / 3) | 0); return b; };
@@ -232,7 +250,7 @@ function build(raga, o, hard) {
   };
   const moraCtx = { notes, NN, valid: Pj.valid, repair: Pj.repair, hard, LX, licence, isLeap, badLeap, sameDirLeaps,
     avoidsHard: ps => hardAvoid.length > 0 && avoidsHard(ps, 0), slots, per, D, e: useEduppu ? e : null,
-    phrases: profile ? profile.phrases : [], style: o.moraStyle || 'auto', feasibleInto, cache: moraCache };
+    phrases: profile ? profile.phrases : [], style: o.moraStyle || 'auto', feasibleInto, cache: moraCache, moveIdiom };
   function moraOptions(tg) { return moraAllowed ? gradedMora(moraCtx, tg) : []; }
 
   // which landings can finish under the requested ending
@@ -330,7 +348,10 @@ function build(raga, o, hard) {
     for (const [end, pc] of src.held) { if (landing.has(pc) && (curPh + end) % per === 0) F += 0.6; else N += 0.3; }
     F -= 0.06 * Math.abs(src.avg - centre);
     if (!isPh && src.outer) { N += 0.5; F -= 0.3; }
-    return { F, N };
+    // moves inside the device that the raga's phrases never make (attested phrases make them by definition)
+    let I = 0;
+    if (c.kind !== 'phrase' && c.kind !== 'phrase-fragment') for (let k = 1; k < ps.length; k++) I += moveIdiom(ps[k - 1], ps[k]);
+    return { F, N, I };
   }
   let curPh = 0;
   const ph0Of = () => curPh;
@@ -361,8 +382,15 @@ function build(raga, o, hard) {
       if (!anchored && prev && prev.base === c.base && prev.dir === c.dir) { F += 0.5; N -= 0.4; }
       if (prev && prev.id === c.id && prev.startP === ps[0]) { F += 0.2; N -= 1.0; }
       if (anchored && used.has(c.phraseId)) F -= 0.8;
+      // the move into the device: idiomatic or not, and for a phrase, how far it had to jump to begin
+      const p0 = line[line.length - 1].p;
+      let I = b.I + moveIdiom(p0, ps[0]);
+      // (an attested phrase is idiom itself, so its entry costs half as much as a variant's)
+      if (anchored) { const d = Math.abs(x.cn[0].i - i); if (d >= 2) I -= (isPh ? 0.3 : 0.6) * (d - 1); }
       if (prev && prev.dir && c.dir && c.dir !== prev.dir) N += 0.3;
-      let score = (1 - D.c) * F + D.c * N;
+      // the raga's idiom keeps at least half its weight at every temperature: creativity means
+      // out-of-the-box phrases of this raga, not jumps it never makes
+      let score = (1 - D.c) * F + D.c * N + (1 - 0.5 * D.c) * I;
       // the phrase-share controller: predominantly characteristic phrases, occasionally out-of-the-box ones
       // (the novelty side scales with c, so a round at T = 0 fills the rest with conventional devices)
       if (isPh) score += push;
@@ -450,7 +478,7 @@ function build(raga, o, hard) {
       phraseShare: phraseS / slots, variantShare: variantS / slots,
       profileCoverage: profileCoverage(profile, phraseCount), phrases: phrasesUsed, devices, leaps
     },
-    dial: D
+    dial: D, level
   };
 }
 

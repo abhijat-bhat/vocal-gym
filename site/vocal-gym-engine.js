@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.3.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.3.1: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -2702,7 +2702,9 @@ var VGEngine = (() => {
             if (avoidsHard(flat.map((j) => notes[j]))) return;
             let unl = 0;
             for (let k = 1; k < flat.length; k++) if (isLeap2(flat[k - 1], flat[k]) && !licence2(LX, notes[flat[k - 1]], notes[flat[k]])) unl++;
-            out.push({ style: st, stmts, flat, delta, adjusted, unl, template: tp.source, phraseId: tp.phraseId, steps: tp.steps, stepwise: tp.steps.every((d) => Math.abs(d) === 1) });
+            let idiomF = 0;
+            if (ctx.moveIdiom) for (let k = 1; k < flat.length; k++) idiomF += ctx.moveIdiom(notes[flat[k - 1]], notes[flat[k]]);
+            out.push({ style: st, stmts, flat, delta, adjusted, unl, idiomF, template: tp.source, phraseId: tp.phraseId, steps: tp.steps, stepwise: tp.steps.every((d) => Math.abs(d) === 1) });
           });
         });
       });
@@ -2742,7 +2744,7 @@ var VGEngine = (() => {
             }
             if (!ok) unres++;
           }
-          const F = (tp.source !== "generic" ? 1 : 0) + (stepwise ? 0.6 : 0) + (onBeat ? 0.9 : 0) + (st === "shift" ? 0.3 : 0) + (q <= per ? 0.3 : 0) - 0.5 * unl - 0.6 * unres - (adjusted ? 0.4 : 0);
+          const F = (tp.source !== "generic" ? 1 : 0) + (stepwise ? 0.6 : 0) + (onBeat ? 0.9 : 0) + (st === "shift" ? 0.3 : 0) + (q <= per ? 0.3 : 0) - 0.5 * unl - 0.6 * unres - (adjusted ? 0.4 : 0) + sh.idiomF;
           const N = (tp.source === "generic" ? 0.5 : 0) + (toward ? 0 : 0.5) + (st === "gopuccha" || st === "srotovaha" ? 0.6 : 0) + (onBeat ? 0 : 0.7);
           out.push({ style: st, stmts, q, B, F, N, delta, toward, adjusted, template: sh.template, phraseId: sh.phraseId, steps: sh.steps });
         }
@@ -2761,15 +2763,16 @@ var VGEngine = (() => {
     }
     return BUDGET[BUDGET.length - 1][1];
   }
-  function leapContext(profile, T, hard) {
+  var maxLeapFor = (T) => 7;
+  function leapContext(profile, T, level) {
     const structural = /* @__PURE__ */ new Set([0, 7]);
     if (profile) [profile.nyasa, profile.jiva, profile.landing].forEach((a) => (a || []).forEach((pc) => structural.add(pc)));
-    return { T, hard, structural, alpa: new Set(profile ? profile.alpa || [] : []), budget: leapBudget(T), regCap: T < 1 ? 9 : 12 };
+    return { T, level, hard: level >= 2, maxLeap: level >= 2 ? maxLeapFor(T) : 12, structural, alpa: new Set(profile ? profile.alpa || [] : []), budget: leapBudget(T), regCap: T < 1 ? 9 : 12 };
   }
   var isLeap = (ia, ib) => Math.abs(ib - ia) >= 2;
   function licence(LX, a, b, tag) {
     if (tag && tag.phrase) return "phrase";
-    if (LX.structural.has(mod12(b))) return "structural";
+    if (LX.structural.has(mod12(b)) && Math.abs(b - a) <= 7) return "structural";
     if (CONSONANT.has(Math.abs(b - a))) return "consonant";
     if (tag && tag.arp && LX.T >= 1) return "arpeggio";
     return null;
@@ -2778,8 +2781,16 @@ var VGEngine = (() => {
     const s = Math.abs(b - a);
     if (s === 6) return "tritone";
     if (s > 12) return "wide";
+    if (s > maxLeapFor(LX.T) && s !== 12) return "large";
     if (LX.alpa.has(mod12(b))) return "alpa";
     return null;
+  }
+  function blocked(LX, a, b) {
+    if (LX.level <= 0) return false;
+    const s = Math.abs(b - a);
+    if (s > 12 || s > 9 && s !== 12) return true;
+    if (LX.level < 2) return false;
+    return s === 6 || s > LX.maxLeap && s !== 12 || LX.alpa.has(mod12(b));
   }
   var inside = (seq, k) => seq[k].g != null && seq[k].g === seq[k - 1].g;
   var tagOf = (seq, k) => inside(seq, k) ? { phrase: !!seq[k].phrase, arp: !!seq[k].arp } : null;
@@ -2854,7 +2865,7 @@ var VGEngine = (() => {
   }
   function leapStats(LX, line, after, slots) {
     const seq = line.concat(after || []), list = [];
-    let licensed = 0, unlicensed = 0, unresolved = 0, tritone = 0, wide = 0, alpa = 0, double = 0;
+    let licensed = 0, unlicensed = 0, unresolved = 0, tritone = 0, wide = 0, large = 0, alpa = 0, double = 0, overFifth = 0;
     for (let k = 1; k < line.length; k++) {
       const d = seq[k].i - seq[k - 1].i;
       if (Math.abs(d) < 2) continue;
@@ -2868,7 +2879,10 @@ var VGEngine = (() => {
         const f = forbiddenLeap(LX, seq[k - 1].p, seq[k].p);
         if (f === "tritone") tritone++;
         else if (f === "wide") wide++;
+        else if (f === "large") large++;
         else if (f === "alpa") alpa++;
+        const sz = Math.abs(seq[k].p - seq[k - 1].p);
+        if (sz > 7 && sz !== 12) overFifth++;
         if (k >= 2) {
           const d0 = seq[k - 1].i - seq[k - 2].i, t0 = tagOf(seq, k - 1);
           if (Math.abs(d0) >= 2 && Math.sign(d0) === Math.sign(d) && !(t0 && t0.phrase)) double++;
@@ -2877,7 +2891,7 @@ var VGEngine = (() => {
       list.push({ from: seq[k - 1].p, to: seq[k].p, at: k, licence: lic, resolved: res });
     }
     const total = list.length;
-    return { total, licensed, unlicensed, unresolved, perEight: slots ? unlicensed * 8 / slots : 0, outsidePhrases: { tritone, wide, alpa, double }, list };
+    return { total, licensed, unlicensed, unresolved, perEight: slots ? unlicensed * 8 / slots : 0, outsidePhrases: { tritone, wide, large, alpa, double, overFifth }, list };
   }
 
   // src/engine/kalpana/index.js
@@ -2925,14 +2939,18 @@ var VGEngine = (() => {
     return roles || landing ? "roles-only" : "none";
   }
   function kalpanaRound(raga, opts) {
-    const o = opts || {}, D = dial(o.T == null ? 1 : o.T);
-    const strict = build(raga, o, D.T < 1.5);
-    if (!strict.error || strict.code !== "unreachable" || !(D.T < 1.5)) return strict;
-    const loose = build(raga, o, false);
-    if (!loose.error) loose.stats.relaxed = "leaps";
-    return loose;
+    const o = opts || {}, D = dial(o.T == null ? 1 : o.T), top = D.T < 1.5 ? 2 : 1;
+    let res;
+    for (let level = top; level >= 0; level--) {
+      res = build(raga, o, level);
+      if (!res.error || res.code !== "unreachable") break;
+    }
+    if (!res.error && res.level < top) res.stats.relaxed = "leaps";
+    if (!res.error) delete res.level;
+    return res;
   }
-  function build(raga, o, hard) {
+  function build(raga, o, level) {
+    const hard = level >= 2;
     const aksharas = o.aksharas, per = o.perAkshara, D = dial(o.T == null ? 1 : o.T), rand = rng(o.seed || 1);
     const slots = aksharas * per, startPitch = o.startPitch, ending = o.ending || "auto";
     const Pj = makeProjector(raga);
@@ -2968,20 +2986,25 @@ var VGEngine = (() => {
       if (ix(o.targetPitch) < 0) return fail("target-not-in-raga", "The landing swara is not a swara of " + raga.name + " inside the kalpana range.");
       targets = [{ p: o.targetPitch, approach: null }];
     }
-    const profile = getProfile(raga), LX = leapContext(profile, D.T, hard);
+    const profile = getProfile(raga), LX = leapContext(profile, D.T, level);
     const landing = new Set(profile ? profile.landing : [0, 7]);
     const restBad = new Set(profile ? profile.avoidLanding.concat(profile.notNyasa) : []);
     const alpa = new Set(profile ? profile.alpa : []), jiva = new Set(profile ? profile.jiva : []);
     const hardAvoid = profile ? profile.avoid.filter((a) => a.strength === "hard").map((a) => a.pitches) : [];
     const softAvoid = profile ? profile.avoid.filter((a) => a.strength !== "hard").map((a) => a.pitches) : [];
     const avoidsHard = (seq, from) => hardAvoid.some((p) => containsRun(seq, p, from));
-    const badLeap = (ia, ib) => hard && isLeap(ia, ib) && !!forbiddenLeap(LX, notes[ia], notes[ib]);
+    const badLeap = (ia, ib) => isLeap(ia, ib) && blocked(LX, notes[ia], notes[ib]);
     const sameDirLeaps = (ia, ib, ic) => isLeap(ia, ib) && isLeap(ib, ic) && Math.sign(ib - ia) === Math.sign(ic - ib);
     const cls = (ia, ib) => isLeap(ia, ib) ? ib > ia ? 1 : 2 : 0;
     const clash = (m2, m22) => hard && m2 !== 0 && m2 === m22;
     const NS = NN * 3;
-    const tables = cachedTables(raga, profile, (hard ? "h" : "") + (D.T >= 1 ? "i" : "") + (o.allowExceptions ? "x" : ""), makeTables);
-    const { app, phr, G, gen, moraCache } = tables;
+    const tables = cachedTables(raga, profile, level + (D.T >= 1 ? "i" : "") + (o.allowExceptions ? "x" : ""), makeTables);
+    const { app, phr, G, gen, moraCache, idiom, idiomKey } = tables;
+    const moveIdiom = (a, b) => {
+      const s = Math.abs(b - a), size = s > 4 && s !== 12 && isLeap(pos(a), pos(b)) ? -0.15 * (s - 4) : 0;
+      if (!idiom || a === b || idiom.has(idiomKey(a, b))) return size;
+      return size + (s > 2 && isLeap(pos(a), pos(b)) ? -0.8 : -0.15);
+    };
     const entryOK = (gp, i2, m2) => gp.allow[m2] >> i2 & 1;
     function makeTables() {
       const app2 = CELLS.map((c) => {
@@ -3068,7 +3091,16 @@ var VGEngine = (() => {
         });
         gen2.push(Int32Array.from(mv));
       }
-      return { app: app2, phr: phr2, G: G2, gen: gen2 };
+      const idiom2 = /* @__PURE__ */ new Set(), idiomKey2 = (a, b) => mod12(a) * 26 + mod12(b) * 2 + (b > a ? 1 : 0);
+      (profile ? profile.phrases : []).forEach((ph) => {
+        for (let k = 1; k < ph.pitches.length; k++) if (ph.pitches[k] !== ph.pitches[k - 1]) idiom2.add(idiomKey2(ph.pitches[k - 1], ph.pitches[k]));
+      });
+      const hasIdiom = idiom2.size > 0;
+      for (let k = 1; k < NN; k++) {
+        if (Pj.valid(notes[k - 1], notes[k])) idiom2.add(idiomKey2(notes[k - 1], notes[k]));
+        if (Pj.valid(notes[k], notes[k - 1])) idiom2.add(idiomKey2(notes[k], notes[k - 1]));
+      }
+      return { app: app2, phr: phr2, G: G2, gen: gen2, idiom: hasIdiom ? idiom2 : null, idiomKey: idiomKey2 };
     }
     const masks = (row) => {
       const b = [0, 0, 0];
@@ -3139,7 +3171,8 @@ var VGEngine = (() => {
       phrases: profile ? profile.phrases : [],
       style: o.moraStyle || "auto",
       feasibleInto,
-      cache: moraCache
+      cache: moraCache,
+      moveIdiom
     };
     function moraOptions2(tg2) {
       return moraAllowed ? moraOptions(moraCtx, tg2) : [];
@@ -3264,7 +3297,9 @@ var VGEngine = (() => {
         N += 0.5;
         F -= 0.3;
       }
-      return { F, N };
+      let I = 0;
+      if (c.kind !== "phrase" && c.kind !== "phrase-fragment") for (let k = 1; k < ps.length; k++) I += moveIdiom(ps[k - 1], ps[k]);
+      return { F, N, I };
     }
     let curPh = 0;
     const ph0Of = () => curPh;
@@ -3300,8 +3335,14 @@ var VGEngine = (() => {
           N -= 1;
         }
         if (anchored && used.has(c2.phraseId)) F -= 0.8;
+        const p0 = line[line.length - 1].p;
+        let I = b.I + moveIdiom(p0, ps[0]);
+        if (anchored) {
+          const d = Math.abs(x.cn[0].i - i);
+          if (d >= 2) I -= (isPh ? 0.3 : 0.6) * (d - 1);
+        }
         if (prev && prev.dir && c2.dir && c2.dir !== prev.dir) N += 0.3;
-        let score = (1 - D.c) * F + D.c * N;
+        let score = (1 - D.c) * F + D.c * N + (1 - 0.5 * D.c) * I;
         if (isPh) score += push;
         else if (push < 0 && (isVar || c2.kind === "nov")) score -= push * D.c;
         return score;
@@ -3429,7 +3470,8 @@ var VGEngine = (() => {
         devices,
         leaps
       },
-      dial: D
+      dial: D,
+      level
     };
   }
   function kalpana(raga, opts) {
@@ -4438,6 +4480,6 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   };
 
   // src/engine/index.js
-  var VERSION = "0.3.0";
+  var VERSION = "0.3.1";
   return __toCommonJS(engine_exports);
 })();

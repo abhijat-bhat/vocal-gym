@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+- **Kalpana swaras: no more erratic jumps.** Rounds could open S → N (11 semitones) straight into a phrase fragment, or drop a seventh, because a leap onto any resting swara counted as licensed and the jump into a phrase was never measured.
+  - A resting swara now licenses a leap only up to a fifth.
+  - Leaps outside attested phrases are capped by a three-level filter: a fifth below T = 1.5 (the octave excepted), a major sixth above, relaxed a level at a time only when a short span cannot be filled.
+  - A first-order idiom model learned from each raga's attested phrases and scale: moves the raga never makes cost familiarity, and so does leap size beyond a major third and the distance of a jump into a phrase. These idiom terms keep at least half their weight at every temperature.
+  - The same scoring applies to mora statements.
+  - Measured in the 32 ragas with phrases: 97% of moves follow the raga's idiom at T = 0 (85% before), 90% at T = 1 (78%); no leap wider than a fifth outside attested phrases below T = 1.5 in any raga; at T = 0 the 32 ragas have 30 leaps wider than a fifth, all inside attested phrases, against 125 before.
+- **Tests.** A regression test for erratic jumps, including the reported Kalyani openings. 29 tests, 594,406 checks, about 15 seconds.
+
 ## 0.3.0
 
 - **Raga profiles.**

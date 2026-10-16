@@ -4,7 +4,7 @@
    score from conventional to unconventional choices and widens sampling, but it only ever
    chooses among moves that can still finish legally. */
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 export { rng, pick, soft, dial } from './random.js';
 export { SEMI, CHAKRA, MELA_NAMES, melaLabels, defineRaga, melakarta, JANYA, allRagas } from './ragas.js';
 export { FAM, DEFJ, JATI, CHAPU, tala, customTala, angaStarts } from './talas.js';

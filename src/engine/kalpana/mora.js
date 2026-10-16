@@ -95,7 +95,10 @@ function moraShapes(ctx, tg, st) {
           if (avoidsHard(flat.map(j => notes[j]))) return;
           let unl = 0;
           for (let k = 1; k < flat.length; k++) if (isLeap(flat[k - 1], flat[k]) && !licence(LX, notes[flat[k - 1]], notes[flat[k]])) unl++;
-          out.push({ style: st, stmts, flat, delta, adjusted, unl, template: tp.source, phraseId: tp.phraseId, steps: tp.steps, stepwise: tp.steps.every(d => Math.abs(d) === 1) });
+          // moves the raga's phrases never make, statement junctions included
+          let idiomF = 0;
+          if (ctx.moveIdiom) for (let k = 1; k < flat.length; k++) idiomF += ctx.moveIdiom(notes[flat[k - 1]], notes[flat[k]]);
+          out.push({ style: st, stmts, flat, delta, adjusted, unl, idiomF, template: tp.source, phraseId: tp.phraseId, steps: tp.steps, stepwise: tp.steps.every(d => Math.abs(d) === 1) });
         });
       });
     });
@@ -134,7 +137,7 @@ function moraOptions(ctx, tg) {
               for (let m = k + 1; m <= k + 2 && !ok; m++) { const d2 = flat[m] - flat[m - 1]; if ((m === k + 1 && d2 === 0) || (Math.abs(d2) === 1 && Math.sign(d2) === -Math.sign(d))) ok = true; }
               if (!ok) unres++;
             }
-            const F = (tp.source !== 'generic' ? 1.0 : 0) + (stepwise ? 0.6 : 0) + (onBeat ? 0.9 : 0) + (st === 'shift' ? 0.3 : 0) + (q <= per ? 0.3 : 0) - 0.5 * unl - 0.6 * unres - (adjusted ? 0.4 : 0);
+            const F = (tp.source !== 'generic' ? 1.0 : 0) + (stepwise ? 0.6 : 0) + (onBeat ? 0.9 : 0) + (st === 'shift' ? 0.3 : 0) + (q <= per ? 0.3 : 0) - 0.5 * unl - 0.6 * unres - (adjusted ? 0.4 : 0) + sh.idiomF;
             const N = (tp.source === 'generic' ? 0.5 : 0) + (toward ? 0 : 0.5) + (st === 'gopuccha' || st === 'srotovaha' ? 0.6 : 0) + (onBeat ? 0 : 0.7);
         out.push({ style: st, stmts, q, B, F, N, delta, toward, adjusted, template: sh.template, phraseId: sh.phraseId, steps: sh.steps });
       }
