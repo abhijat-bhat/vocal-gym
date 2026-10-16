@@ -149,3 +149,97 @@ test('gamaka geometry: the degradation ladder lightens faster tempos (plan test 
   t.diagnostic('mean degradedShare at 60, 90, 120, 180 BPM (second speed): ' + [0, 1, 2, 3].map(k => mean(k).toFixed(3)).join(', '));
   done();
 });
+
+/* ---------- Phase 2: the resolver and renderGamaka ---------- */
+import { LAND_HOLD, TRANS_SEC } from '../src/engine/gamaka/constants.js';
+const notesOf = ps => ps.map(p => Array.isArray(p) ? { p: p[0], dur: p[1] } : { p, dur: 1 });
+const unionPcs = r => new Set(r.aro.concat(r.avaro).map(E.mod12));
+
+test('renderGamaka: deterministic, never changes the notes, targets on raga notes, landing held plain (plan tests 1, 5, 9)', t => {
+  const { ok, done } = checker(t);
+  let rounds = 0, targets = 0;
+  ALL.forEach((r, ri) => [0, 1, 2].forEach(T => {
+    const pcs = unionPcs(r);
+    const res = E.kalpana(r, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: pcs.has(7) ? 7 : 12, T, seed: 3 + ri });
+    const before = JSON.stringify(res.notes);
+    const opts = { raga: r, slotSec: 0.25, seed: 5, units: res.units };
+    const a = E.renderGamaka(res.notes, opts), b = E.renderGamaka(res.notes, opts);
+    rounds++;
+    ok(JSON.stringify(a.points) === JSON.stringify(b.points) && JSON.stringify(a.notes) === JSON.stringify(b.notes), 'test 1: same notes, options and seed, same contour');
+    const v1 = E.renderGamaka(res.notes, Object.assign({ variety: 1 }, opts)), v2 = E.renderGamaka(res.notes, Object.assign({ variety: 1 }, opts));
+    ok(JSON.stringify(v1.points) === JSON.stringify(v2.points), 'test 1: variety is seeded too');
+    ok(JSON.stringify(res.notes) === before, 'the input notes are untouched');
+    // test 5: at depth 1, every target of a full-depth rule is a raga note (or its octave copy)
+    a.notes.forEach(n => {
+      if (n.ruleDepth < 1) return;
+      n.targets.forEach(x => { targets++; ok(Number.isInteger(Math.round(x.p * 1e6) / 1e6) && pcs.has(E.mod12(Math.round(x.p))), r.name + ': target ' + x.p + ' is a raga note (' + n.rule + ')'); });
+    });
+    // test 9: the landing swara ends on a plain CPN of at least LAND_HOLD (or what the note has left)
+    const last = a.notes[a.notes.length - 1], tl = last.targets[last.targets.length - 1], sec = last.t1 - last.t0;
+    ok(tl.kind === 'cpn' && Math.abs(tl.p - last.p) < 1e-9 && Math.abs(tl.t + tl.dur - last.t1) < 1e-9, r.name + ': the round ends on a plain CPN of its last swara');
+    ok(tl.dur >= Math.min(LAND_HOLD, sec - TRANS_SEC / 2 - 0.06) - 1e-9, r.name + ': landing CPN ' + tl.dur.toFixed(3) + ' s');
+    ok(last.shape.indexOf('kampita') < 0 && last.shape.indexOf('orikkai') < 0, r.name + ': no oscillation or exit on the landing swara');
+  }));
+  t.diagnostic(rounds + ' kalpana rounds rendered, ' + targets + ' full-depth targets checked against the raga');
+  done();
+});
+
+test('renderGamaka golden cases: Todi, Sankarabharanam, Kalyani, Mayamalavagowla (plan tests 10-13)', t => {
+  const { ok, done } = checker(t);
+  const at = (g, i) => g.notes[i];
+  // 10: Todi, a 0.6 s G in R G M swings to R (or lower) and M; a held S is plain
+  const todi = E.renderGamaka(notesOf([1, [3, 2], 5, [0, 4]]), { ragaId: 'mela8', slotSec: 0.3, landing: false });
+  const g = at(todi, 1).targets.filter(x => x.kind === 'sta').map(x => x.p);
+  ok(g.some(p => p <= 1) && g.some(p => p >= 5), 'Todi G reaches R and M: ' + g.join(' '));
+  ok(at(todi, 3).targets.length === 1 && at(todi, 3).targets[0].kind === 'cpn', 'Todi held S is plain');
+  // 11: Sankarabharanam G is plain at every duration and in every context
+  [1, 2, 4, 8].forEach(d => [[2, 4, 5], [5, 4, 2], [4, 4, 5], [0, 4, 0]].forEach(ctx => {
+    const s = E.renderGamaka(notesOf([[ctx[0], 1], [ctx[1], d], [ctx[2], 1]]), { ragaId: 'mela29', slotSec: 0.25, landing: false });
+    s.notes.filter(n => n.p === 4).forEach(n => ok(n.targets.length === 1 && n.targets[0].kind === 'cpn', 'Sankarabharanam G plain at ' + (d * 0.25) + ' s in ' + ctx.join(' ')));
+  }));
+  // 12: Kalyani S' N D P M G R: every note after the first is touched from the note above
+  // (the landing R is held for two slots: its plain hold of LAND_HOLD and the nokku need about 0.35 s)
+  const kal = E.renderGamaka(notesOf([12, 11, 9, 7, 6, 4, [2, 2]]), { ragaId: 'mela65', slotSec: 0.3 });
+  kal.notes.slice(1).forEach((n, k) => ok(n.targets[0].kind === 'sta' && Math.abs(n.targets[0].p - kal.notes[k].p) < 1e-9, 'Kalyani ' + n.p + ': nokku from ' + kal.notes[k].p + ' (' + n.rule + ')'));
+  // 13: Mayamalavagowla, a held G spends more than half its time at or near M
+  const mmg = E.renderGamaka(notesOf([1, [4, 4], 1]), { ragaId: 'mela15', slotSec: 0.3, landing: false }), n = mmg.notes[1];
+  const inG = mmg.points.filter(pt => pt.t >= n.t0 && pt.t < n.t1), nearM = inG.filter(pt => Math.abs(pt.p - 5) <= 0.5).length / inG.length;
+  ok(nearM > 0.5, 'Mayamalavagowla G near M ' + (100 * nearM).toFixed(0) + '% of its time');
+  t.diagnostic('Todi G STAs ' + g.join(' ') + '; Mayamalavagowla G near M ' + (100 * nearM).toFixed(0) + '% of the time; Kalyani: ' + kal.notes.map(x => x.shape).join(' · '));
+  done();
+});
+
+test('renderGamaka: mora repetitions share their template, and data-less ragas stay conservative (plan tests 14, 15)', t => {
+  const { ok, done } = checker(t);
+  let moras = 0, defaults = 0, defNotes = 0;
+  ALL.forEach((r, ri) => {
+    const pcs = unionPcs(r);
+    [0, 1].forEach(T => {
+      const res = E.kalpana(r, { aksharas: 16, perAkshara: 2, startPitch: 0, eduppuPitch: pcs.has(7) ? 7 : 12, T, seed: 7 + ri, ending: 'mora' });
+      if (res.ending.type !== 'mora') return;
+      const gr = E.renderGamaka(res.notes, { raga: r, slotSec: 0.25, units: res.units });
+      const idx = []; let k = 0; res.units.forEach(u => { const ids = u.notes.map(() => k++); if (u.kind === 'mora') idx.push(ids); });
+      const last = res.notes.length - 1;
+      const kinds = ids => ids.filter(i => i !== last).map(i => gr.notes[i].shape.replace(/\+?(nokku|odukkal|sphurita|pratyahata)\+?/, ''));
+      // aligned from the end, as gopuccha and srotovaha change the front of the statements
+      const m = Math.min(idx[0].length, idx[1].length, idx[2].length) - 1;
+      const tail = ids => kinds(ids.slice(ids.length - 1 - m, ids.length - 1));
+      moras++;
+      ok(tail(idx[0]).join() === tail(idx[1]).join() && tail(idx[1]).join() === tail(idx[2]).join(), r.name + ': mora statements use the same template: ' + [0, 1, 2].map(j => tail(idx[j]).join(' ')).join(' | '));
+    });
+    // test 15: a data-less raga keeps S and P plain and gives no note shorter than 0.4 s an oscillation
+    if (E.getProfile(r).gamaka.basis !== 'default') return;
+    defaults++;
+    const res = E.kalpana(r, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: pcs.has(7) ? 7 : 12, T: 1, seed: ri + 1 });
+    [0.15, 0.3].forEach(slotSec => {
+      const gr = E.renderGamaka(res.notes, { raga: r, slotSec });
+      gr.notes.forEach(n => {
+        defNotes++;
+        if (E.mod12(n.p) === 0 || E.mod12(n.p) === 7) ok(n.targets.length === 1 && n.targets[0].kind === 'cpn', r.name + ': S and P plain');
+        if (n.t1 - n.t0 < 0.4 - 1e-9) ok(n.shape.indexOf('kampita') < 0, r.name + ': no kampita under 0.4 s');
+      });
+    });
+  });
+  t.diagnostic(moras + ' moras rendered with consistent templates; ' + defaults + ' data-less ragas, ' + defNotes + ' notes on the conservative default');
+  done();
+});

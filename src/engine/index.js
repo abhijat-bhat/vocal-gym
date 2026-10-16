@@ -14,6 +14,7 @@ export { FAMILIAR, moveKeys, motifKeys, motifFamiliarity, pdfFamScores, motifRep
 export { alankara } from './alankara/lines.js';
 export { CELL_DEFS, CELLS, kalpana, kalpanaRound, eduppuNeighbours } from './kalpana/index.js';
 export { getProfile, setProfiles, getSource } from './profiles.js';
+export { renderGamaka, buildContour, GAMAKA_CONSTANTS } from './gamaka/index.js';
 export { SOLLU, ALIAS, norm, KNOWN, HEAVY, CADENCE, LIB, idiomatic, splitCompound } from './sollu.js';
 export { TEER, yatiBlocks, jathi } from './jathi/generator.js';
 export { TICKS, JATI_WORDS, FAM_WORDS, JATI_NAME, talaSpec, parseTalaSpec, tokenizeLine, parseJathiScript, jathiToScript } from './jathi/script.js';

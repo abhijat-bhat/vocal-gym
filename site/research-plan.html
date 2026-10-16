@@ -938,6 +938,7 @@ var VGEngine = (() => {
     FAM: () => FAM,
     FAMILIAR: () => FAMILIAR,
     FAM_WORDS: () => FAM_WORDS,
+    GAMAKA_CONSTANTS: () => constants_exports,
     HEAVY: () => HEAVY,
     JANYA: () => JANYA,
     JATHI_EXAMPLES: () => JATHI_EXAMPLES,
@@ -959,6 +960,7 @@ var VGEngine = (() => {
     alankaraSeries: () => alankaraSeries,
     allRagas: () => allRagas,
     angaStarts: () => angaStarts,
+    buildContour: () => buildContour,
     canonicalMotif: () => canonicalMotif,
     customTala: () => customTala,
     defineRaga: () => defineRaga,
@@ -999,6 +1001,7 @@ var VGEngine = (() => {
     pdfFamScores: () => pdfFamScores,
     pdfMotif: () => pdfMotif,
     pick: () => pick,
+    renderGamaka: () => renderGamaka,
     rng: () => rng,
     sampleMotif: () => sampleMotif,
     setProfiles: () => setProfiles,
@@ -3980,17 +3983,17 @@ var VGEngine = (() => {
     if (o.moraStyle != null && !MORA_STYLES.includes(o.moraStyle)) return fail("bad-mora-style", "Mora style must be one of " + MORA_STYLES.join(", ") + ".");
     if (s0 < 0) return fail("start-not-in-raga", "The opening swara is not a swara of " + raga.name + " inside the kalpana range (mandra Pa to tara Pa).");
     const useEduppu = o.eduppuPitch != null, e = o.eduppuPitch;
-    let targets;
+    let targets2;
     if (useEduppu) {
       const nb = eduppuNeighbours(raga, e);
       if (nb.error) return fail(nb.code, nb.error);
       if (!nb.inRange) return fail("eduppu-out-of-range", "The eduppu swara " + swaraName(raga, e) + " is outside the kalpana range (mandra Pa to tara Pa).");
-      targets = [{ p: nb.lo, approach: "below" }, { p: nb.hi, approach: "above" }].filter((x) => x.p != null && ix(x.p) >= 0);
-      if (!targets.length) return fail("no-neighbour", "No swara of " + raga.name + " inside the kalpana range steps legally into the eduppu swara.");
+      targets2 = [{ p: nb.lo, approach: "below" }, { p: nb.hi, approach: "above" }].filter((x) => x.p != null && ix(x.p) >= 0);
+      if (!targets2.length) return fail("no-neighbour", "No swara of " + raga.name + " inside the kalpana range steps legally into the eduppu swara.");
     } else {
       if (o.targetPitch == null) return fail("no-landing", "Give eduppuPitch, the swara the composition resumes on.");
       if (ix(o.targetPitch) < 0) return fail("target-not-in-raga", "The landing swara is not a swara of " + raga.name + " inside the kalpana range.");
-      targets = [{ p: o.targetPitch, approach: null }];
+      targets2 = [{ p: o.targetPitch, approach: null }];
     }
     const profile = getProfile(raga), LX = leapContext(profile, D.T, level);
     const landing = new Set(profile ? profile.landing : [0, 7]);
@@ -4183,14 +4186,14 @@ var VGEngine = (() => {
     function moraOptions2(tg2) {
       return moraAllowed ? moraOptions(moraCtx, tg2) : [];
     }
-    let cands = targets.map((x) => {
+    let cands = targets2.map((x) => {
       const tg2 = ix(x.p);
       return Object.assign({ tg: tg2, freeOK: !!reach(slots, tg2), moraOpts: moraOptions2(tg2) }, x);
     });
     cands = cands.filter((x) => ending === "free" ? x.freeOK : x.freeOK || x.moraOpts.length);
     if (ending === "mora" && cands.some((x) => x.moraOpts.length)) cands = cands.filter((x) => x.moraOpts.length);
     if (!cands.length) {
-      const names = targets.map((x) => swaraName(raga, x.p)).join(" or ");
+      const names = targets2.map((x) => swaraName(raga, x.p)).join(" or ");
       return fail("unreachable", useEduppu ? "No legal round of " + slots + " slots moves from " + swaraName(raga, startPitch) + " to " + names + ", the neighbours of the eduppu swara " + swaraName(raga, e) + ". Lengthen the round or pick closer swaras." : "No legal round of " + slots + " slots moves from " + swaraName(raga, startPitch) + " to " + names + ". Lengthen the round or pick closer swaras.");
     }
     const pick2 = cands.length === 1 ? cands[0] : cands[soft(cands.map((x) => (1 - D.c) * approachScore(e, x, profile)), D.tau, rand)];
@@ -4483,6 +4486,485 @@ var VGEngine = (() => {
   function kalpana(raga, opts) {
     const res = kalpanaRound(raga, opts);
     return res.error ? null : res;
+  }
+
+  // src/engine/gamaka/constants.js
+  var constants_exports = {};
+  __export(constants_exports, {
+    ANDOLITA_SLOW: () => ANDOLITA_SLOW,
+    CPN_MIN: () => CPN_MIN,
+    JARU_SEC: () => JARU_SEC,
+    LAND_HOLD: () => LAND_HOLD,
+    MAX_RATE_HZ: () => MAX_RATE_HZ,
+    MAX_SLOPE: () => MAX_SLOPE,
+    NOKKU_SEC: () => NOKKU_SEC,
+    ORIKKAI_SEC: () => ORIKKAI_SEC,
+    SAMPLE_SEC: () => SAMPLE_SEC,
+    STA_DWELL: () => STA_DWELL,
+    TRANS_SEC: () => TRANS_SEC
+  });
+  var CPN_MIN = 0.08;
+  var STA_DWELL = 0.06;
+  var TRANS_SEC = 0.05;
+  var JARU_SEC = 0.14;
+  var NOKKU_SEC = 0.05;
+  var ORIKKAI_SEC = 0.07;
+  var MAX_RATE_HZ = 5;
+  var LAND_HOLD = 0.25;
+  var ANDOLITA_SLOW = 1.8;
+  var SAMPLE_SEC = 5e-3;
+  var MAX_SLOPE = 1.4;
+
+  // src/engine/gamaka/shapes.js
+  var PLAIN = Object.freeze({ onset: "none", body: "plain", exit: "none" });
+  var sta = (p, dur, role) => ({ p, dur, kind: "sta", flex: false, min: dur, role });
+  var cpn = (p, min, role) => ({ p, dur: min, kind: "cpn", flex: true, min, role });
+  function onsetTargets(s, n, scale) {
+    switch (s.onset) {
+      case "nokku":
+      case "odukkal":
+      case "sphurita":
+      case "pratyahata":
+        return [sta(n + scale(s.from != null ? s.from : s.onset === "nokku" ? 1 : -1), NOKKU_SEC, "onset")];
+      default:
+        return [];
+    }
+  }
+  function targets(s, n, depth, level, cycles, landing) {
+    const scale = (off) => depth * (off || 0);
+    const out = [];
+    if (level >= 3 || !s) return [cpn(n, Math.max(CPN_MIN, landing || 0), "body")];
+    out.push(...onsetTargets(s, n, scale));
+    const body = level >= 2 ? "plain" : s.body;
+    if (body === "plain") out.push(cpn(n, Math.max(CPN_MIN, landing || 0), "body"));
+    else {
+      const slow = body === "andolita" ? ANDOLITA_SLOW : 1;
+      const dw = s.dwell === "hi" ? [1.5, 0.5] : s.dwell === "lo" ? [0.5, 1.5] : [1, 1];
+      const lo = n + scale(s.lo), hi = n + scale(s.hi);
+      out.push(cpn(n, 0, "head"));
+      for (let c = 0; c < cycles; c++) {
+        out.push(sta(hi, STA_DWELL * dw[0] * slow, "hi"));
+        out.push(sta(lo, STA_DWELL * dw[1] * slow, "lo"));
+      }
+      const endP = s.end === "hi" ? hi : s.end === "lo" ? lo : n;
+      if (out[out.length - 1].p === endP) out.pop();
+      out.push(cpn(endP, CPN_MIN, "end"));
+    }
+    if (level < 2 && s.exit === "orikkai") out.push(sta(n + scale(s.exitTo != null ? s.exitTo : 1), ORIKKAI_SEC, "exit"));
+    const merged = [];
+    for (const x of out) {
+      const last = merged[merged.length - 1];
+      if (last && Math.abs(last.p - x.p) < 1e-9) {
+        last.dur += x.dur;
+        last.min += x.min;
+        last.flex = last.flex || x.flex;
+        last.kind = last.flex ? "cpn" : last.kind;
+      } else merged.push(Object.assign({}, x));
+    }
+    return merged;
+  }
+  function cycleRange(s) {
+    if (!s || s.body === "plain" || !s.body) return [0, 0];
+    const c = s.cycles || [1, 1], max = s.body === "andolita" ? Math.min(2, c[1]) : c[1];
+    return [Math.min(c[0], max), max];
+  }
+  function isGamaka(ts) {
+    return ts.length > 1 || ts.some((t) => t.kind === "sta");
+  }
+
+  // src/engine/gamaka/contour.js
+  var cosine = (a, b, u) => a + (b - a) * (1 - Math.cos(Math.PI * u)) / 2;
+  var minWidth = (d) => Math.abs(d) * (Math.PI / 2) * SAMPLE_SEC / MAX_SLOPE;
+  function fitNote(shape, n, depth, avail, landing) {
+    const [cmin, cmax] = cycleRange(shape);
+    const tries = [];
+    tries.push([0, cmax]);
+    for (let c = cmax - 1; c >= 1; c--) tries.push([1, c]);
+    if (cmin > 1 && !tries.some((x) => x[1] === cmin)) tries.push([1, cmin]);
+    tries.push([2, 0], [3, 0]);
+    for (const [level, cycles] of tries) {
+      const ts = targets(shape, n, depth, level, cycles, landing);
+      const fixed = ts.reduce((s, t) => s + (t.flex ? t.min : t.dur), 0) + (ts.length - 1) * TRANS_SEC;
+      if (fixed <= avail + 1e-9 || level === 3) {
+        let spare = avail - fixed;
+        if (spare < 0) {
+          ts.forEach((t) => {
+            t.dur = 0;
+          });
+          return { ts: [Object.assign(ts[0], { dur: Math.max(0, avail) })], level, squeezed: true };
+        }
+        const flex = ts.filter((t) => t.flex), w = (t) => t.role === "head" ? 0.4 : t.role === "end" ? 0.6 : 1;
+        const wsum = flex.reduce((s, t) => s + w(t), 0);
+        ts.forEach((t) => {
+          if (t.flex) t.dur = t.min + (wsum ? spare * w(t) / wsum : 0);
+        });
+        if (!flex.length) ts[ts.length - 1].dur += spare;
+        return { ts, level: level === 0 && cycles < cmax ? 1 : level, cycles };
+      }
+    }
+  }
+  function buildContour(items, opts) {
+    const o = opts || {}, slotSec = o.slotSec, depth = o.depth == null ? 1 : o.depth;
+    if (!(slotSec > 0)) throw new Error("buildContour needs slotSec > 0");
+    const wscale = depth <= 0 ? 0 : Math.min(1, depth * 4);
+    const N = items.length, t0s = [], t1s = [];
+    let acc = 0;
+    items.forEach((it) => {
+      t0s.push(acc * slotSec);
+      acc += it.dur;
+      t1s.push(acc * slotSec);
+    });
+    const sounding = (i) => i >= 0 && i < N && items[i].p != null;
+    const R = new Array(N).fill(0), L = new Array(N).fill(0);
+    for (let i = 0; i < N; i++) {
+      if (!sounding(i)) continue;
+      const sh = items[i].shape || {};
+      if (sounding(i - 1)) R[i] = (sh.onset === "jaru" ? JARU_SEC - TRANS_SEC / 2 : TRANS_SEC / 2) * wscale;
+      if (sounding(i + 1)) L[i] = (sh.exit === "jaru" ? JARU_SEC - TRANS_SEC / 2 : TRANS_SEC / 2) * wscale;
+    }
+    const fit = new Array(N);
+    const fitAt = (i) => {
+      const it = items[i], sec = t1s[i] - t0s[i];
+      let r = R[i], l = L[i];
+      if (r + l > sec) {
+        const k = sec / (r + l);
+        r *= k;
+        l *= k;
+        R[i] = r;
+        L[i] = l;
+      }
+      fit[i] = fitNote(it.shape, it.p, depth, sec - r - l, it.landing ? LAND_HOLD : 0);
+    };
+    for (let i = 0; i < N; i++) if (sounding(i)) fitAt(i);
+    if (wscale > 0) for (let i = 1; i < N; i++) {
+      if (!sounding(i) || !sounding(i - 1)) continue;
+      const a = fit[i - 1].ts[fit[i - 1].ts.length - 1].p, b = fit[i].ts[0].p, need = minWidth(b - a);
+      if (L[i - 1] + R[i] < need - 1e-12) {
+        const k = need / Math.max(1e-9, L[i - 1] + R[i]);
+        L[i - 1] = Math.max(L[i - 1] * k, need / 2);
+        R[i] = Math.max(R[i] * k, need / 2);
+        fitAt(i - 1);
+        fitAt(i);
+      }
+    }
+    const groups = [], notes = [];
+    let g = null;
+    for (let i = 0; i < N; i++) {
+      if (!sounding(i)) {
+        if (g) {
+          groups.push(g);
+          g = null;
+        }
+        notes.push({ i, t0: t0s[i], t1: t1s[i], p: null, rest: true });
+        continue;
+      }
+      if (!g) g = { t0: t0s[i], t1: t1s[i], segs: [], notes: [] };
+      const ts = fit[i].ts, abs = [];
+      let cur = t0s[i] + R[i];
+      ts.forEach((tg, k) => {
+        const end = k === ts.length - 1 ? t1s[i] - L[i] : cur + tg.dur;
+        g.segs.push({ a: cur, b: end, p0: tg.p, p1: tg.p });
+        abs.push({ t: cur, dur: end - cur, p: tg.p, kind: tg.kind, role: tg.role });
+        cur = end;
+        if (k < ts.length - 1) {
+          g.segs.push({ a: cur, b: cur + TRANS_SEC, p0: tg.p, p1: ts[k + 1].p });
+          cur += TRANS_SEC;
+        }
+      });
+      if (sounding(i + 1)) g.segs.push({ a: t1s[i] - L[i], b: t1s[i] + R[i + 1], p0: ts[ts.length - 1].p, p1: null, next: i + 1 });
+      g.t1 = t1s[i];
+      const sh = items[i].shape, plainShape = !sh || (sh.body || "plain") === "plain" && (sh.onset || "none") === "none" && (sh.exit || "none") === "none";
+      notes.push({ i, t0: t0s[i], t1: t1s[i], p: items[i].p, targets: abs, degraded: plainShape ? 0 : fit[i].level, gamaka: isGamaka(ts), shape: items[i].shape || null });
+      g.notes.push(i);
+    }
+    if (g) groups.push(g);
+    groups.forEach((gr) => gr.segs.forEach((s) => {
+      if (s.p1 === null) s.p1 = fit[s.next].ts[0].p;
+    }));
+    const points = [];
+    groups.forEach((gr) => {
+      gr.points = [];
+      let k = 0;
+      const at = (t) => {
+        while (k < gr.segs.length - 1 && (t >= gr.segs[k].b || gr.segs[k].b <= gr.segs[k].a)) k++;
+        const s = gr.segs[k];
+        if (s.b <= s.a) return s.p1;
+        const u = Math.min(1, Math.max(0, (t - s.a) / (s.b - s.a)));
+        return s.p0 === s.p1 ? s.p0 : cosine(s.p0, s.p1, u);
+      };
+      const first = Math.ceil(gr.t0 / SAMPLE_SEC - 1e-9);
+      const ts = [gr.t0];
+      for (let j = first; j * SAMPLE_SEC < gr.t1 - 1e-9; j++) if (j * SAMPLE_SEC > gr.t0 + 1e-9) ts.push(j * SAMPLE_SEC);
+      ts.push(gr.t1);
+      ts.forEach((t) => {
+        const pt = { t, p: at(t) };
+        gr.points.push(pt);
+        points.push(pt);
+      });
+      delete gr.segs;
+    });
+    const sound = notes.filter((n) => !n.rest);
+    return {
+      points,
+      groups,
+      notes,
+      stats: {
+        gamakaShare: sound.length ? sound.filter((n) => n.gamaka).length / sound.length : 0,
+        degradedShare: sound.length ? sound.filter((n) => n.degraded > 0).length / sound.length : 0,
+        staCount: sound.reduce((s, n) => s + n.targets.filter((x) => x.kind === "sta").length, 0)
+      }
+    };
+  }
+
+  // src/engine/gamaka/resolve.js
+  function scaleOf(raga) {
+    const pcs = Array.from(new Set(raga.aro.concat(raga.avaro).map(mod12))).sort((a, b) => a - b);
+    const step = (p, k) => {
+      let q = p, n = Math.abs(k), dir = Math.sign(k);
+      while (n > 0) {
+        q += dir;
+        if (pcs.includes(mod12(q))) n--;
+      }
+      return q;
+    };
+    return { pcs, step, isNote: (p) => Number.isInteger(p) && pcs.includes(mod12(p)) };
+  }
+  function contextOf(notes, i, slotSec, sc) {
+    const n = notes[i], p = n.p;
+    const prev = i > 0 && notes[i - 1].p != null ? notes[i - 1].p : null;
+    const next = i < notes.length - 1 && notes[i + 1].p != null ? notes[i + 1].p : null;
+    let dir;
+    if (prev != null && next != null) {
+      if (prev < p && p <= next) dir = "up";
+      else if (prev > p && p >= next) dir = "down";
+      else if (p > prev && p > next || p < prev && p < next) dir = "turn";
+      else dir = "flat";
+    } else if (prev != null) dir = p > prev ? "up" : p < prev ? "down" : "flat";
+    else if (next != null) dir = next > p ? "up" : next < p ? "down" : "flat";
+    else dir = "flat";
+    const leap = prev != null && Math.abs(countSteps(sc, prev, p)) >= 2;
+    return { i, p, prev, next, dir, sec: n.dur * slotSec, janta: prev === p, leap, octave: Math.floor(p / 12) };
+  }
+  function countSteps(sc, a, b) {
+    let k = 0, q = a;
+    const d = Math.sign(b - a);
+    while (q !== b && Math.abs(k) < 40) {
+      q += d;
+      if (sc.pcs.includes(mod12(q))) k += d;
+    }
+    return k;
+  }
+  function matches(w, ctx, notes) {
+    if (w.dir && w.dir !== ctx.dir) return false;
+    if (w.minSec != null && ctx.sec < w.minSec - 1e-9) return false;
+    if (w.maxSec != null && ctx.sec > w.maxSec + 1e-9) return false;
+    if (w.janta && !ctx.janta) return false;
+    if (w.octave != null && w.octave !== ctx.octave) return false;
+    const nb = (spec, q) => q != null && mod12(q) === spec.pc && (!spec.rel || (spec.rel === "up" ? q > ctx.p : q < ctx.p));
+    if (w.prev && !nb(w.prev, ctx.prev)) return false;
+    if (w.next && !nb(w.next, ctx.next)) return false;
+    if (w.inPhrase) {
+      const pat = w.inPhrase, L = pat.length;
+      let hit = false;
+      for (let s = Math.max(0, ctx.i - L + 1); s <= ctx.i && !hit; s++) {
+        if (s + L > notes.length) break;
+        let k = 0;
+        while (k < L && notes[s + k].p != null && mod12(notes[s + k].p) === pat[k]) k++;
+        if (k === L) hit = true;
+      }
+      if (!hit) return false;
+    }
+    return true;
+  }
+  function styleDefault(style, ctx, sc) {
+    const pc = mod12(ctx.p);
+    if (style === "plain") return null;
+    if (pc === 0 || pc === 7) return { onset: "none", body: "plain", exit: "none", src: "S198", basis: "default", why: "S and P are held steady" };
+    const depth = style === "medium" ? 0.8 : 0.5, cyc = style === "medium" ? [1, 2] : [1, 1];
+    const below = sc.step(ctx.p, -1) - ctx.p, above = sc.step(ctx.p, 1) - ctx.p;
+    const out = { onset: "none", body: "plain", exit: "none", src: "S198", basis: "default", why: style + " default" };
+    if (ctx.sec >= 0.4 - 1e-9) Object.assign(out, { body: "kampita", lo: below, hi: 0, cycles: cyc, end: "self", depth });
+    if (ctx.dir === "down" && ctx.sec >= 0.2 - 1e-9) Object.assign(out, { onset: "nokku", from: above });
+    else if (ctx.janta) Object.assign(out, { onset: "sphurita", from: below });
+    return out;
+  }
+  function resolveNotes(notes, opts, gamaka, raga) {
+    const o = opts || {}, sc = scaleOf(raga), slotSec = o.slotSec;
+    const style = o.style && o.style !== "auto" ? o.style : gamaka.style;
+    const rules = gamaka.rules || {};
+    const out = new Array(notes.length);
+    const sounding = notes.map((n) => n.p != null);
+    let lastSounding = -1;
+    notes.forEach((n, k) => {
+      if (n.p != null) lastSounding = k;
+    });
+    notes.forEach((n, i) => {
+      if (n.p == null) {
+        out[i] = null;
+        return;
+      }
+      const ctx = contextOf(notes, i, slotSec, sc);
+      let rule = null;
+      if (style !== "plain") {
+        const list = (rules[mod12(n.p)] || []).map((r, k) => ({ r, k })).filter((x) => matches(x.r.when || {}, ctx, notes));
+        if (list.length) {
+          const top = Math.max.apply(null, list.map((x) => x.r.spec || 0));
+          const tied = list.filter((x) => (x.r.spec || 0) === top);
+          let pick2 = tied[0];
+          if (tied.length > 1 && o.variety > 0) {
+            const rand = rng(((o.seed || 1) ^ i * 2654435761) >>> 0), ws = tied.map((x) => x.r.weight || 1);
+            let u = rand() * ws.reduce((a, b) => a + b, 0), k = 0;
+            while (u > ws[k] && k < ws.length - 1) {
+              u -= ws[k];
+              k++;
+            }
+            pick2 = tied[k];
+          }
+          rule = Object.assign({}, pick2.r, { why: "raga rule" });
+        }
+      }
+      if (!rule) rule = styleDefault(style === "heavy" ? "light" : style === "default" ? "light" : style, ctx, sc);
+      out[i] = { ctx, rule: rule || { onset: "none", body: "plain", exit: "none", src: null, basis: "plain", why: "plain style" } };
+    });
+    const shapeOf = (rule, ctx) => {
+      const d = rule.depth != null ? rule.depth : 1, sh = { onset: rule.onset || "none", body: rule.body || "plain", exit: rule.exit || "none" };
+      if (sh.onset === "sphurita" && !ctx.janta) sh.onset = "none";
+      if (sh.onset === "pratyahata" && !(ctx.next != null && ctx.next < ctx.p)) sh.onset = "none";
+      if (sh.onset !== "none" && sh.onset !== "jaru") sh.from = d * (rule.from != null ? rule.from : sh.onset === "nokku" ? sc.step(ctx.p, 1) - ctx.p : sc.step(ctx.p, -1) - ctx.p);
+      if (sh.body !== "plain") Object.assign(sh, { lo: d * (rule.lo || 0), hi: d * (rule.hi || 0), end: rule.end || "self", cycles: rule.cycles || [1, 1], dwell: rule.dwell });
+      if (sh.exit === "orikkai") sh.exitTo = d * (sc.step(ctx.p, 1) - ctx.p);
+      sh.ruleDepth = d;
+      return sh;
+    };
+    out.forEach((x, i) => {
+      if (x) x.shape = shapeOf(x.rule, x.ctx);
+    });
+    const units = o.units, moraNotes = [];
+    if (units) {
+      let k = 0;
+      units.forEach((u) => {
+        const idx = [];
+        u.notes.forEach(() => idx.push(k++));
+        if (u.kind === "mora") moraNotes.push(idx);
+      });
+    }
+    if (moraNotes.length === 3) {
+      const [m1] = moraNotes;
+      for (let r = 1; r < 3; r++) {
+        const mr = moraNotes[r];
+        for (let k = 1; k <= Math.min(m1.length, mr.length); k++) {
+          const a = m1[m1.length - k], b = mr[mr.length - k];
+          if (!out[a] || !out[b]) continue;
+          const src = out[a], pa = notes[a].p, pb = notes[b].p, move = (off) => {
+            if (off == null) return off;
+            const target = pa + off;
+            if (!sc.isNote(target)) return off;
+            const steps = countSteps(sc, pa, target), q = sc.step(pb, steps) - pb;
+            return Math.abs(q) <= 7 ? q : off;
+          };
+          const sh = Object.assign({}, src.shape);
+          ["from", "lo", "hi", "exitTo"].forEach((f) => {
+            if (sh[f] != null) sh[f] = move(sh[f]);
+          });
+          if (sh.body !== "plain" && !(sh.lo < sh.hi || sh.lo === 0 && sh.hi === 0)) continue;
+          if (sh.onset === "sphurita" && !out[b].ctx.janta) sh.onset = "none";
+          out[b] = Object.assign({}, out[b], { shape: sh, rule: Object.assign({}, src.rule, { why: "mora: as statement 1" }) });
+        }
+      }
+    }
+    let chain = 0, chainBreaks = 0;
+    const maxChain = gamaka.maxChain || 4, inMora = new Set(moraNotes.flat());
+    out.forEach((x, i) => {
+      if (!x) {
+        chain = 0;
+        return;
+      }
+      const sh = x.shape;
+      if (sh.onset === "jaru" && x.ctx.prev != null && Math.abs(x.ctx.p - x.ctx.prev) > 4 && x.rule.basis === "default") sh.onset = "none";
+      const plain = sh.body === "plain";
+      if (!plain && chain >= maxChain && x.ctx.sec >= 0.15 - 1e-9 && !inMora.has(i)) {
+        x.shape = { onset: "none", body: "plain", exit: "none", ruleDepth: 1 };
+        x.chainBreak = true;
+        chainBreaks++;
+        chain = 0;
+      } else chain = plain ? 0 : chain + 1;
+      if (o.landing !== false && i === lastSounding) {
+        x.shape = Object.assign({}, x.shape, { body: "plain", exit: "none" });
+        delete x.shape.lo;
+        delete x.shape.hi;
+        x.landing = true;
+      }
+    });
+    return { resolved: out, chainBreaks, style, sounding };
+  }
+
+  // src/engine/gamaka/index.js
+  var RAGAS = null;
+  var ragaById = (id) => {
+    if (!RAGAS) {
+      const R = allRagas();
+      RAGAS = new Map(R.melakartas.concat(R.janyas).map((r) => [r.id, r]));
+    }
+    return RAGAS.get(id) || null;
+  };
+  var DEFAULT = { style: "light", basis: "default", maxChain: 4, rules: {}, sources: ["S193", "S198"] };
+  function label(raga, p) {
+    const r = Math.round(p);
+    if (Math.abs(p - r) > 1e-6) return (p >= 0 ? "+" : "") + Math.round(p * 100) + "c";
+    const lab = raga.labels[mod12(r)] || "?";
+    return lab + (r >= 12 ? "'" : r < 0 ? "." : "");
+  }
+  function describe(raga, p, sh) {
+    if (!sh) return "plain";
+    const d = sh.ruleDepth || 1, at = (off) => label(raga, p + off / d), parts = [];
+    if (sh.onset && sh.onset !== "none") parts.push(sh.onset + (sh.from != null ? " from " + at(sh.from) : ""));
+    if (sh.body && sh.body !== "plain") parts.push(sh.body + " " + at(sh.lo) + "\u2013" + at(sh.hi) + (sh.end && sh.end !== "self" ? ", resting on " + (sh.end === "hi" ? at(sh.hi) : at(sh.lo)) : "") + (d < 1 ? " at depth " + d : ""));
+    else parts.push("plain");
+    if (sh.exit && sh.exit !== "none") parts.push(sh.exit);
+    return parts.join(", ");
+  }
+  var shapeName = (sh) => !sh ? "plain" : [sh.onset !== "none" ? sh.onset : null, sh.body, sh.exit !== "none" ? sh.exit : null].filter(Boolean).join("+");
+  function humanizeOffsets(c, amount, seed) {
+    if (!(amount > 0)) return;
+    const rand = rng((seed || 1) * 7919 + 13), gauss = () => {
+      let u = 0, v = 0;
+      while (u === 0) u = rand();
+      v = rand();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const z = c.notes.map(() => gauss());
+    let k = 0;
+    c.points.forEach((pt) => {
+      while (k < c.notes.length - 1 && pt.t >= c.notes[k].t1) k++;
+      const n = c.notes[k];
+      if (n.p == null) return;
+      const dt = pt.t - n.t0, sigma = Math.sqrt(8 * 8 + 40 * 40 * Math.exp(-dt / 0.15));
+      pt.p += amount * z[k] * sigma / 100;
+    });
+  }
+  function renderGamaka(notes, opts) {
+    const o = opts || {};
+    const raga = o.raga && typeof o.raga === "object" ? o.raga : ragaById(o.ragaId || o.raga);
+    if (!raga) throw new Error("renderGamaka needs a raga (opts.raga or opts.ragaId)");
+    if (!(o.slotSec > 0)) throw new Error("renderGamaka needs slotSec > 0");
+    const prof = getProfile(raga), gamaka = prof && prof.gamaka || DEFAULT;
+    const input = notes.map((n) => ({ p: n.p, dur: n.dur }));
+    const { resolved: resolved2, chainBreaks, style } = resolveNotes(input, o, gamaka, raga);
+    const items = input.map((n, i) => ({ p: n.p, dur: n.dur, shape: resolved2[i] ? resolved2[i].shape : null, landing: !!(resolved2[i] && resolved2[i].landing) }));
+    const c = buildContour(items, { slotSec: o.slotSec, depth: o.depth == null ? 1 : o.depth });
+    humanizeOffsets(c, o.humanize, o.seed);
+    c.notes.forEach((n) => {
+      const x = resolved2[n.i];
+      if (!x) return;
+      n.rule = describe(raga, n.p, x.shape);
+      n.shape = shapeName(x.shape);
+      n.src = x.chainBreak ? "S193" : x.rule.src || null;
+      n.basis = x.chainBreak ? "chain limit" : x.rule.basis || null;
+      n.why = x.chainBreak ? "plain after a long run of gamaka (chain limit)" : x.landing ? "landing swara: held plain" : x.rule.why;
+      n.source = n.src ? getSource(n.src) : null;
+      n.ruleDepth = x.shape.ruleDepth;
+    });
+    return { points: c.points, groups: c.groups, notes: c.notes, stats: Object.assign(c.stats, { chainBreaks }), style, basis: gamaka.basis, sources: gamaka.sources };
   }
 
   // src/engine/sollu.js
