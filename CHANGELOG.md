@@ -7,8 +7,9 @@
   - Engine: `src/engine/gamaka/` and `renderGamaka(notes, opts)`. Swaras become CPN and STA targets on raga notes, joined by half-cosine transitions that keep their length in seconds. A degradation ladder lightens fast kalams. Rule choice by context, with overrides for the landing swara, wide leaps, long gamaka chains and mora consistency. Deterministic. It never changes the notes, and depth 0 is plain playback.
   - Demo: a Gamaka select (off, light, full), one continuous voice per legato group, a pitch view with per-swara rules and sources, a raga badge and Download WAV.
   - CLI: `--gamaka` marks, `--contour json`, `--bpm`; `scripts/render-wav.js` renders a WAV in Node.
-- **Tests.** `test/gamaka.test.js` covers plan tests 1–16, and the smoke test covers 17: 35 tests, 1,199,748 checks, about 15 seconds.
-- **Not done yet.** The listening test and calibration of plan Phase 5 need musicians; the kit is in `docs/research/gamaka-eval.md`.
+- **Evaluation kit.** `npm run listening-kit` writes blind, seeded WAV clips, a response form and an answer key for an A/B idiom rating and a raga-identification test. `docs/research/gamaka-eval.md` has the protocol, the rule-review step, the analysis plan and the reasoning behind every constant.
+- **Tests.** `test/gamaka.test.js` covers plan tests 1–16 and the kit, and the smoke test covers 17: 36 tests, 1,199,784 checks, about 15 seconds.
+- **Not done yet.** The listening sessions, the musician review of the rules and the calibration against pitch-track data need people and data; until then no constant has been tuned by ear and the demo defaults to light gamaka.
 
 ## 0.3.1
 

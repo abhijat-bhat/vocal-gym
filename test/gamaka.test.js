@@ -247,3 +247,21 @@ test('renderGamaka: mora repetitions share their template, and data-less ragas s
   t.diagnostic(moras + ' moras rendered with consistent templates; ' + defaults + ' data-less ragas, ' + defNotes + ' notes on the conservative default');
   done();
 });
+
+/* ---------- Phase 5: the listening-test kit ---------- */
+import { buildManifest, RATING_RAGAS, ID_RAGAS } from '../scripts/listening-kit.js';
+
+test('listening kit: balanced, blind and reproducible', t => {
+  const { ok, done } = checker(t);
+  const m = buildManifest(1), again = buildManifest(1), other = buildManifest(2);
+  ok(JSON.stringify(m) === JSON.stringify(again), 'the same seed gives the same kit');
+  ok(m.map(c => c.raga + c.round + c.gamaka).join() !== other.map(c => c.raga + c.round + c.gamaka).join(), 'another seed gives another order');
+  const A = m.filter(c => c.part === 'A'), B = m.filter(c => c.part === 'B');
+  ok(A.length === 24 && B.length === 8, '24 rating clips and 8 identification clips');
+  RATING_RAGAS.forEach(([id]) => ['off', 'full'].forEach(g => ok(A.filter(c => c.raga === id && c.gamaka === g).length === 2, id + ': two rounds at gamaka ' + g)));
+  ID_RAGAS.forEach(([id]) => ['off', 'full'].forEach(g => ok(B.filter(c => c.raga === id && c.gamaka === g).length === 1, id + ': one identification clip at gamaka ' + g)));
+  ok(new Set(m.map(c => c.file)).size === m.length && m.every(c => /^[AB]\d\d\.wav$/.test(c.file)), 'clip names are unique and say nothing about the clip');
+  // a plain and a gamaka clip of the same round use the same notes
+  A.filter(c => c.gamaka === 'off').forEach(c => { const twin = A.find(x => x.raga === c.raga && x.round === c.round && x.gamaka === 'full'); ok(twin && twin.args.slice(0, -4).join() === c.args.slice(0, -4).join(), c.raga + ': the plain and gamaka clips share their round'); });
+  done();
+});
