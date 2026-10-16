@@ -12,7 +12,7 @@ It also holds the web pages built on the engine: an interactive playground, the 
 
 ```
 npm install          # esbuild and jsdom, for the page build and the smoke test
-npm test             # 29 tests, 594,406 checked properties, about 15 seconds
+npm test             # 35 tests, 1,199,748 checked properties, about 15 seconds
 npm run build        # bundles the engine and writes the pages to site/
 npm run smoke        # loads every page in jsdom and drives every control
 node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
@@ -57,6 +57,7 @@ node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
 | Alankaras: the 35 sheet patterns, new patterns with no repeats, creativity dial | Done, tested | `src/engine/alankara/` |
 | Raga profiles: sourced swara roles, phrases and avoid lists for all 86 ragas, compiled for the engine | Done, tested; phrases for 32 ragas | `data/`, `src/engine/profiles.js` |
 | Kalpana swaras: phrase-driven rounds, reasoned jumps, landing next to the eduppu, graded mora, creativity dial | Done, tested | `src/engine/kalpana/` |
+| Gamaka rendering for kalpana playback: sourced rules for 23 ragas, a conservative default for the rest, pitch view, WAV | Done, tested; rules await musician review and a listening test | `src/engine/gamaka/` |
 | Jathi generator (35 + 3 talas, any nadai, atita and anagata eduppu, seven yati settings) | Done, tested | `src/engine/jathi/generator.js` |
 | JathiScript parser | Done, tested | `src/engine/jathi/script.js` |
 | Jathi judge: correctness gate, six craft aspects, computed fixes | Done, tested; weights not yet calibrated with teachers | `src/engine/jathi/judge.js` |
@@ -136,6 +137,12 @@ vocal-gym/
 │   │   ├── profiles.js          getProfile, setProfiles, getSource over the compiled profiles
 │   │   ├── data/profiles.generated.js   compiled from data/raga-profiles.json (generated; committed)
 │   │   ├── kalpana.js           re-exports kalpana/ (kept for old imports)
+│   │   ├── gamaka/
+│   │   │   ├── index.js         renderGamaka: notes → pitch contour with the raga's gamaka
+│   │   │   ├── resolve.js       note context, rule choice, style defaults, overrides
+│   │   │   ├── contour.js       time fitting (the degradation ladder) and sampling
+│   │   │   ├── shapes.js        kampita, andolita, nokku, odukkal, jaru, sphurita, orikkai …
+│   │   │   └── constants.js     CPN, STA and transition times
 │   │   ├── kalpana/
 │   │   │   ├── index.js         kalpana and kalpanaRound: tables, endings, sampling, stats
 │   │   │   ├── devices.js       generic cells and anchored phrase devices
@@ -153,9 +160,9 @@ vocal-gym/
 ├── docs/
 │   ├── raga-profiles.md         the profile format and how the generator uses it
 │   ├── research/raga-profiles-report.md   the research behind the profiles
-│   └── plans/kalpana-v0.3.md    the plan for the v0.3 kalpana generator
+│   └── plans/kalpana-v0.3.md, gamaka-audio.md   the plans for v0.3 and v0.4
 ├── examples/*.jathi             the worked JathiScript examples as files
-├── test/                        node:test suite: helpers.js and 8 *.test.js files (29 tests)
+├── test/                        node:test suite: helpers.js and 9 *.test.js files (35 tests)
 ├── web/                         page sources
 │   ├── shared/theme.css         colour tokens (dark first, light variant) and base type
 │   ├── shared/components.css    layout and component styles
@@ -167,6 +174,7 @@ vocal-gym/
 ├── scripts/build.js             compiles the profiles, bundles the engine, expands web/ templates into site/
 ├── scripts/compile-profiles.js  data/raga-profiles.json → src/engine/data/profiles.generated.js
 ├── scripts/check-raga-profiles.js   validates the profiles against the engine (--fix recomputes fields)
+├── scripts/render-wav.js        a kalpana round with gamaka to a 16-bit WAV (Node, additive synthesis)
 ├── scripts/smoke.js             jsdom smoke test of every page in site/
 ├── site/                        built pages (generated; committed so they open without a build)
 └── dist/                        the engine bundle (generated; ignored by git)
@@ -883,6 +891,35 @@ T 2   S , Ṇ , Ḍ Ṇ , Ḍ | Ṇ Ḍ G M | S R M D → eduppu P
 
 Two avartanams at T = 0 resuming on Sa (seed 3) open with the whole dattu phrase mela65#13 (`R G R Ṇ , Ḍ Ṇ Ḍ G R S Ṇ Ḍ`, source S144) and end with the shift mora `D P M , , · P M G , , · M G R` landing on R. In such rounds the body before the mora is about three quarters attested phrases; the round as a whole is about 40%.
 
+### 12.9 Gamaka rendering (v0.4)
+
+When a round is played, each swara can sound with the raga's gamaka instead of a flat keyboard tone: Todi's G swings up towards M, Sankarabharanam's G stays flat, Kalyani's descending notes are flicked from the note above, Mayamalavagowla's G oscillates against a held M. Gamaka is a **rendering layer**: `renderGamaka(notes, opts)` reads a finished note list and never changes it, and depth 0 is exactly the old plain playback. The plan is `docs/plans/gamaka-audio.md`; the code is in `src/engine/gamaka/`.
+
+**The model.** A sung pitch curve is a chain of constant-pitch notes (CPNs, steady for at least 80 ms) and stationary points (STAs, the turns inside a transient, about 100 ms), joined by smooth transitions (S193, S194). Every swara is rendered as a short list of such targets, and the targets are always **raga notes**: "G between R and M", not an abstract width. Transitions are half-cosine and keep their length in seconds when the tempo changes, while CPNs and oscillation cycles give way (S195), so faster kalams sound lighter without extra rules:
+
+| Rung | When the shape does not fit the note |
+| --- | --- |
+| 0 | The full shape; spare time goes to the CPNs |
+| 1 | Fewer oscillation cycles |
+| 2 | Only the onset (nokku, odukkal, jaru) and a CPN |
+| 3 | Plain; a very short note becomes a pure transition into the next |
+
+Shapes: `plain`; `kampita` (STAs alternating between two raga notes, resting on the swara or on either end, with an even or uneven dwell); `andolita` (slower, at most 2 cycles); onsets `nokku` (from above), `odukkal` (from below), `jaru` (a slide in), `sphurita` (the second note of a janta, struck from below), `pratyahata`; exits `orikkai` (a flick up at the end) and `jaru`. Oscillation never runs faster than 5 Hz, and every note of 0.2 s or more keeps a CPN of at least 80 ms.
+
+**The data.** `gamakaRender` in `data/raga-profiles.json` transcribes the gamaka text of the 23 ragas that have it into rules, one source per rule (`docs/raga-profiles.md`): 5 ragas `heavy` (Todi, Mayamalavagowla, Gourimanohari, Sankarabharanam, Kalyani), 6 `medium`, 12 `light`. Vague text ("permits strong gamaka") is marked `text-vague`, and every judgement has an `interpretation` note for a musician to review. The other 63 ragas get a conservative **light default**, never invented colour: S and P plain; a note of 0.4 s or more a gentle swing from the swara below; a descending note of 0.2 s or more touched from the swara above; the second note of a janta struck from below.
+
+**Choosing a rule.** For each note the resolver works out its neighbours, direction (up, down, turn), duration in seconds, janta and leap, and takes the most specific matching rule of that swara (list order breaks ties; `variety` and `humanize`, both off by default, are seeded). Then four overrides: the **landing** swara is held plain for at least 0.25 s, so the singer gets a clean pitch reference before the eduppu; no default jaru across a wide leap; after 4 notes with an oscillating body, the next note of 0.15 s or more is plain (the chain limit, S193); and the three **mora** statements share statement 1's template, moved along the scale, except that a swara the raga holds plain stays plain.
+
+**Playback and views.** In the demo, a "Gamaka" select (off, light, full; light by default) sits with the sound controls. Each legato group is one continuous voice: a single `setValueCurveAtTime` pitch curve, a few harmonics through two "aa" formants, no vibrato, and a short dip at each swara boundary except inside a jaru. A pitch view under the notation draws the contour against the raga's swara lines, with each swara's rule and source on hover, and a badge says whether the gamaka is raga-specific, partly interpreted text, or the generic default. "Download WAV" renders the same graph offline. On the command line, `--gamaka` prints the round with marks (`G~(R–M)` kampita, `(M)G` touched from M, `→G` jaru, `G/` orikkai), `--contour json` prints the rendered contour, and `scripts/render-wav.js` turns it into a WAV.
+
+```
+$ vocal-gym kalpana --raga todi --aksharas 8 --temp 0 --gamaka light
+Gamaka (light, 72 aksharas a minute) · heavy, from S37, S193 · 60% of swaras with gamaka
+S G~(R–M)  M~(G–M) ,  G~(R–M) M~(M–P)  P D~(P–D) | D~(P–D) Ṡ  N~(D–Ṡ) Ṡ | (Ṡ)Ṙ Ṡ  (Ṡ)Ṙ D ||
+```
+
+**Limits.** The rules are transcriptions of prose, not measurements, and need a musician's review (the `interpretation` notes) and the listening test planned in `docs/research/gamaka-eval.md` before `full` becomes the default. The synthetic voice has no consonants or breath, and the Node renderer has no formant filters. Alankara and jathi playback keep plain tones.
+
 ---
 
 ## 13. Library API
@@ -956,6 +993,8 @@ A `Motif` is `[{ d: scaleDegree, dur: 1 | 2 }]`.
 | `eduppuNeighbours(raga, e) → { eduppu, lo, hi, inRange } \| { error, code }` | The legal neighbours of an eduppu swara (12.5) |
 | `getProfile(ragaOrId) → Profile \| null`, `setProfiles(table \| null)`, `getSource(id) → { title, url, reliability } \| null` | The compiled raga profiles (12.2) |
 | `CELL_DEFS`, `CELLS` | The generic device catalogue (upward and downward forms) |
+| `renderGamaka(notes, { raga \| ragaId, slotSec, depth = 1, style = 'auto', seed, variety = 0, humanize = 0, landing = true, units })` | `{ points: [{ t, p }], groups, notes: [{ i, t0, t1, p, rule, shape, form, src, basis, degraded, targets }], stats: { gamakaShare, degradedShare, chainBreaks, staCount }, style, basis, sources }` (12.9). Never changes `notes` |
+| `buildContour(items, { slotSec, depth })`, `GAMAKA_CONSTANTS` | The geometry under it, for research: shapes in, contour out |
 
 ### Jathis
 
@@ -984,7 +1023,7 @@ node bin/vocal-gym.js <command> [options]     # or: npm link, then vocal-gym <co
 | `talas` | List the 35 suladi talas and the chapu talas |
 | `sheet [--tala "misra jhampa"]` | The sheet's first lines |
 | `alankara --raga R --tala T [--new N] [--temp T] [--seed S] [--span s] [--speed 1\|2\|4] [--numbers]` | The sheet pattern through the raga, then N new patterns |
-| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--eduppu-swara P] [--ending auto\|mora\|free] [--mora-style auto\|shift\|gopuccha\|srotovaha\|identical] [--allow-exceptions] [--temp T] [--seed S]` | One round, with its devices and their phrase sources, the phrase share, the mora style and the leaps. `--land X` (deprecated) ends on X itself |
+| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--eduppu-swara P] [--ending auto\|mora\|free] [--mora-style auto\|shift\|gopuccha\|srotovaha\|identical] [--allow-exceptions] [--gamaka off\|light\|full] [--bpm 72] [--contour json] [--temp T] [--seed S]` | One round, with its devices and their phrase sources, the phrase share, the mora style and the leaps; `--gamaka` adds the round with gamaka marks, `--contour json` prints the rendered contour instead. `--land X` (deprecated) ends on X itself |
 | `jathi --tala T [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam\|end] [--temp T] [--seed S] [--script]` | Generate; `--script` prints JathiScript |
 | `judge <file \| -> [--json]` | Judge a JathiScript file (exit code 1 if the gate fails) |
 | `example <adi\|short\|chapu\|speed>` | Print a worked example |
@@ -1061,7 +1100,8 @@ The research plan covers: verdict, novelty assessment, the engine, Modules A to 
 - **Kalpana:**
   - raga, tala, length, speed, opening swara, the swara the composition resumes on, ending, mora style and temperature;
   - attested phrases in saffron, fragments in lighter saffron, variants in violet italics, the mora in teal; each phrase's title names its source;
-  - an audit with the creativity readout, the phrases used and their sources (or "phrase data: none for this raga"), the leaps and their licences, and the mora's style and contour.
+  - an audit with the creativity readout, the phrases used and their sources (or "phrase data: none for this raga"), the leaps and their licences, and the mora's style and contour;
+  - a gamaka select (off, light, full), a pitch view of the contour with each swara's rule and source, a badge for how raga-specific the gamaka is, and Download WAV.
 
 **Design.** The palette is midnight indigo with saffron for the voice and teal for the machine. Pages are dark first, with a light variant from `prefers-color-scheme`. Type is Cormorant Garamond, DM Sans and IBM Plex Mono. Colours are tokens in `web/shared/theme.css`.
 
@@ -1090,14 +1130,15 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 | `alankara.test.js` | **All 35 sheet first lines, ascending and descending, note for note** in Mayamalavagowla; bars on anga lines; row counts equal the sheet's for every tala; all ten lines of 1.1; variation 0 is the sheet. Direction rule on every step of 23,992 lines (217,320 notes) in 86 ragas × 35 talas. 1,248 new patterns: legal, never a repeat, direction-valid in every line, conventionality falling with temperature, the sheet's span by default, every Tisra Eka alternative found, `null` only when all are shown | 310,676 |
 | `kalpana.test.js` | The v0.2 sweep (every other melakarta and every janya, 4 lengths, 2 speeds, 3 temperatures, 3 endings): exact length, start, landing, range, direction, three different mora statements with equal gaps, novelty rising with temperature. Eduppu neighbours (the table in 12.5) and 2,022 rounds landing next to every eduppu. Structured errors and backward compatibility. Leap acceptance over 86 ragas × 10 seeds × 3 temperatures; the relaxation over 2,696 short spans. Graded mora acceptance over 1,032 moras and the Mayamalavagowla golden mora | 185,467 |
 | `kalpana-phrases.test.js` | Attested phrases at T = 0 in Kalyani, Todi, Mohanam, Hamsadhwani and Hemavati, with every phrase and fragment unit matching its profile; the phrase-share acceptance over the 27 phrase-rich ragas; profile coverage and the fallback with no profile; exceptions only with `allowExceptions`; no erratic jumps (leap-size caps over 86 ragas, the share of moves in each raga's idiom, and the reported Kalyani S → N openings) | 30,983 |
-| `raga-profiles.test.js` | The profile file covers the 86 engine ragas with the engine's scales; every phrase parses and its computed flags match; sources and enums are valid; the compiled module is up to date and loads in the engine | 15,973 |
+| `gamaka.test.js` | The gamakaRender transcriptions validate and compile, and crafted bad rules are rejected; the geometry (depth 0 is plain, exact timing, no jumps, anchors, the 5 Hz rate cap, the ladder lightening faster tempos); `renderGamaka` on 258 kalpana rounds (determinism, untouched notes, targets on raga notes, the landing held plain); golden Todi, Sankarabharanam, Kalyani and Mayamalavagowla cases; mora templates; the default for data-less ragas | 605,321 |
+| `raga-profiles.test.js` | The profile file covers the 86 engine ragas with the engine's scales; every phrase parses and its computed flags match; sources and enums are valid; the compiled module is up to date and loads in the engine | 15,994 |
 | `jathi.test.js` | 12,417 generated jathis over 38 talas, nadai 3–5, 1–2 avartanams, eduppu −2, 0 and +2, seven yati settings and three temperatures: exact sums, slot formula, yati shapes, threefold teermanam. 2,452 exported to JathiScript all pass the gate (scores 71–100, median 88). 1,947 combinations are refused with a message because no teermanam fits the span with the chosen yati | 50,570 |
 | `jathiscript.test.js` | Worked examples (100 for the guide example; the short example fails with a fix at line 11); syntax errors with line and column; compound and vocabulary warnings; land `end` and `+n`; inferred avartanams; kalai; atita and anagata eduppu and their aliases; speed changes; bar errors; missing teermanam; opening karvai; written-out teermanams; trailing karvai; generator–parser round trips | 90 |
-| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions` | — |
+| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions`, `--gamaka`, `--contour json` and a WAV from `scripts/render-wav.js` | — |
 
-Total: 594,406 checked properties, in about 15 seconds on a laptop CPU at full speed (test files run in parallel).
+Total: 1,199,748 checked properties, in about 15 seconds on a laptop CPU at full speed (test files run in parallel).
 
-`npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, checks that kalpana presets land next to their eduppu and that the audit names phrase sources, leaps and every mora style, and switches tabs. It also times 100 Kalyani rounds (best of three; the limit is 1 s at full CPU speed, scaled up by a calibration loop on a throttled machine). It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
+`npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, checks that kalpana presets land next to their eduppu and that the audit names phrase sources, leaps and every mora style, and switches tabs. It also checks the gamaka select, the pitch view, the gamaka badges and, with Web Audio stubbed, one finite pitch curve per legato group (and none when gamaka is off). It times 100 Kalyani rounds (best of three; the limit is 1 s at full CPU speed, scaled up by a calibration loop on a throttled machine). It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
 
 ---
 
@@ -1159,7 +1200,7 @@ Evaluation hooks already in the engine:
 - **Path-dependent leap rules are soft, except one.** Unlicensed and unresolved leaps, the leap budget and the register cap are scores. The same-direction double-leap ban is exact below T = 1.5 because the tables carry the arriving move's class; the hard-avoid lists are exact for one swara of look-behind and avoided by the sampler for longer junctions.
 - **Sollu vocabulary and spellings vary by bani.** Unknown syllables are warnings, not errors, and aliases map common spellings (ta/tha, di/dhi, tom/thom, tei/tai, …).
 - **Chapu support covers Tisra, Khanda and Misra.** Sankeerna Chapu is not included because counting conventions for it differ.
-- **Playback is a sketch.** Equal temperament, plain tones, no gamakas.
+- **Playback is a sketch.** Equal temperament and a synthetic voice. Kalpana playback has rule-based gamaka (12.9), transcribed from prose and not yet reviewed by a musician or tested by ear; alankara and jathi playback stay plain.
 
 ---
 

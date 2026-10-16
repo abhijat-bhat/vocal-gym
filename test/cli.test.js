@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const BIN = fileURLToPath(new URL('../bin/vocal-gym.js', import.meta.url));
 const run = (...a) => spawnSync(process.execPath, [BIN, ...a], { encoding: 'utf8' });
@@ -24,6 +27,26 @@ test('command line', () => {
   assert.equal(r.status, 0); assert.match(r.stdout, /gopuccha mora \(/); assert.equal((r.stdout.match(/mora · mora \d of 3/g) || []).length, 3);
   r = run('kalpana', '--raga', 'kalyani', '--mora-style', 'zigzag');
   assert.equal(r.status, 2); assert.match(r.stderr, /Mora style must be one of/);
+  // gamaka: marks in the notation, the contour as JSON, and a WAV rendered from it
+  r = run('kalpana', '--raga', 'todi', '--aksharas', '8', '--temp', '0', '--gamaka', 'full');
+  assert.equal(r.status, 0); assert.match(r.stdout, /^Gamaka \(full, 72 aksharas a minute\) · heavy, from S37/m); assert.match(r.stdout, /G~\(R–M\)/);
+  r = run('kalpana', '--raga', 'mela1', '--aksharas', '8', '--gamaka', 'light');
+  assert.equal(r.status, 0); assert.match(r.stdout, /generic: no raga-specific data yet/);
+  assert.equal(run('kalpana', '--raga', 'kalyani', '--gamaka', 'loud').status, 2);
+  r = run('kalpana', '--raga', 'kalyani', '--aksharas', '8', '--eduppu-swara', 'P', '--contour', 'json', '--bpm', '60');
+  assert.equal(r.status, 0);
+  const cj = JSON.parse(r.stdout), total = cj.notes.reduce((s, n) => s + n.dur, 0) * cj.slotSec;
+  assert.equal(cj.raga, 'mela65'); assert.equal(cj.rendered.length, cj.notes.length);
+  assert.ok(Math.abs(cj.points[cj.points.length - 1][0] - total) < 1e-4 && cj.points[0][0] === 0, 'the contour spans the round');
+  assert.ok(cj.points.every((pt, k) => k === 0 || pt[0] >= cj.points[k - 1][0]), 'contour times increase');
+  const tmp = mkdtempSync(join(tmpdir(), 'vg-')), wavFile = join(tmp, 'round.wav'), jsonFile = join(tmp, 'round.json');
+  writeFileSync(jsonFile, r.stdout);
+  const w = spawnSync(process.execPath, [fileURLToPath(new URL('../scripts/render-wav.js', import.meta.url)), '--in', jsonFile, '--out', wavFile], { encoding: 'utf8' });
+  assert.equal(w.status, 0, w.stderr);
+  const wb = readFileSync(wavFile);
+  assert.equal(wb.toString('ascii', 0, 4), 'RIFF'); assert.equal(wb.toString('ascii', 8, 12), 'WAVE'); assert.equal(wb.readUInt32LE(24), 44100);
+  assert.equal(wb.readUInt32LE(40), wb.length - 44); assert.ok(Math.abs(wb.readUInt32LE(40) / 2 / 44100 - (total + 0.25)) < 0.01, 'WAV length matches the round');
+  rmSync(tmp, { recursive: true, force: true });
   r = run('kalpana', '--raga', 'saveri', '--aksharas', '4', '--eduppu-swara', 'G');
   assert.equal(r.status, 0); assert.match(r.stdout, /lands on M₁, the swara just above the eduppu G₃/);
   r = run('kalpana', '--raga', 'kalyani', '--aksharas', '1', '--per', '1', '--eduppu-swara', "P'");

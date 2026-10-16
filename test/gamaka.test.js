@@ -223,9 +223,13 @@ test('renderGamaka: mora repetitions share their template, and data-less ragas s
       const kinds = ids => ids.filter(i => i !== last).map(i => gr.notes[i].shape.replace(/\+?(nokku|odukkal|sphurita|pratyahata)\+?/, ''));
       // aligned from the end, as gopuccha and srotovaha change the front of the statements
       const m = Math.min(idx[0].length, idx[1].length, idx[2].length) - 1;
-      const tail = ids => kinds(ids.slice(ids.length - 1 - m, ids.length - 1));
+      const tail = ids => ids.slice(ids.length - 1 - m, ids.length - 1);
       moras++;
-      ok(tail(idx[0]).join() === tail(idx[1]).join() && tail(idx[1]).join() === tail(idx[2]).join(), r.name + ': mora statements use the same template: ' + [0, 1, 2].map(j => tail(idx[j]).join(' ')).join(' | '));
+      // positions where any statement lands on a swara the raga holds plain keep that swara plain; the rest share the template
+      const keep = tail(idx[0]).map((_, j) => idx.every(ids => !gr.notes[tail(ids)[j]].plainByRule));
+      idx.forEach(ids => tail(ids).forEach(i => { if (gr.notes[i].plainByRule) ok(gr.notes[i].shape.indexOf('kampita') < 0, r.name + ': a plain-by-rule swara stays plain in a mora'); }));
+      const cmp = ids => kinds(tail(ids)).filter((_, j) => keep[j]);
+      ok(cmp(idx[0]).join() === cmp(idx[1]).join() && cmp(idx[1]).join() === cmp(idx[2]).join(), r.name + ': mora statements use the same template: ' + [0, 1, 2].map(j => cmp(idx[j]).join(' ')).join(' | '));
     });
     // test 15: a data-less raga keeps S and P plain and gives no note shorter than 0.4 s an oscillation
     if (E.getProfile(r).gamaka.basis !== 'default') return;

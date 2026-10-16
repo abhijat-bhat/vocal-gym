@@ -10,7 +10,7 @@ Usage
   vocal-gym talas                                   list the 35 suladi talas and the chapu talas
   vocal-gym sheet [--tala "misra jhampa"]           the 35 first lines from the tala alankara sheet
   vocal-gym alankara --raga <raga> --tala <tala> [--new N] [--temp T] [--seed S] [--span s] [--speed 1|2|4] [--numbers]
-  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free] [--mora-style auto|shift|gopuccha|srotovaha|identical] [--allow-exceptions] [--temp T] [--seed S]
+  vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free] [--mora-style auto|shift|gopuccha|srotovaha|identical] [--allow-exceptions] [--gamaka off|light|full] [--bpm 72] [--contour json] [--temp T] [--seed S]
   vocal-gym jathi --tala <tala> [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam|end] [--temp T] [--seed S] [--script]
   vocal-gym judge <file.jathi | -> [--json]
   vocal-gym example <adi|short|chapu|speed>
@@ -19,6 +19,8 @@ Arguments
   <raga>   mela number (15), id (mela15, mohanam) or name (Mayamalavagowla, kalyani)
   <tala>   adi, rupaka, "misra jhampa", "khanda jati ata", "misra chapu", "custom 3+2+2"
   --temp   temperature 0 to 2, the performer's creativity (0 conventional, 2 adventurous)
+  --gamaka  print the round with gamaka marks: G~(R–M) kampita, (M)G touched from M, G/ orikkai,
+           →G jaru; --contour json prints the rendered pitch contour (renderGamaka) as JSON
   --eduppu-swara  the swara the composition resumes on (S' tara, S. mandra); the round ends on
            the raga's swara just below or just above it. --land X (deprecated) ends on X itself.
 
@@ -116,6 +118,17 @@ function leapText(L) {
   const parts = Object.keys(LICENCE).filter(k => by[k]).map(k => (L.total > 1 && by[k] === L.total ? (L.total === 2 ? 'both ' : 'all ') : by[k] + ' ') + LICENCE[k]);
   return 'Leaps: ' + L.total + ', ' + parts.join(', ') + (L.unresolved ? '; ' + L.unresolved + ' not stepped back from' : L.total > 1 ? '; all resolved' : '; resolved') + '.';
 }
+/* compact gamaka marks: G~(R–M) kampita, G≈(…) andolita, (M)G touched from M, →G jaru, G/ orikkai */
+function gamakaMark(r, n) {
+  const f = n.form || {}, s = swara(r, n.p);
+  let m = s;
+  if (f.body === 'kampita' || f.body === 'andolita') m += (f.body === 'kampita' ? '~(' : '≈(') + swara(r, Math.round(f.lo)) + '–' + swara(r, Math.round(f.hi)) + ')';
+  if (['nokku', 'odukkal', 'sphurita', 'pratyahata'].includes(f.onset) && f.from != null) m = '(' + swara(r, Math.round(f.from)) + ')' + m;
+  if (f.onset === 'jaru') m = '→' + m;
+  if (f.exit === 'orikkai') m += '/';
+  if (f.exit === 'jaru') m += '→';
+  return m;
+}
 function cmdKalpana(o, out) {
   const r = findRaga(o.raga), tl = findTala(o.tala || 'adi'), per = num(o.per, 2), K = num(o.aksharas, tl.total), T = num(o.temp, 1), seed = num(o.seed, 3);
   const pcs = Array.from(new Set(r.aro.concat(r.avaro).map(E.mod12)));
@@ -124,10 +137,27 @@ function cmdKalpana(o, out) {
   if (legacy) opts.targetPitch = swaraPitch(r, o.land);   // --land: deprecated, the last swara itself
   else opts.eduppuPitch = swaraPitch(r, o['eduppu-swara'], pcs.includes(7) ? 7 : 12);
   const res = E.kalpanaRound(r, opts);
+  const GAMAKA = { off: 0, light: 0.5, full: 1 }, gmode = o.gamaka === true ? 'full' : o.gamaka, bpm = num(o.bpm, 72);
+  if (gmode !== undefined && GAMAKA[gmode] === undefined) fail('--gamaka is off, light or full.');
+  if (o.contour !== undefined) {
+    if (o.contour !== 'json') fail('--contour takes json.');
+    if (res.error) fail(res.error);
+    const g = E.renderGamaka(res.notes, { raga: r, slotSec: 60 / bpm / per, depth: gmode === undefined ? 1 : GAMAKA[gmode], units: res.units, seed });
+    out(JSON.stringify({ raga: r.id, bpm, slotSec: 60 / bpm / per, notes: res.notes, style: g.style, basis: g.basis, stats: g.stats, rendered: g.notes.map(({ targets, source, ...n }) => n), points: g.points.map(pt => [Math.round(pt.t * 1e5) / 1e5, Math.round(pt.p * 1e4) / 1e4]) }));
+    return;
+  }
   out(ragaHeader(r));
   out(tl.name + ' · ' + K + ' aksharas x ' + per + ' = ' + K * per + ' slots · T ' + T + ' · seed ' + seed + '\n');
   if (res.error) fail(res.error);
   out(layout(noteCells(r, res.notes), tl, per) + '  → eduppu' + (legacy ? '' : ' ' + swara(r, opts.eduppuPitch)) + '\n');
+  if (gmode !== undefined && gmode !== 'off') {
+    const g = E.renderGamaka(res.notes, { raga: r, slotSec: 60 / bpm / per, depth: GAMAKA[gmode], units: res.units, seed });
+    const prof = E.getProfile(r).gamaka;
+    out('Gamaka (' + gmode + ', ' + bpm + ' aksharas a minute) · ' + (prof.basis === 'default' ? 'generic: no raga-specific data yet' : prof.style + ', from ' + prof.sources.join(', ')) + ' · ' + Math.round(g.stats.gamakaShare * 100) + '% of swaras with gamaka');
+    const cells = [];
+    g.notes.forEach((n, k) => { cells.push(gamakaMark(r, n)); for (let j = 1; j < res.notes[k].dur; j++) cells.push(','); });
+    out(layout(cells, tl, per) + '\n');
+  }
   out('Devices');
   const KIND = { nov: 'unconventional · ', conv: 'conventional · ', mora: 'mora · ', phrase: 'attested · ', 'phrase-fragment': 'attested · ', 'phrase-variant': 'variant · ' };
   res.units.forEach(u => out('  ' + u.notes.map(n => swara(r, n.p) + (n.dur > 1 ? ' ,'.repeat(n.dur - 1) : '')).join(' ').padEnd(26) + (KIND[u.kind] || '') + u.name + (u.dir > 0 ? ' ↑' : u.dir < 0 ? ' ↓' : '') +

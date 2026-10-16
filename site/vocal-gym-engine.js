@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.3.1: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.4.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -3918,6 +3918,7 @@ var VGEngine = (() => {
       }
       if (!rule) rule = styleDefault(style === "heavy" ? "light" : style === "default" ? "light" : style, ctx, sc);
       out[i] = { ctx, rule: rule || { onset: "none", body: "plain", exit: "none", src: null, basis: "plain", why: "plain style" } };
+      out[i].plainByRule = (out[i].rule.body || "plain") === "plain";
     });
     const shapeOf = (rule, ctx) => {
       const d = rule.depth != null ? rule.depth : 1, sh = { onset: rule.onset || "none", body: rule.body || "plain", exit: rule.exit || "none" };
@@ -3948,12 +3949,12 @@ var VGEngine = (() => {
         for (let k = 1; k <= Math.min(m1.length, mr.length); k++) {
           const a = m1[m1.length - k], b = mr[mr.length - k];
           if (!out[a] || !out[b]) continue;
-          const src = out[a], pa = notes[a].p, pb = notes[b].p, move = (off) => {
+          const src = out[a], pa = notes[a].p, pb = notes[b].p, d = src.shape.ruleDepth || 1, move = (off) => {
             if (off == null) return off;
-            const target = pa + off;
+            const target = pa + off / d;
             if (!sc.isNote(target)) return off;
             const steps = countSteps(sc, pa, target), q = sc.step(pb, steps) - pb;
-            return Math.abs(q) <= 7 ? q : off;
+            return Math.abs(q) <= 7 ? q * d : off;
           };
           const sh = Object.assign({}, src.shape);
           ["from", "lo", "hi", "exitTo"].forEach((f) => {
@@ -3961,6 +3962,11 @@ var VGEngine = (() => {
           });
           if (sh.body !== "plain" && !(sh.lo < sh.hi || sh.lo === 0 && sh.hi === 0)) continue;
           if (sh.onset === "sphurita" && !out[b].ctx.janta) sh.onset = "none";
+          if (out[b].plainByRule && sh.body !== "plain") {
+            sh.body = "plain";
+            delete sh.lo;
+            delete sh.hi;
+          }
           out[b] = Object.assign({}, out[b], { shape: sh, rule: Object.assign({}, src.rule, { why: "mora: as statement 1" }) });
         }
       }
@@ -4056,6 +4062,9 @@ var VGEngine = (() => {
       n.why = x.chainBreak ? "plain after a long run of gamaka (chain limit)" : x.landing ? "landing swara: held plain" : x.rule.why;
       n.source = n.src ? getSource(n.src) : null;
       n.ruleDepth = x.shape.ruleDepth;
+      n.plainByRule = !!x.plainByRule;
+      const sh = x.shape, d = sh.ruleDepth || 1, abs = (off) => off == null ? null : n.p + off / d;
+      n.form = { onset: sh.onset, from: abs(sh.from), body: sh.body, lo: abs(sh.lo), hi: abs(sh.hi), exit: sh.exit };
     });
     return { points: c.points, groups: c.groups, notes: c.notes, stats: Object.assign(c.stats, { chainBreaks }), style, basis: gamaka.basis, sources: gamaka.sources };
   }
@@ -5061,6 +5070,6 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   };
 
   // src/engine/index.js
-  var VERSION = "0.3.1";
+  var VERSION = "0.4.0";
   return __toCommonJS(engine_exports);
 })();

@@ -11,7 +11,7 @@ import { resolveNotes } from './resolve.js';
      notes  [{ p, dur }]  dur in slots; p === null is a rest (the kalpana output)
      opts   { raga | ragaId, slotSec, depth = 1, style = 'auto', seed = 1, variety = 0, humanize = 0,
               landing = true, units? }   units: kalpana's units, for mora consistency
-   Returns { points: [{ t, p }], groups, notes: [{ i, t0, t1, p, rule, shape, src, basis, degraded }],
+   Returns { points: [{ t, p }], groups, notes: [{ i, t0, t1, p, rule, shape, form, src, basis, degraded }],
              stats: { gamakaShare, degradedShare, chainBreaks, staCount }, style, basis }. */
 let RAGAS = null;
 const ragaById = id => { if (!RAGAS) { const R = allRagas(); RAGAS = new Map(R.melakartas.concat(R.janyas).map(r => [r.id, r])); } return RAGAS.get(id) || null; };
@@ -71,6 +71,10 @@ export function renderGamaka(notes, opts) {
     n.why = x.chainBreak ? 'plain after a long run of gamaka (chain limit)' : x.landing ? 'landing swara: held plain' : x.rule.why;
     n.source = n.src ? getSource(n.src) : null;
     n.ruleDepth = x.shape.ruleDepth;
+    n.plainByRule = !!x.plainByRule;   // the raga (or the S and P default) holds this swara plain
+    // the shape with its targets as raga-note pitches (before depth), for notation and teaching
+    const sh = x.shape, d = sh.ruleDepth || 1, abs = off => off == null ? null : n.p + off / d;
+    n.form = { onset: sh.onset, from: abs(sh.from), body: sh.body, lo: abs(sh.lo), hi: abs(sh.hi), exit: sh.exit };
   });
   return { points: c.points, groups: c.groups, notes: c.notes, stats: Object.assign(c.stats, { chainBreaks }), style, basis: gamaka.basis, sources: gamaka.sources };
 }

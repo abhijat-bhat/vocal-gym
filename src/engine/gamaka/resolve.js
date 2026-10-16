@@ -106,6 +106,7 @@ export function resolveNotes(notes, opts, gamaka, raga) {
     // heavy ragas leave unmentioned swaras to the light default
     if (!rule) rule = styleDefault(style === 'heavy' ? 'light' : style === 'default' ? 'light' : style, ctx, sc);
     out[i] = { ctx, rule: rule || { onset: 'none', body: 'plain', exit: 'none', src: null, basis: 'plain', why: 'plain style' } };
+    out[i].plainByRule = (out[i].rule.body || 'plain') === 'plain';
   });
 
   // shapes: offsets scaled by the rule's depth; janta-only and pair-only onsets checked against context
@@ -134,17 +135,19 @@ export function resolveNotes(notes, opts, gamaka, raga) {
       for (let k = 1; k <= Math.min(m1.length, mr.length); k++) {   // aligned from the end (gopuccha and srotovaha trim the front)
         const a = m1[m1.length - k], b = mr[mr.length - k];
         if (!out[a] || !out[b]) continue;
-        const src = out[a], pa = notes[a].p, pb = notes[b].p, move = off => {
+        const src = out[a], pa = notes[a].p, pb = notes[b].p, d = src.shape.ruleDepth || 1, move = off => {
           if (off == null) return off;
-          const target = pa + off;
-          if (!sc.isNote(target)) return off;                     // cents or depth-scaled: keep the width
+          const target = pa + off / d;                            // the raga note before the rule's depth
+          if (!sc.isNote(target)) return off;                     // cents (measured data): keep the width
           const steps = countSteps(sc, pa, target), q = sc.step(pb, steps) - pb;
-          return Math.abs(q) <= 7 ? q : off;
+          return Math.abs(q) <= 7 ? q * d : off;
         };
         const sh = Object.assign({}, src.shape);
         ['from', 'lo', 'hi', 'exitTo'].forEach(f => { if (sh[f] != null) sh[f] = move(sh[f]); });
         if (sh.body !== 'plain' && !(sh.lo < sh.hi || (sh.lo === 0 && sh.hi === 0))) continue;   // illegal once moved: keep its own
         if (sh.onset === 'sphurita' && !out[b].ctx.janta) sh.onset = 'none';
+        // a swara the raga holds plain (a plain rule, or S and P by default) keeps its plain body
+        if (out[b].plainByRule && sh.body !== 'plain') { sh.body = 'plain'; delete sh.lo; delete sh.hi; }
         out[b] = Object.assign({}, out[b], { shape: sh, rule: Object.assign({}, src.rule, { why: 'mora: as statement 1' }) });
       }
     }
