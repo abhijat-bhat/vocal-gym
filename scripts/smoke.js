@@ -139,7 +139,7 @@ async function driveDemos(file) {
   check($('k-fam').disabled && $('k-len').disabled, 'the tala and length come from the lab');
   { const o0 = w.__audio.oscillators + w.__audio.sources; click($('k-play')); check(w.__audio.oscillators + w.__audio.sources > o0, 'it plays'); click($('k-play')); }
   // v0.8.5: breath, and inspiration pasted from an AI assistant
-  { const m = /(\d+) swaras on (\d+) syllables/.exec(text('k-audit')); check(m && +m[1] < +m[2], 'the lines breathe: fewer swaras than syllables (' + (m ? m[1] + ' of ' + m[2] : 'none') + ')');
+  { const m = /(\d+) swaras on (\d+) syllables/.exec(text('k-audit')); check(m && +m[1] <= +m[2] && /held swara \(a karvai\) now and then/.test(text('k-audit')), 'the breath is reported (' + (m ? m[1] + ' of ' + m[2] : 'none') + ')');
     const d = $('k-rh-dens'); d.value = 'full'; fire(d, 'change'); const f = /(\d+) swaras on (\d+) syllables/.exec(text('k-audit')); check(f && f[1] === f[2], 'one swara on every syllable on request'); d.value = 'auto'; fire(d, 'change');
     click($('k-rh-prompt')); check(!$('k-rh-ptext').hidden && /Arohana/.test($('k-rh-ptext').value) && /Phrase 1 \(/.test($('k-rh-ptext').value), 'the prompt describes the raga and the rhythm');
     const n = ($('k-rh-ptext').value.match(/^Phrase \d+ \(/gm) || []).length;

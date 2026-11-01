@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.8.6
+
+- **Ragas whose arohana and avarohana differ now sing lab rhythms** (Saveri, Malahari, Arabhi, Kedaragowla, Abheri). Before, most rhythms in these ragas failed as "unsingable": Saveri on 22 of 32 tries and Malahari on 15 of 28; the committed 0.8.5 failed less often, but still failed. There were two causes.
+  - **Joins.** Each phrase's line kept the direction rule inside itself, but the move into the next phrase often broke it (in Saveri, G and N may only be reached descending), and a korvai has many joins. When a join breaks the rule, the next phrase's first one or two swaras now move to the nearest swaras that join legally; its ending is kept. Bridging costs score, so passages that need none are preferred, and each phrase reports `bridged`.
+  - **Traps.** Tara Ga, the top of a line's range, can only be reached from above in these ragas, so a line that touched it stuck there (Ġ Ġ Ġ Ṙ Ṡ). Swaras with no legal way in inside the range are now never stepped on and never rested on.
+  - **Landing.** A varied last mora statement whose raga repair moved its final swara now falls back to the plain statement, so it always lands.
+  - **Coverage.** All 86 ragas now sing lab rhythms for every eduppu: a new test covers 2,022 passages. An unsingable answer reports which rules failed (`failed`).
+- **Contours: a line is not always a rise and a fall** (`src/engine/kalpana/rhythm.js`). Every line used to be built backwards from its ending, a step above the next, turning only at the edge of an octave window. A long phrase therefore became a triangle wave (down about seven steps, bounce, up seven), and sequences moved the same hump around.
+  - **Segments.** A line is now a chain of short segments (three to six moves, longer at higher creativity). Each has its own shape, never the same shape twice running: a run down or up, an arch, a valley, janta (each swara doubled: S S R R G G), a zigzag of skips (dhatu: S G R M G P), or circling one swara.
+  - **Creativity.** Low creativity leans on runs down (Field 2018); higher creativity brings janta, zigzags and rising lines.
+  - **The cadence.** The mora statements and the uttaranga still close on a run down into the landing.
+  - **Rules.** The line is still built from its ending, so it always arrives. A move the direction rule forbids becomes a smaller or larger move, the opposite move or a repeated swara.
+  - **No swinging between two swaras.** The old fallback (the opposite move, at the top of the range or against the direction rule) made lines bounce between two swaras (Ṡ Ṙ Ṡ Ṙ Ṡ, Ḋ Ṡ Ḋ Ṡ), above all in pentatonic ragas. A line now refuses a move that makes A B A B or a third repeat of one swara, if any other legal move exists. Across the passage a pair swung five times (A B A B A) breaks a hard rule, and a single A B A B costs score. Over 60 khanda passages in the pentatonic ragas, A B A B fell from 1,595 to 18 and A B A B A from 1,046 to 0.
+  - **Measured.** Over 12 khanda korvais × 3 creativities × 3 seeds, the mean run in one direction is 2.0 moves (the triangle ran about seven), and the cadence ends with a descent 96% of the time.
+  - **Explanation.** The audit names each family's contours (`families[].shapes`), and the inspiration prompt asks for varied contours too.
+- **Held swaras are rare, and at word ends** (`src/engine/kalpana/rhythm.js`). 0.8.5 held weak pulses at random: about 30% of syllables, scattered across the sollu words, so the korvai's groupings could no longer be heard. A first fix lengthened the end of every long word, which made the holds a predictable pattern of their own. Now a run of syllables is mostly sung continuously, and a held swara (a karvai) comes only now and then:
+  - **How often.** About one for every 18 syllables in tisra, 14 in chatusra and 11 in faster gatis, by chance, so a phrase may have none, one or more. About 95% of syllables start a swara.
+  - **Where.** Always at the end of a sollu word of three or more syllables (tha ka dhi mi → S R G ,), or now and then the second syllable of "tha dhi gi na thom" (the lab's own "tha , dhi gi na thom"). Places are drawn at random, leaning towards the phrase's end, at least six syllables apart. The words come from the sollu vocabulary: each run is split into the fewest words of up to five syllables, and `rhythmPhrases` now gives each phrase's `words`.
+  - **Structure kept.** A family shares its held places, so repeated phrases and the mora statements keep one rhythm, and a yati's lines stay the ends of one line. Every word's first syllable and every phrase's last sound; the lab's own karvais and a trikaala's syllables are unchanged.
+- **Honest labels.** A sequence or variation that could not move anywhere in the raga is reported as identical.
+- **Tests.** The rhythm sweep checks that no pair of swaras swings five times (S R S R S) and that a four-note swing is rare. A contour test checks that all seven shapes are used, that lines turn (mean run under three moves, few runs of six or more) and that the cadence runs down into its landing. The rhythm sweep checks that every sollu word starts on a swara, that holds come only at word ends and at least six syllables apart, that repeated phrases share them, and that most syllables (86–97%) start a swara.
+- **Prompt.** The inspiration prompt asks for the same: most syllables sung, a held swara now and then at a word end, never as a pattern.
+- **Pages.** The Swaras menu reads "a few held swaras".
+
 ## 0.8.5
 
 - **Breath: not every syllable needs its own swara** (`src/engine/kalpana/rhythm.js`). A continuous run of syllables (tha ka dhi mi tha) is the rhythm, not a demand for a new swara on every pulse.

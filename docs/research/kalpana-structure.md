@@ -305,7 +305,7 @@ The lab works out the rhythm of a mora, a tihai or a korvai: a purvanga whose ph
 | Rule | How it is applied |
 |---|---|
 | A design is counted to fit the tala (Field 2018) | The lab's pulses are kept exactly. A swara starts on every syllable; held syllables and the lab's gaps become karvais (rule 17: karvais mark phrase ends and gaps). |
-| Figures descend; ascents obey the arohana (rule 11) | Each line moves by step, now and then a skip of two, mostly descending into its last swara. It stays within about an octave and below tara Ga. The direction rule is hard. |
+| Figures descend; ascents obey the arohana (rule 11). Since v0.8.6 only the cadence must: other lines vary their contour (§11) | Each line moves by step, now and then a skip of two, mostly descending into its last swara. It stays within about an octave and below tara Ga. The direction rule is hard. |
 | Yati shapes in swaras (rule 14) | A nested family is sung from one line, and each phrase is the end of it. A gopuccha trims the line from the front and keeps its ending; a srotovaha grows it back. The kuraippu and GP purvangas keep their halving and doubling. |
 | Moras repeat with shifts (Field Ex. 3: the run, a step lower, two steps lower) | v0.8.4: a repeated rhythm is not a repeated melody. At low creativity a repeated phrase keeps its shape and starts from another swara, as an alankara climbs the scale: a step lower or higher each time, by thirds, an arch or a wave, repaired where the raga's direction rule needs it. At higher creativity repetitions are re-sung: new openings on the same ending, inverted contours, fresh lines. A yati that comes back whole moves as one round. Exact repetition stays for a trikaala's speeds and, now and then, a mora at low creativity. |
 | Phrase ends rest on structural swaras (rules 6–8) | A family's line ends on a nyasa, landing or jiva swara of the profile, or on S or P, never on an alpa swara or one the raga avoids resting on. |
@@ -314,18 +314,38 @@ The lab works out the rhythm of a mora, a tihai or a korvai: a purvanga whose ph
 The rasikas.org threads on constructing kalpana swaras were unavailable (HTTP 503) when this was written, so the rules rest on the sources above.
 
 
-## 11. Breath and inspiration (v0.8.5)
+## 11. Breath and inspiration (v0.8.5, v0.8.6)
 
-**Breath.** A singer does not put a new swara on every pulse of a run of sollus. Kalpana swaras mix runs with held swaras (the karvais of rule 17), and a phrase usually breathes on a held swara before the next one. v0.8.3 sang a swara on every syllable of the lab's rhythm. That was exact, but it was too dense: in khanda gati, five swaras a beat throughout. Now:
+**Breath.** A singer does not put a new swara on every pulse of a run of sollus, but neither do held swaras come on a schedule: a kalpana line is mostly continuous, with a karvai (rule 17) now and then. v0.8.3 sang a swara on every syllable of the lab's rhythm, which was exact but relentless. Two corrections followed, each instructive:
 
-| Pulse | Starts a swara |
+- v0.8.5 held weak pulses at random (about 30% of syllables). The holds fell inside sollu words, each "tha ka dhi mi" came out differently, and the korvai's groupings (the 4s, 3s and 5s that make it a korvai) could no longer be heard.
+- A first v0.8.6 draft lengthened the end of every long word. The words were clear, but the holds became a predictable pattern of their own (a sustain every fourth swara).
+
+Since v0.8.6 held swaras are rare, and placed where they cannot obscure the words:
+
+| Rule | Value |
 |---|---|
-| A phrase's first syllable | always |
-| The beat's first pulse and its strong subdivisions (4 = 2 + 2, 5 = 2 + 3, 7 = 3 + 4, 9 = 3 + 3 + 3) | always, in the family's reference phrase |
-| A cadence's last syllable | always (the landing must sound) |
-| Any other syllable | with probability 0.45 (tisra), 0.3 (chatusra, khanda), 0.25 (6), 0.2 (faster), + 0.15c |
+| How many | about one per 18 syllables (tisra), 14 (chatusra), 11 (faster), by chance: none, one or more in a phrase |
+| Where | the last syllable of a sollu word of three or more (tha ka dhi mi → S R G ,), or the second of "tha dhi gi na thom" ("tha , dhi gi na thom", the lab's own statement shape) |
+| Placement | drawn at random, weighted towards the phrase's end (a breath before its closing figure), at least six syllables apart |
+| Always sounding | every word's first syllable, every phrase's last (and the landing) |
+| Shared | by a family: repeated phrases and mora statements keep one rhythm; a yati's lines are the ends of one line (a held place is kept in a shorter line only where it is a word end there too) |
 
-The mask belongs to the family and is counted from the end, so a repeat breathes alike and a yati's lines are the ends of one line in rhythm as well as in swaras. A trikaala keeps every syllable, because its speeds are the point. The lab's own karvais (the "D , ," at a phrase end) are unchanged. Over the test passages, about 70% of syllables now start a swara.
+Words come from the sollu vocabulary (`src/engine/sollu.js`): each run between the lab's holds is split into the fewest words of up to five syllables, longest first. A trikaala keeps every syllable, because its speeds are the point, and the lab's own karvais are unchanged. Over the test passages about 95% of syllables start a swara.
+
+**Contours (v0.8.6).** Building every line backwards from its ending, a step above the next, made each long phrase a triangle wave: down about seven steps, a bounce at the edge of the octave, up seven. "The melodic contour in each unit usually descends" (Field 2018) describes the units of a design, not every phrase of a passage. A line is now a chain of short segments, each with its own shape, never the same shape twice running:
+
+| Shape | Moves | Example |
+|---|---|---|
+| A run down / up | steps (sometimes skips) one way | P M G R S |
+| An arch / a valley | up then down / down then up | S R G R S |
+| Janta | each swara doubled | S S R R G G |
+| A zigzag of skips (dhatu) | a skip forward, a step back | S G R M G P |
+| Circling one swara | above, back, below, back | P D P M P |
+
+Low creativity leans on runs down; higher creativity brings janta, zigzags and rising lines. A cadence (the mora statements, the uttaranga) always closes on a run down into its landing. The line is still built from its ending, so it always arrives, and every move keeps the direction rule (a forbidden move becomes a smaller or larger move, the opposite move or a repeated swara). Taking the opposite move whenever a move was blocked made lines swing between two swaras (Ṡ Ṙ Ṡ Ṙ Ṡ) at the top of the range and in pentatonic ragas, so a line refuses a move that makes A B A B or a third repeat of one swara while any other legal move exists, and across the passage a pair swung five times (A B A B A) breaks a hard rule. Over 60 khanda passages in the pentatonic ragas, A B A B fell from 1,595 to 18 and A B A B A from 1,046 to 0. Over 12 khanda korvais × 3 creativities × 3 seeds, the mean run in one direction is 2.0 moves, and 96% of cadences end on a descent.
+
+**Asymmetric ragas (v0.8.6).** In a raga whose arohana and avarohana differ (Saveri, Malahari, Arabhi: G and N only descending), the direction rule binds the joins between phrases as well as the moves inside them. Each line obeyed it, but a phrase ending low followed by one opening on a descending-only swara did not, and a korvai has many joins, so most rhythms failed. Such an opening is now bridged: its first one or two swaras move to the nearest legal swaras, and its ending is kept. Bridging costs score, so it is a last resort. Tara Ga, the top of a line's range, is a trap in these ragas: it can only be reached from above, which is out of range. Lines never step onto such a swara, and phrases never rest on one. All 86 ragas now sing lab rhythms for every eduppu.
 
 **Inspiration.** A language model can suggest lines, but its answer is inspiration, not a ruling. `rhythmPrompt` gives it the facts the engine itself uses:
 - the arohana, the avarohana and the direction rule;

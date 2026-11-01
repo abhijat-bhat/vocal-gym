@@ -259,13 +259,13 @@ function kalpanaRhythm(body) {
   const units = res.units.map(u => ({ kind: u.kind === 'gap' ? 'step' : u.kind, name: u.name, inspired: !!u.inspired, notes: u.notes.map(n => n.p == null ? { p: null, dur: n.dur } : { p: n.p, dur: n.dur, t: swara(r, n.p, false), name: swaraName(r, n.p) }) }));
   const counts = { conv: 0, nov: 0, step: 0, mora: 0 };
   units.forEach(u => u.notes.forEach(n => { counts[u.kind] = (counts[u.kind] || 0) + n.dur; }));
-  const fams = res.families.map(f => ({ name: (f.role === 'statement' || f.role === 'uttaranga' ? 'cadence' : f.role) + (f.kind === 'nested' ? ' ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join('→') + (f.rounds > 1 ? ' × ' + f.rounds : '') : f.kind === 'repeat' ? ' × ' + f.lens.length : '') + ': ' + f.how, count: 1 }));
+  const fams = res.families.map(f => ({ name: (f.role === 'statement' || f.role === 'uttaranga' ? 'cadence' : f.role) + (f.kind === 'nested' ? ' ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join('→') + (f.rounds > 1 ? ' × ' + f.rounds : '') : f.kind === 'repeat' ? ' × ' + f.lens.length : '') + ': ' + f.how + '; its line: ' + f.shapes.join(', then '), count: 1 }));
   const aksharas = Math.round((res.slots + res.lead) / parsed.gati);
   return Object.assign(base, {
     aksharas, slots: res.slots, lead: res.lead, units, counts, devices: fams, breath: res.breath, inspiration: res.inspiration,
     ending: { type: 'rhythm', phrase: null, gap: 0, fallback: false, text: 'It ends on ' + swaraName(r, res.ending.final) + ', on the lab’s landing.' },
     stats: { novelShare: (counts.nov || 0) / res.slots, convShare: (counts.conv || 0) / res.slots },
-    summary: 'The korvai lab’s rhythm' + (parsed.label ? ' (' + parsed.label + ')' : '') + ', sung in ' + r.name + ': ' + res.slots + ' pulses at ' + parsed.gati + ' a beat, each swara starting on one of the lab’s syllables (' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables: weak pulses are held, phrase starts and cadence endings sound) and every gap a karvai.'
+    summary: 'The korvai lab’s rhythm' + (parsed.label ? ' (' + parsed.label + ')' : '') + ', sung in ' + r.name + ': ' + res.slots + ' pulses at ' + parsed.gati + ' a beat, each swara starting on one of the lab’s syllables (' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables: mostly one swara a syllable, with a held swara now and then at the end of a sollu word) and every gap a karvai.'
       + (res.inspiration && res.inspiration.used.length ? ' ' + res.inspiration.used.length + ' of its phrases come from the suggested lines, fitted to the rhythm and the raga.' : '') + ' A yati (an AP, GP or kuraippu purvanga, a shaped mora) is one line, each phrase the end of it; repeated phrases keep their rhythm but not their swaras: their shape moves to other swaras, or at higher creativity they are re-sung. It lands on ' + swaraName(r, res.ending.final) + '.',
     checks: res.checks.map(c => ({ ok: c.ok, title: c.text, detail: '' }))
   });

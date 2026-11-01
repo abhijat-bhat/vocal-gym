@@ -634,7 +634,7 @@ function kalRhythmControls(){
   b._for = K.rhythm; K.inspiration = '';
   const t = K.rhythm, tn = t.tala.fam === 'custom' ? 'a custom tala' : E.tala(t.tala.fam, t.tala.L).name;
   b.innerHTML = '<div><b>Singing the korvai lab’s rhythm</b><span>' + esc((t.label || t.form || 'a korvai') + ' · ' + tn + ' · gati ' + t.gati) + '. The tala, length, speed and ending come from the lab; choose the raga, the eduppu swara and the creativity.</span></div>' +
-    '<label class="rh-dens">Swaras <select id="k-rh-dens"><option value="auto">breathe: weak pulses held</option><option value="full">one on every syllable</option></select></label>' +
+    '<label class="rh-dens">Swaras <select id="k-rh-dens"><option value="auto">a few held swaras</option><option value="full">one on every syllable</option></select></label>' +
     '<button type="button" class="btn" id="k-rh-lab">← Back to the lab</button><button type="button" class="btn ghost" id="k-rh-stop">Stop following</button>' +
     // v0.8.5: inspiration from an AI assistant, by copy and paste (the playground has no server and no key)
     '<details class="rhythm-insp" id="k-rh-insp"><summary>Inspiration from an AI assistant</summary>' +
@@ -680,9 +680,9 @@ function kalRenderRhythm(r, tp, T){
   $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i + 1), partialLast: true }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
   const sw = ps => ps.map(p => swara(r, p, false)).join(' ');
   const famTxt = res.families.map(f => 'Family ' + (f.id + 1) + ' (' + (f.role === 'statement' || f.role === 'uttaranga' ? 'the cadence' : f.role) + ', ' +
-    (f.kind === 'nested' ? 'a yati of ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join(' → ') + (f.rounds > 1 ? ', ' + f.rounds + ' times' : '') : f.kind === 'repeat' ? f.lens.length + ' repetitions' : 'one phrase') + '): ' + f.how + '. ' + (f.rounds > 1 || f.kind === 'repeat' ? 'First as ' : '') + sw(f.line));
+    (f.kind === 'nested' ? 'a yati of ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join(' → ') + (f.rounds > 1 ? ', ' + f.rounds + ' times' : '') : f.kind === 'repeat' ? f.lens.length + ' repetitions' : 'one phrase') + '): ' + f.how + '. Its line: ' + f.shapes.join(', then ') + '. ' + (f.rounds > 1 || f.kind === 'repeat' ? 'First as ' : '') + sw(f.line));
   $('k-audit').innerHTML = res.checks.map(c => '<li' + (c.ok ? '' : ' class="bad"') + '>' + esc(c.text) + '</li>').join('') + famTxt.map(t => '<li>' + esc(t) + '</li>').join('') +
-    '<li>' + esc('Breath: ' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables. ' + (res.breath.density === 'full' ? 'One swara on every syllable.' : 'A run of syllables is the rhythm, not one swara a pulse: each phrase starts on a swara, the beat’s strong pulses carry one, and weak pulses are often held from the swara before (a karvai), more often in a fast gati.')) + '</li>' +
+    '<li>' + esc('Breath: ' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables. ' + (res.breath.density === 'full' ? 'One swara on every syllable.' : 'Mostly a swara on every syllable, with a held swara (a karvai) now and then, at irregular places and always at the end of a sollu word, so the korvai’s words stay clear. Repeated phrases keep the same rhythm.')) + '</li>' +
     (res.inspiration && res.inspiration.note ? '<li>' + esc('The assistant’s idea: ' + res.inspiration.note) + '</li>' : '') +
     '<li>' + esc('Creativity ' + res.dial.T.toFixed(1) + ': a repeated rhythm is never simply a repeated melody. Low creativity keeps a phrase’s shape and starts it from another swara, as an alankara climbs the scale; higher creativity re-sings openings, turns contours over and writes fresh lines to the same rhythm.') + '</li>';
   kalGamakaView();

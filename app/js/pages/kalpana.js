@@ -47,7 +47,7 @@ export async function mount(root, meta) {
     if (!on) return;
     b.innerHTML = '<b>Singing a rhythm from the korvai lab.</b> ' + esc(S.rhythm.label || S.rhythm.form || 'A korvai') + '. The tala, length, speed and ending come from the lab: choose the raga, the landing swara and the creativity. <span style="display:inline-flex;gap:8px;margin-left:8px"><a class="btn small" href="#/korvai">← Back to the lab</a><button type="button" class="btn small ghost" id="k-rh-stop">Stop following</button></span>' +
       // v0.8.5: how dense the swaras are, and lines from Claude as inspiration
-      '<div class="rh-tools"><label>Swaras <select id="k-rh-dens"><option value="auto">breathe: weak pulses held</option><option value="full">one on every syllable</option></select></label>' +
+      '<div class="rh-tools"><label>Swaras <select id="k-rh-dens"><option value="auto">a few held swaras</option><option value="full">one on every syllable</option></select></label>' +
       '<button type="button" class="btn small" id="k-rh-ask">Ask Claude for lines</button><button type="button" class="btn small ghost" id="k-rh-clear" hidden>Back to the engine’s own lines</button><span id="k-rh-status" class="card-sub"></span></div>' +
       '<details class="rh-paste" id="k-rh-paste"><summary>Or use any AI assistant: copy the prompt, paste its answer</summary>' +
       '<p class="card-sub">The prompt describes this rhythm and the raga in full. The answer’s lines are inspiration: each is fitted to the rhythm and the raga and sung only where every rule of the raga still holds.</p>' +

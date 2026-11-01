@@ -54,6 +54,7 @@ ul,ol{padding-left:1.25rem;margin:.5rem 0}
 li{margin:.25rem 0}
 code,.mono{font-family:var(--font-mono);font-size:.86em}
 sub{font-size:.7em}
+
 .shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:40px}
 @media (min-width:1040px){.shell{grid-template-columns:210px minmax(0,1fr)}}
 .toc{display:none}
@@ -262,6 +263,7 @@ table.ref td:first-child{white-space:nowrap}
 .rhythm-insp textarea{width:100%;box-sizing:border-box;margin:6px 0;font:inherit;font-size:.82rem;padding:6px 8px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg)}
 .rhythm-insp .rh-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .s.insp{box-shadow:inset 0 -2px 0 var(--violet)}
+
 /* Vocal Gym · the Korvai & Tihai lab (web/shared/korvai-lab.js). Uses the theme tokens shared by the
    playground (web/shared/theme.css) and the app (app/css/app.css). */
 .kl{--kl-r:12px;--kl-rs:8px;--kl-cw:30px;display:flex;flex-direction:column;gap:14px;font-family:var(--font-body)}
@@ -514,6 +516,7 @@ table.ref td:first-child{white-space:nowrap}
   .kl-modes button{padding:8px 10px}
   .kl-rl{display:none}
 }
+
 /* playground page */
 .page{max-width:1080px;margin:0 auto}
 .page section{border-bottom:0;padding-top:24px}
@@ -638,6 +641,7 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
       </div>
     </div>
   </div>
+
 </section>
 
 <section aria-labelledby="howto-h">
@@ -664,7 +668,7 @@ $A $A tha , dhi , | tha-ki-ta (tha-ka)x2 ...   # one word = one matra; , and ; a
 </main>
 
 <script>
-/* Vocal Gym engine 0.8.5: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.8.6: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -688,7 +692,7 @@ var VGEngine = (() => {
   var engine_exports = {};
   __export(engine_exports, {
     ALIAS: () => ALIAS,
-    CADENCE: () => CADENCE2,
+    CADENCE: () => CADENCE,
     CELLS: () => CELLS,
     CELL_DEFS: () => CELL_DEFS,
     CHAKRA: () => CHAKRA,
@@ -4745,10 +4749,66 @@ var VGEngine = (() => {
     return { parsed: true, phrases, note: typeof obj.idea === "string" ? obj.idea.slice(0, 400) : "", outside };
   }
 
+  // src/engine/sollu.js
+  var SOLLU = {
+    1: [["tha"], ["dhi"], ["thom"], ["nam"]],
+    2: [["tha", "ka"], ["ki", "ta"], ["dhi", "mi"], ["jho", "nu"]],
+    3: [["tha", "ki", "ta"], ["tha", "ka", "jham"], ["tat", "tai", "tam"]],
+    4: [["tha", "ka", "dhi", "mi"], ["tha", "ka", "jho", "nu"], ["ki", "ta", "tha", "ka"], ["tha", "ri", "ki", "ta"], ["tai", "ya", "tai", "ya"], ["tai", "hat", "tai", "hi"]],
+    5: [["tha", "dhi", "gi", "na", "thom"], ["tha", "ka", "tha", "ki", "ta"]],
+    6: [["tha", "ka", "dhi", "mi", "tha", "ka"], ["tha", "ri", "ki", "ta", "tha", "ka"]],
+    7: [["tha", "ka", "dhi", "mi", "tha", "ki", "ta"]],
+    8: [["tha", "ka", "dhi", "mi", "tha", "ka", "jho", "nu"]],
+    9: [["tha", "ka", "dhi", "mi", "tha", "dhi", "gi", "na", "thom"]]
+  };
+  var ALIAS = { ta: "tha", di: "dhi", tom: "thom", dhom: "thom", thai: "tai", tei: "tai", jo: "jho", dheem: "dhim", dhin: "dhim", din: "dhim", ding: "dhim", gin: "gi", tham: "tam", tak: "tha" };
+  var norm = (s) => ALIAS[s] || s;
+  var KNOWN = new Set("tha ka ki dhi mi jho nu gi na thom nam jham tam tai ya hi ha hat tat dhit dhim ri ku lan gu ga num".split(" "));
+  var HEAVY = new Set("tha dhi thom nam jham tam tai tat dhit dhim".split(" "));
+  var CADENCE = new Set("thom nam jham tam tai dhit dhim dhi tat".split(" "));
+  var LIB = function() {
+    const set = /* @__PURE__ */ new Set(), suf = /* @__PURE__ */ new Set();
+    Object.keys(SOLLU).forEach((k) => SOLLU[k].forEach((p) => {
+      const n = p.map(norm);
+      set.add(n.join(" "));
+      for (let i = 1; i < n.length - 1; i++) suf.add(n.slice(i).join(" "));
+    }));
+    return { set, suf };
+  }();
+  function idiomatic(syls) {
+    const s = syls.filter((x) => x !== ",").map(norm);
+    if (!s.length) return true;
+    const key = s.join(" ");
+    if (LIB.set.has(key) || LIB.suf.has(key)) return true;
+    const memo = {};
+    const seg = (i, k) => {
+      if (i === s.length) return true;
+      if (k === 0) return false;
+      const id = i + ":" + k;
+      if (id in memo) return memo[id];
+      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo[id] = true;
+      return memo[id] = false;
+    };
+    return seg(0, 3);
+  }
+  function splitCompound(word) {
+    const keys = Array.from(new Set(Array.from(KNOWN).concat(Object.keys(ALIAS)))).sort((a, b) => b.length - a.length);
+    const dfs = (i) => {
+      if (i === word.length) return [];
+      for (const k of keys) if (word.startsWith(k, i)) {
+        const r = dfs(i + k.length);
+        if (r) return [k].concat(r);
+      }
+      return null;
+    };
+    const parts = dfs(0);
+    return parts && parts.length > 1 ? parts : null;
+  }
+
   // src/engine/kalpana/rhythm.js
   var ROLES = /* @__PURE__ */ new Set(["pre", "purvanga", "pgap", "statement", "gap", "uttaranga", "mukhra", "close", "count", "speed1", "speed2", "speed3"]);
   var GAP = /* @__PURE__ */ new Set(["gap", "pgap"]);
-  var CADENCE = /* @__PURE__ */ new Set(["statement", "uttaranga"]);
+  var CADENCE2 = /* @__PURE__ */ new Set(["statement", "uttaranga"]);
   var isSyl = (s) => !!s && s !== ",";
   function rhythmTemplate(F, layout, meta) {
     const cells = layout.cells.map((c) => ({ s: String(c.syl == null ? "" : c.syl), r: c.role, f: c.first ? 1 : 0 }));
@@ -4806,20 +4866,44 @@ var VGEngine = (() => {
         return;
       }
       if (c.f || !cur) {
-        cur = { i: out.length, role: c.r, cells: [], sylls: [], sc: [] };
+        cur = { i: out.length, role: c.r, cells: [], sylls: [], sc: [], brk: /* @__PURE__ */ new Set() };
         out.push(cur);
       }
       cur.cells.push(i);
       if (isSyl(c.s)) {
         cur.sylls.push(c.s.toLowerCase());
         cur.sc.push(i);
-      }
+      } else if (cur.sylls.length) cur.brk.add(cur.sylls.length);
     });
-    return out.filter((p) => p.sylls.length);
+    const ph = out.filter((p) => p.sylls.length);
+    ph.forEach((q) => {
+      q.words = wordsOf(q.sylls, q.brk);
+    });
+    return ph;
   }
-  var STRONG = { 3: [0], 4: [0, 2], 5: [0, 2], 6: [0, 3], 7: [0, 3], 8: [0, 4], 9: [0, 3, 6] };
-  var strongAt = (pos, g) => pos === 0 || (STRONG[g] || [0, Math.floor(g / 2)]).includes(pos);
-  var weakKeep = (g) => g <= 3 ? 0.45 : g <= 5 ? 0.3 : g === 6 ? 0.25 : 0.2;
+  var WORD = new Set([...LIB.set].filter((k) => k.split(" ").length <= 5).concat([...LIB.suf].filter((k) => k.split(" ").length <= 4)));
+  function wordsOf(sylls, brk) {
+    const out = [], n = sylls.length, s = sylls.map(norm);
+    let a = 0;
+    for (let j = 1; j <= n; j++) {
+      if (j < n && !brk.has(j)) continue;
+      const best = new Array(j - a + 1).fill(Infinity), take = new Array(j - a + 1).fill(1);
+      best[j - a] = 0;
+      for (let i = j - a - 1; i >= 0; i--) for (let L = Math.min(5, j - a - i); L >= 1; L--) {
+        const cost = (WORD.has(s.slice(a + i, a + i + L).join(" ")) ? 1 : L === 1 ? 1.6 : Infinity) + best[i + L];
+        if (cost < best[i]) {
+          best[i] = cost;
+          take[i] = L;
+        }
+      }
+      for (let i = 0; i < j - a; i += take[i]) {
+        const L = take[i], end = a + i + L;
+        out.push({ a: a + i, n: L, key: s.slice(a + i, end).join(" "), hold: end < j });
+      }
+      a = j;
+    }
+    return out;
+  }
   var suffix = (a, b) => a.length <= b.length && a.every((x, k) => x === b[b.length - a.length + k]);
   function familiesOf(ph) {
     const fams = [];
@@ -4894,38 +4978,76 @@ var VGEngine = (() => {
     const lastPhrase = ph[ph.length - 1], cadFam = fams[lastPhrase.fam];
     const rest = new Set(profile ? profile.nyasa.concat(profile.landing, profile.jiva) : [0, 7]);
     const bad = new Set(profile ? profile.alpa.concat(profile.avoidLanding, profile.notNyasa) : []);
-    const anchors = notes.filter((p) => (rest.has(mod12(p)) || mod12(p) === 0 || mod12(p) === 7) && !bad.has(mod12(p)) && p >= -2 && p <= 16);
+    const lineTop = notes.filter((p) => p <= 16).length - 1;
+    const trap = new Set(notes.map((_, i) => i).filter((i) => i <= lineTop && ![i - 2, i - 1, i + 1, i + 2].some((j) => j >= 0 && j <= lineTop && Pj.valid(notes[j], notes[i]))));
+    const anchors = notes.filter((p) => (rest.has(mod12(p)) || mod12(p) === 0 || mod12(p) === 7) && !bad.has(mod12(p)) && p >= -2 && p <= 16 && !trap.has(ix(p)));
     const hardAvoid = profile ? profile.avoid.filter((a) => a.strength === "hard").map((a) => a.pitches) : [];
     const hasRun = (seq, pat) => {
       for (let i = 0; i + pat.length <= seq.length; i++) if (pat.every((x, k) => seq[i + k] === x)) return true;
       return false;
     };
     const melody = opts.melody || "auto";
-    function line(end, n, rand) {
-      const out = [end];
-      let dir = 1, lo = ix(end), hi = ix(end);
-      const W = 7, top = notes.filter((p) => p <= 16).length - 1;
-      for (let k = 1; k < n; k++) {
-        const cur = out[0], i = ix(cur);
-        if (rand() < 0.06 + 0.16 * c) dir = -dir;
-        let made = false;
-        for (const d of [dir, -dir]) {
-          const steps = rand() < 0.12 + 0.22 * c ? [2, 1] : [1, 2];
-          for (const s of steps) {
-            const j = i + d * s;
-            if (j < 0 || j > top || Math.max(hi, j) - Math.min(lo, j) > W) continue;
-            const prev = notes[j];
-            if (!Pj.valid(prev, cur)) continue;
-            out.unshift(prev);
-            made = true;
-            dir = d;
-            lo = Math.min(lo, j);
-            hi = Math.max(hi, j);
+    const SHAPE_NAME2 = { down: "a run down", up: "a run up", arch: "an arch", valley: "a valley", janta: "janta (doubled swaras)", zigzag: "a zigzag of skips", plateau: "circling one swara" };
+    const shapeWeights = (cad) => cad ? [["down", 1.6], ["arch", 0.8], ["plateau", 0.4], ["janta", 0.2 + 0.4 * c], ["valley", 0.2 * c]] : [["down", 1 - 0.3 * c], ["up", 0.8 + 0.2 * c], ["arch", 0.8], ["valley", 0.7], ["janta", 0.5 + 0.4 * c], ["zigzag", 0.35 + 0.6 * c], ["plateau", 0.5]];
+    function segment(shape, len, rand) {
+      const d = [], step = () => rand() < 0.1 + 0.2 * c ? 2 : 1, sgn = rand() < 0.5 ? 1 : -1;
+      for (let k = 0; k < len; k++) {
+        if (shape === "down" || shape === "up") d.push((shape === "down" ? -1 : 1) * step());
+        else if (shape === "arch" || shape === "valley") d.push((k < Math.ceil(len / 2) ? 1 : -1) * (shape === "arch" ? 1 : -1));
+        else if (shape === "janta") d.push(k % 2 ? sgn : 0);
+        else if (shape === "zigzag") d.push(k % 2 ? -sgn : 2 * sgn);
+        else d.push([1, -1, -1, 1][k % 4]);
+      }
+      return d;
+    }
+    function line(end, n, rand, cad, rec) {
+      if (n <= 1) return [end];
+      const plan = [];
+      let left = n - 1, prev = null;
+      while (left > 0) {
+        const len = left <= 6 ? left : Math.min(left, 3 + Math.floor(rand() * (4 + 2 * c)));
+        const shape = cad && len === left ? "down" : weighted(shapeWeights(cad).filter((x) => x[0] !== prev), rand);
+        plan.push([shape, len]);
+        prev = shape;
+        left -= len;
+      }
+      if (rec) plan.forEach((p) => rec.push(p[0]));
+      const d = [].concat(...plan.map((p) => segment(p[0], p[1], rand)));
+      const W = 7, top = notes.filter((p) => p <= 16).length - 1, out = new Array(n);
+      out[n - 1] = end;
+      let lo = ix(end), hi = lo;
+      for (let k = n - 1; k > 0; k--) {
+        const cur = out[k], at = ix(cur), m = d[k - 1];
+        const sg = Math.sign(m) || 1;
+        const tries = [m, m - sg, 2 * sg, -sg, -2 * sg, 0].filter((x, q, a) => (x !== 0 || m === 0 || q === a.length - 1) && a.indexOf(x) === q);
+        const fits = (jj, t) => jj >= 0 && jj <= top && Math.max(hi, jj) - Math.min(lo, jj) <= W && (t === 0 || Pj.valid(notes[jj], cur));
+        const swings = (x) => out[k + 1] === x && out[k + 2] === cur || x === cur && cur === out[k + 1];
+        let pick2 = null;
+        for (const t of tries) {
+          const jj = at - t;
+          if (fits(jj, t) && !swings(notes[jj]) && !trap.has(jj)) {
+            pick2 = jj;
             break;
           }
-          if (made) break;
         }
-        if (!made) out.unshift(cur);
+        if (pick2 == null) for (const t of tries) {
+          const jj = at - t;
+          if (fits(jj, t) && !trap.has(jj)) {
+            pick2 = jj;
+            break;
+          }
+        }
+        if (pick2 == null) for (const t of tries) {
+          const jj = at - t;
+          if (fits(jj, t)) {
+            pick2 = jj;
+            break;
+          }
+        }
+        if (pick2 == null) pick2 = at;
+        out[k - 1] = notes[pick2];
+        lo = Math.min(lo, pick2);
+        hi = Math.max(hi, pick2);
       }
       return out;
     }
@@ -4970,15 +5092,34 @@ var VGEngine = (() => {
       return items[items.length - 1][0];
     };
     const full = opts.density === "full" || R.gati <= 2;
-    const refPos = fams.map((f) => {
-      const q = ph[f.members[f.lens.indexOf(Math.max(...f.lens))]];
-      return q.sc.map((i) => (R.lead + i) % R.gati).reverse();
-    });
-    const breath = (f, rand) => {
-      const all = full || /^speed\d$/.test(f.role), p = weakKeep(R.gati) + 0.15 * c;
-      return refPos[f.id].map((pos, d) => all || strongAt(pos, R.gati) || d === 0 && (f === cadFam || CADENCE.has(f.role)) || rand() < p ? 1 : 0);
+    const SPAN = R.gati <= 3 ? 18 : R.gati === 4 ? 14 : 11, GAP_MIN = 6;
+    const holdable = (q) => {
+      const ok = /* @__PURE__ */ new Set();
+      q.words.forEach((w) => {
+        if (w.hold && w.n >= 3) ok.add(w.a + w.n - 1);
+        if (w.n >= 5) ok.add(w.a + 1);
+      });
+      return ok;
     };
-    const maskOf = (q, fm) => q.sylls.map((_, j) => j === 0 || fm[q.sylls.length - 1 - j] ? 1 : 0);
+    const breathOf = (f, rand) => {
+      const held = /* @__PURE__ */ new Set();
+      if (full || /^speed\d$/.test(f.role)) return held;
+      const q = ph[f.members[f.lens.indexOf(Math.max(...f.lens))]], n = q.sylls.length, cands = [];
+      q.words.forEach((w) => {
+        if (w.hold && w.n >= 3) cands.push({ j: w.a + w.n - 1, w: 1 + 1.5 * (w.a + w.n) / n });
+        if (w.n >= 5) cands.push({ j: w.a + 1, w: 0.4 });
+      });
+      for (let k = Math.floor(n / SPAN + rand()); k > 0 && cands.length; k--) {
+        const pick2 = weighted(cands.map((x) => [x, x.w]), rand);
+        held.add(n - 1 - pick2.j);
+        for (let x = cands.length - 1; x >= 0; x--) if (Math.abs(cands[x].j - pick2.j) < GAP_MIN) cands.splice(x, 1);
+      }
+      return held;
+    };
+    const maskOf = (q, held) => {
+      const ok = holdable(q);
+      return q.sylls.map((_, j) => j > 0 && ok.has(j) && held.has(q.sylls.length - 1 - j) ? 0 : 1);
+    };
     const count = (m) => m.reduce((a, b) => a + b, 0);
     const pOf = /* @__PURE__ */ new Map();
     ph.forEach((q, k) => q.cells.forEach((i) => pOf.set(i, k)));
@@ -5008,6 +5149,18 @@ var VGEngine = (() => {
       });
       return { out, units: units2 };
     }
+    function bridge(a, q) {
+      const near = (x) => notes.filter((p) => p <= 16 && Math.abs(p - x) <= 5 && !trap.has(ix(p))).sort((u, v) => Math.abs(u - x) - Math.abs(v - x));
+      const move = (u, v, lim) => Pj.valid(u, v) && Math.abs(v - u) <= lim;
+      if (q.length >= 2) {
+        for (const x of near(q[0])) if (move(a, x, 9) && move(x, q[1], 7)) return [x].concat(q.slice(1));
+      }
+      if (q.length >= 3) for (const x of near(q[0])) {
+        if (!move(a, x, 9)) continue;
+        for (const y of near(q[1])) if (move(x, y, 7) && move(y, q[2], 7)) return [x, y].concat(q.slice(2));
+      }
+      return null;
+    }
     function legal(pitches, out) {
       const seq = out.filter((n) => n.p != null).map((n) => n.p);
       if (seq.some((p) => p == null || ix(p) < 0)) return "range";
@@ -5020,16 +5173,17 @@ var VGEngine = (() => {
       }
       for (const q of pitches) for (let i = 1; i < q.length; i++) if (Math.abs(q[i] - q[i - 1]) > 7) return "leap";
       if (hardAvoid.some((pat) => hasRun(seq, pat))) return "avoid";
+      for (let i = 4; i < seq.length; i++) if (seq[i] === seq[i - 2] && seq[i - 2] === seq[i - 4] && seq[i - 1] === seq[i - 3] && seq[i] !== seq[i - 1]) return "swing";
       return { seq, joins };
     }
     function attempt(seed) {
       const rand = rng(seed), target = targets2[Math.floor(rand() * targets2.length)];
-      const lines = {}, styles = {}, plans = {}, hows = {};
-      const fm = {};
+      const lines = {}, styles = {}, plans = {}, hows = {}, shapes = {};
+      const fb = {};
       fams.forEach((f) => {
-        fm[f.id] = breath(f, rand);
+        fb[f.id] = breathOf(f, rand);
       });
-      const masks = ph.map((q) => maskOf(q, fm[q.fam])), nOn = {};
+      const masks = ph.map((q) => maskOf(q, fb[q.fam])), nOn = {};
       fams.forEach((f) => {
         nOn[f.id] = Math.max(...f.members.map((k) => count(masks[k])));
       });
@@ -5040,7 +5194,8 @@ var VGEngine = (() => {
           const pool = anchors.length ? anchors : notes;
           end = pool[Math.floor(rand() * pool.length)];
         }
-        lines[f.id] = line(end, nOn[f.id], rand);
+        shapes[f.id] = [];
+        lines[f.id] = line(end, nOn[f.id], rand, f === cadFam || CADENCE2.has(f.role), shapes[f.id]);
         const speed = /^speed\d$/.test(f.role), cad = f === cadFam;
         if (f.kind === "repeat") {
           if (speed || melody === "repeat") styles[f.id] = "repeat";
@@ -5080,11 +5235,33 @@ var VGEngine = (() => {
         const op = weighted([["transpose", 1], ["recompose", 0.5 + 1.2 * c], ["invert", 0.5 * c], ["fresh", Math.max(0, c - 0.35) * 1.6]], rand);
         if (op === "transpose") return isLast && f === cadFam ? base : shifted;
         if (op === "recompose") return recompose(isLast && f === cadFam ? base : shifted, Math.max(2, Math.ceil(n * (0.6 - 0.25 * c))), rand);
-        if (op === "invert") return (isLast && f === cadFam ? invert(base) : invert(shifted)) || shifted;
-        return line(isLast && f === cadFam ? target : shifted[n - 1], n, rand);
+        if (op === "invert") {
+          const v = isLast && f === cadFam ? invert(base) : invert(shifted);
+          return v && !(isLast && f === cadFam && v[v.length - 1] !== target) ? v : isLast && f === cadFam ? base : shifted;
+        }
+        return line(isLast && f === cadFam ? target : shifted[n - 1], n, rand, f === cadFam || CADENCE2.has(f.role));
+      });
+      const bridged = /* @__PURE__ */ new Set();
+      for (let k = 1; k < ph.length; k++) {
+        const a = pitches[k - 1][pitches[k - 1].length - 1], q = pitches[k];
+        if (Pj.valid(a, q[0]) && Math.abs(q[0] - a) <= 9) continue;
+        const b = bridge(a, q);
+        if (b) {
+          pitches[k] = b;
+          bridged.add(k);
+        }
+      }
+      fams.forEach((f) => {
+        if (f.kind === "repeat" && styles[f.id] !== "repeat" && f.members.length > 1 && new Set(f.members.map((k) => pitches[k].join())).size === 1) {
+          styles[f.id] = "repeat";
+          hows[f.id] = "identical (no other swara fits the raga here)";
+        }
       });
       const { out, units: units2 } = assemble(pitches, masks), L = legal(pitches, out);
-      if (typeof L === "string") return null;
+      if (typeof L === "string") {
+        failed[L] = (failed[L] || 0) + 1;
+        return null;
+      }
       const { seq, joins } = L;
       let S = -0.12 * joins.reduce((a, b) => a + b, 0) / Math.max(1, joins.length) * joins.length / 3;
       let skips = 0;
@@ -5092,21 +5269,25 @@ var VGEngine = (() => {
         for (let i = 1; i < q.length; i++) if (Math.abs(ix(q[i]) - ix(q[i - 1])) > 1) skips++;
       });
       S -= (1 - c) * 0.25 * skips;
+      S -= 1.5 * bridged.size;
+      for (let i = 3; i < seq.length; i++) if (seq[i] === seq[i - 2] && seq[i - 1] === seq[i - 3] && seq[i] !== seq[i - 1]) S -= 0.6;
+      for (let i = 2; i < seq.length; i++) if (seq[i] === seq[i - 1] && seq[i] === seq[i - 2]) S -= 0.4;
       const lo = Math.min(...seq), hi = Math.max(...seq);
       S -= Math.max(0, hi - 14) * 0.3 + Math.max(0, -3 - lo) * 0.3;
       S += 0.2 * new Set(fams.map((f) => lines[f.id][lines[f.id].length - 1])).size;
       fams.forEach((f) => {
         if (f.kind === "repeat" && styles[f.id] !== "repeat" && f.members.length > 1) S += (0.4 + 0.6 * c) * (new Set(f.members.map((k) => pitches[k].join())).size - 1) / (f.members.length - 1);
       });
-      return { notes: out, units: units2, pitches, masks, lines, styles, hows, plans, target, score: S, inspired: ph.map(() => false) };
+      return { notes: out, units: units2, pitches, masks, lines, styles, hows, plans, shapes, bridged, target, score: S, inspired: ph.map(() => false) };
     }
     let best = null;
     const seed0 = (opts.seed || 1) * 7919 + 13;
+    const failed = {};
     for (let k = 0; k < 60; k++) {
       const a = attempt(seed0 + k * 104729);
       if (a && (!best || a.score > best.score)) best = a;
     }
-    if (!best) return { error: "No line in " + raga.name + " fits this rhythm within the raga\u2019s rules; try another eduppu swara or raga.", code: "unsingable" };
+    if (!best) return { error: "No line in " + raga.name + " fits this rhythm within the raga\u2019s rules; try another eduppu swara or raga.", code: "unsingable", failed };
     let insp = null;
     if (opts.inspiration) {
       const I = parseInspiration(opts.inspiration, raga);
@@ -5128,7 +5309,7 @@ var VGEngine = (() => {
           arr[m - 2] = opt.reduce((a, b) => Math.abs(b - arr[m - 2]) < Math.abs(a - arr[m - 2]) ? b : a);
           return arr;
         };
-        const WHY = { range: "it leaves the kalpana range", direction: "it breaks " + raga.name + "\u2019s direction rule where it meets its neighbours", join: "it leaps more than a sixth from the phrase before or after", leap: "it leaps more than a fifth", avoid: "it sings a phrase " + raga.name + " avoids" };
+        const WHY = { swing: "it swings between two swaras too long", range: "it leaves the kalpana range", direction: "it breaks " + raga.name + "\u2019s direction rule where it meets its neighbours", join: "it leaps more than a sixth from the phrase before or after", leap: "it leaps more than a fifth", avoid: "it sings a phrase " + raga.name + " avoids" };
         const pending = [], taken = /* @__PURE__ */ new Set();
         I.phrases.forEach((s) => {
           const k = s.phrase;
@@ -5148,7 +5329,7 @@ var VGEngine = (() => {
             return;
           }
           const mask = s.tokens.length === n && s.tokens[0] != null && !/^speedd$/.test(q.role) ? s.tokens.map((t) => t != null ? 1 : 0) : M[k].slice();
-          if ((k === lastK || CADENCE.has(q.role)) && !mask[n - 1]) mask[n - 1] = 1;
+          if ((k === lastK || CADENCE2.has(q.role)) && !mask[n - 1]) mask[n - 1] = 1;
           const m = count(mask);
           const naive = Array.from({ length: m }, (_, j) => snap(sw[m === 1 || sw.length === 1 ? 0 : Math.round(j * (sw.length - 1) / (m - 1))]));
           const rep = Pj.repair(naive);
@@ -5197,9 +5378,9 @@ var VGEngine = (() => {
     }
     const total = best.notes.reduce((s, n) => s + n.dur, 0);
     const swName = (p) => (raga.labels && raga.labels[mod12(p)] ? raga.labels[mod12(p)][0] : String(p)) + (p >= 12 ? "'" : p < 0 ? "." : "");
-    const famInfo = fams.map((f) => ({ id: f.id, rounds: f.rounds, role: f.role, kind: f.kind, style: best.styles[f.id], how: best.hows[f.id] + (f.members.some((k) => best.inspired[k]) ? "; " + f.members.filter((k) => best.inspired[k]).length + " of its phrases from the inspiration" : ""), plan: best.plans[f.id] || null, lens: f.lens, line: best.lines[f.id], end: best.lines[f.id][best.lines[f.id].length - 1] }));
-    const kindOf = (u) => u.role === "gap" ? "gap" : CADENCE.has(u.role) ? "mora" : best.styles[u.fam] === "sequence" || best.styles[u.fam] === "varied" || best.inspired[u.phrase] ? "nov" : "conv";
-    const units = best.units.map((u) => ({ kind: kindOf(u), role: u.role, phrase: u.phrase, family: u.fam, inspired: u.phrase != null && best.inspired[u.phrase], name: u.role === "gap" ? "karvai" : (CADENCE.has(u.role) ? "cadence" : u.role) + " \xB7 family " + (u.fam + 1) + (fams[u.fam] && fams[u.fam].kind === "nested" ? " (" + fams[u.fam].lens.join(" \u2192 ") + ")" : "") + (best.inspired[u.phrase] ? " \xB7 inspired" : ""), notes: u.notes }));
+    const famInfo = fams.map((f) => ({ id: f.id, rounds: f.rounds, role: f.role, kind: f.kind, style: best.styles[f.id], how: best.hows[f.id] + (f.members.some((k) => best.inspired[k]) ? "; " + f.members.filter((k) => best.inspired[k]).length + " of its phrases from the inspiration" : ""), plan: best.plans[f.id] || null, shapes: best.shapes[f.id].map((x) => SHAPE_NAME2[x]), lens: f.lens, line: best.lines[f.id], end: best.lines[f.id][best.lines[f.id].length - 1] }));
+    const kindOf = (u) => u.role === "gap" ? "gap" : CADENCE2.has(u.role) ? "mora" : best.styles[u.fam] === "sequence" || best.styles[u.fam] === "varied" || best.inspired[u.phrase] ? "nov" : "conv";
+    const units = best.units.map((u) => ({ kind: kindOf(u), role: u.role, phrase: u.phrase, family: u.fam, inspired: u.phrase != null && best.inspired[u.phrase], name: u.role === "gap" ? "karvai" : (CADENCE2.has(u.role) ? "cadence" : u.role) + " \xB7 family " + (u.fam + 1) + (fams[u.fam] && fams[u.fam].kind === "nested" ? " (" + fams[u.fam].lens.join(" \u2192 ") + ")" : "") + (best.inspired[u.phrase] ? " \xB7 inspired" : ""), notes: u.notes }));
     const last = best.pitches[best.pitches.length - 1], final = last[last.length - 1];
     const sylls = ph.reduce((s, q) => s + q.sylls.length, 0), swaras = best.notes.filter((n) => n.p != null).length;
     const checks = [
@@ -5222,7 +5403,7 @@ var VGEngine = (() => {
       slots: total,
       notes: best.notes,
       units,
-      phrases: ph.map((q, k) => ({ role: q.role, family: q.fam, round: q.round || 0, mask: best.masks[k], inspired: best.inspired[k], pitches: best.pitches[k] })),
+      phrases: ph.map((q, k) => ({ role: q.role, family: q.fam, round: q.round || 0, mask: best.masks[k], inspired: best.inspired[k], bridged: best.bridged.has(k), pitches: best.pitches[k] })),
       families: famInfo,
       ending: { type: "rhythm", final, target: best.target, eduppu: opts.eduppuPitch == null ? null : opts.eduppuPitch },
       breath: { density: full ? "full" : "auto", syllables: sylls, swaras },
@@ -5291,6 +5472,7 @@ var VGEngine = (() => {
         });
       }
     } else L.push("No detailed profile is available: rest on S and P and keep to the scale.");
+    L.push("Contour: vary it from phrase to phrase, as a singer does: runs down and up, arches, valleys, janta, each swara doubled (S S R R G G), zigzags of skips (S G R M G P), circling one swara. Do not make every phrase a rise and a fall, and never swing between two swaras (S R S R S). The cadence (the last statements) may run down into its landing.");
     L.push("Range: from mandra P (P.) up to tara G (G'), mostly in the middle octave. Move mostly by step, sometimes a skip; no leap wider than a fifth inside a phrase or a sixth between phrases.");
     L.push("");
     const per = R.gati, total = R.body.length;
@@ -5318,7 +5500,7 @@ var VGEngine = (() => {
     L.push(landing);
     L.push("Creativity " + D.T.toFixed(1) + " of 2: " + (D.T < 0.6 ? "conventional; stepwise, familiar turns of the raga, clear sequences." : D.T < 1.3 ? "balanced; familiar idiom with some surprises, varied repetitions." : "adventurous; unexpected turns, skips and contrasts, still within the raga."));
     L.push("");
-    L.push("How to write each phrase: exactly one token for each syllable, separated by spaces. A token is a swara, which starts on that syllable, or a comma, which holds the swara before it. Do not give every syllable its own swara: let lines breathe with held swaras, as singers do, keeping a swara on the first syllable of each phrase and usually on the beat. In a fast gati about half to two-thirds of the syllables carry a new swara.");
+    L.push("How to write each phrase: exactly one token for each syllable, separated by spaces. A token is a swara, which starts on that syllable, or a comma, which holds the swara before it. Give most syllables their own swara. Add a held swara only now and then, at irregular places and never as a pattern: about one in every twelve syllables, always at the end of a sollu word of three or more (tha ka dhi mi \u2192 S R G ,), never on the first syllable of a word or the last of a phrase.");
     L.push("Swaras: S R G M P D N (the variant number is optional, e.g. " + lab(raga.aro[1]) + "); an apostrophe after a swara for the upper octave (S'), a dot after it for the lower (P.).");
     L.push('Answer with JSON only: {"idea": "the musical idea in a sentence", "phrases": [{"phrase": 1, "swaras": "S , R G"}, ...]} with every phrase from 1 to ' + ph.length + ".");
     const system = "You are an experienced Carnatic musician who sings kalpana swaras. You suggest swara lines for a rhythm that is already fixed, keeping strictly to the raga's grammar. Your lines are taken as inspiration by a rule-based engine that checks every rule, so be idiomatic and musical rather than exhaustive.";
@@ -6436,62 +6618,6 @@ var VGEngine = (() => {
     return { points: c.points, groups: c.groups, notes: c.notes, stats: Object.assign(c.stats, { chainBreaks }), style, basis: gamaka.basis, sources: gamaka.sources, intensity: natural ? intensity : null, voice, expression: ex };
   }
 
-  // src/engine/sollu.js
-  var SOLLU = {
-    1: [["tha"], ["dhi"], ["thom"], ["nam"]],
-    2: [["tha", "ka"], ["ki", "ta"], ["dhi", "mi"], ["jho", "nu"]],
-    3: [["tha", "ki", "ta"], ["tha", "ka", "jham"], ["tat", "tai", "tam"]],
-    4: [["tha", "ka", "dhi", "mi"], ["tha", "ka", "jho", "nu"], ["ki", "ta", "tha", "ka"], ["tha", "ri", "ki", "ta"], ["tai", "ya", "tai", "ya"], ["tai", "hat", "tai", "hi"]],
-    5: [["tha", "dhi", "gi", "na", "thom"], ["tha", "ka", "tha", "ki", "ta"]],
-    6: [["tha", "ka", "dhi", "mi", "tha", "ka"], ["tha", "ri", "ki", "ta", "tha", "ka"]],
-    7: [["tha", "ka", "dhi", "mi", "tha", "ki", "ta"]],
-    8: [["tha", "ka", "dhi", "mi", "tha", "ka", "jho", "nu"]],
-    9: [["tha", "ka", "dhi", "mi", "tha", "dhi", "gi", "na", "thom"]]
-  };
-  var ALIAS = { ta: "tha", di: "dhi", tom: "thom", dhom: "thom", thai: "tai", tei: "tai", jo: "jho", dheem: "dhim", dhin: "dhim", din: "dhim", ding: "dhim", gin: "gi", tham: "tam", tak: "tha" };
-  var norm = (s) => ALIAS[s] || s;
-  var KNOWN = new Set("tha ka ki dhi mi jho nu gi na thom nam jham tam tai ya hi ha hat tat dhit dhim ri ku lan gu ga num".split(" "));
-  var HEAVY = new Set("tha dhi thom nam jham tam tai tat dhit dhim".split(" "));
-  var CADENCE2 = new Set("thom nam jham tam tai dhit dhim dhi tat".split(" "));
-  var LIB = function() {
-    const set = /* @__PURE__ */ new Set(), suf = /* @__PURE__ */ new Set();
-    Object.keys(SOLLU).forEach((k) => SOLLU[k].forEach((p) => {
-      const n = p.map(norm);
-      set.add(n.join(" "));
-      for (let i = 1; i < n.length - 1; i++) suf.add(n.slice(i).join(" "));
-    }));
-    return { set, suf };
-  }();
-  function idiomatic(syls) {
-    const s = syls.filter((x) => x !== ",").map(norm);
-    if (!s.length) return true;
-    const key = s.join(" ");
-    if (LIB.set.has(key) || LIB.suf.has(key)) return true;
-    const memo = {};
-    const seg = (i, k) => {
-      if (i === s.length) return true;
-      if (k === 0) return false;
-      const id = i + ":" + k;
-      if (id in memo) return memo[id];
-      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo[id] = true;
-      return memo[id] = false;
-    };
-    return seg(0, 3);
-  }
-  function splitCompound(word) {
-    const keys = Array.from(new Set(Array.from(KNOWN).concat(Object.keys(ALIAS)))).sort((a, b) => b.length - a.length);
-    const dfs = (i) => {
-      if (i === word.length) return [];
-      for (const k of keys) if (word.startsWith(k, i)) {
-        const r = dfs(i + k.length);
-        if (r) return [k].concat(r);
-      }
-      return null;
-    };
-    const parts = dfs(0);
-    return parts && parts.length > 1 ? parts : null;
-  }
-
   // src/engine/jathi/script.js
   var TICKS = 2520;
   var JATI_WORDS = { tisra: 3, tishra: 3, thisra: 3, chatusra: 4, chaturasra: 4, chatushra: 4, chaturashra: 4, chathusra: 4, khanda: 5, kanda: 5, misra: 7, mishra: 7, sankeerna: 9, sankirna: 9 };
@@ -7254,7 +7380,7 @@ var VGEngine = (() => {
       if (teer) {
         s += 8;
         const lastV = norm(teer.syls.filter((x) => x !== ",").slice(-1)[0] || "");
-        if (CADENCE2.has(lastV)) s += 3;
+        if (CADENCE.has(lastV)) s += 3;
         else notes.push('The teermanam ends on "' + lastV + '"; a closing syllable such as thom, dhit, tam or nam marks the arrival.');
         if (teer.gap <= teer.phrase) s += 2;
         else notes.push("The gap is longer than the phrase; the three statements may not sound connected.");
@@ -8828,7 +8954,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   }
 
   // src/engine/index.js
-  var VERSION = "0.8.5";
+  var VERSION = "0.8.6";
   return __toCommonJS(engine_exports);
 })();
 </script>
@@ -8836,6 +8962,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
 /* Generated by scripts/solkattu-bank.js; do not edit. Recorded syllables for jathi playback,
    played by web/shared/solkattu.js (docs/solkattu-recording.md). Empty: no recordings yet, so sollus are synthesized. */
 globalThis.VG_SOLKATTU_BANK = null;
+
 /* Vocal Gym · solkattu voice: recorded syllables for jathi playback (docs/solkattu-recording.md)
    A classic script shared by the playground page (inlined by scripts/build.js) and the app (served at
    /shared/ and imported for its side effect). It reads the sample bank that scripts/solkattu-bank.js
@@ -8908,6 +9035,7 @@ globalThis.VG_SOLKATTU_BANK = null;
   }
   g.VGSolkattu = { available: () => !!bank(), info, key, voice, ulaw, ALIAS };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+
 /* Vocal Gym · synthesized mridangam for jathi playback (docs/research/mridangam-synthesis.md)
    A classic script shared by the playground pages (inlined by scripts/build.js), the app (served at
    /shared/) and Node (tests and scripts/mridangam-wav.js load it in a vm). It sets globalThis.VGMridangam:
@@ -9171,6 +9299,7 @@ globalThis.VG_SOLKATTU_BANK = null;
   }
   g.VGMridangam = { STROKES, DERIVED, GROUPS, SINGLE, KARYA, RATE, realize, render, prepare, ready, voice, arrange, playArranged, guideHz, snap };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+
 /* Vocal Gym · the singing voice for kalpana and alankara playback (docs/research/expressive-voice.md)
    A classic script shared by the playground pages (inlined by scripts/build.js), the app (served at
    /shared/) and Node (scripts/render-wav.js and the tests load it in a vm). It sets globalThis.VGVoice:
@@ -9382,6 +9511,7 @@ globalThis.VG_SOLKATTU_BANK = null;
 
   g.VGVoice = { PRE, VOWEL, CONS, lineOf, render, play };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+
 /* Vocal Gym · the Korvai & Tihai lab (docs/research/korvai-tihai.md)
    A classic script shared by the playground pages (inlined by scripts/build.js) and the app (served at
    /shared/). It sets globalThis.VGKorvaiLab = { mount(root, host) }, which returns { unmount, setMode }:
@@ -10147,6 +10277,7 @@ globalThis.VG_SOLKATTU_BANK = null;
   function validTala(fam, L) { return FAMS.includes(fam) && (fam === 'chapu' ? [3, 5, 7] : [3, 4, 5, 7, 9]).includes(L); }
   g.VGKorvaiLab = { mount };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+
 </script>
 <script>
 /* Vocal Gym demos: alankara generator, jathi creator and judge, kalpana swara generator.
@@ -10785,7 +10916,7 @@ function kalRhythmControls(){
   b._for = K.rhythm; K.inspiration = '';
   const t = K.rhythm, tn = t.tala.fam === 'custom' ? 'a custom tala' : E.tala(t.tala.fam, t.tala.L).name;
   b.innerHTML = '<div><b>Singing the korvai lab’s rhythm</b><span>' + esc((t.label || t.form || 'a korvai') + ' · ' + tn + ' · gati ' + t.gati) + '. The tala, length, speed and ending come from the lab; choose the raga, the eduppu swara and the creativity.</span></div>' +
-    '<label class="rh-dens">Swaras <select id="k-rh-dens"><option value="auto">breathe: weak pulses held</option><option value="full">one on every syllable</option></select></label>' +
+    '<label class="rh-dens">Swaras <select id="k-rh-dens"><option value="auto">a few held swaras</option><option value="full">one on every syllable</option></select></label>' +
     '<button type="button" class="btn" id="k-rh-lab">← Back to the lab</button><button type="button" class="btn ghost" id="k-rh-stop">Stop following</button>' +
     // v0.8.5: inspiration from an AI assistant, by copy and paste (the playground has no server and no key)
     '<details class="rhythm-insp" id="k-rh-insp"><summary>Inspiration from an AI assistant</summary>' +
@@ -10831,9 +10962,9 @@ function kalRenderRhythm(r, tp, T){
   $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i + 1), partialLast: true }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
   const sw = ps => ps.map(p => swara(r, p, false)).join(' ');
   const famTxt = res.families.map(f => 'Family ' + (f.id + 1) + ' (' + (f.role === 'statement' || f.role === 'uttaranga' ? 'the cadence' : f.role) + ', ' +
-    (f.kind === 'nested' ? 'a yati of ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join(' → ') + (f.rounds > 1 ? ', ' + f.rounds + ' times' : '') : f.kind === 'repeat' ? f.lens.length + ' repetitions' : 'one phrase') + '): ' + f.how + '. ' + (f.rounds > 1 || f.kind === 'repeat' ? 'First as ' : '') + sw(f.line));
+    (f.kind === 'nested' ? 'a yati of ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join(' → ') + (f.rounds > 1 ? ', ' + f.rounds + ' times' : '') : f.kind === 'repeat' ? f.lens.length + ' repetitions' : 'one phrase') + '): ' + f.how + '. Its line: ' + f.shapes.join(', then ') + '. ' + (f.rounds > 1 || f.kind === 'repeat' ? 'First as ' : '') + sw(f.line));
   $('k-audit').innerHTML = res.checks.map(c => '<li' + (c.ok ? '' : ' class="bad"') + '>' + esc(c.text) + '</li>').join('') + famTxt.map(t => '<li>' + esc(t) + '</li>').join('') +
-    '<li>' + esc('Breath: ' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables. ' + (res.breath.density === 'full' ? 'One swara on every syllable.' : 'A run of syllables is the rhythm, not one swara a pulse: each phrase starts on a swara, the beat’s strong pulses carry one, and weak pulses are often held from the swara before (a karvai), more often in a fast gati.')) + '</li>' +
+    '<li>' + esc('Breath: ' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables. ' + (res.breath.density === 'full' ? 'One swara on every syllable.' : 'Mostly a swara on every syllable, with a held swara (a karvai) now and then, at irregular places and always at the end of a sollu word, so the korvai’s words stay clear. Repeated phrases keep the same rhythm.')) + '</li>' +
     (res.inspiration && res.inspiration.note ? '<li>' + esc('The assistant’s idea: ' + res.inspiration.note) + '</li>' : '') +
     '<li>' + esc('Creativity ' + res.dial.T.toFixed(1) + ': a repeated rhythm is never simply a repeated melody. Low creativity keeps a phrase’s shape and starts it from another swara, as an alankara climbs the scale; higher creativity re-sings openings, turns contours over and writes fresh lines to the same rhythm.') + '</li>';
   kalGamakaView();
@@ -10972,5 +11103,6 @@ alaInit(); jathiInit(); kalInit(); tabs();
 if ($('pdf-table')) pdfTable();
 if ($('ex-adi')) $('ex-adi').textContent = E.JATHI_EXAMPLES.adi;
 })();
+
 </script>
 <!-- Generated by scripts/build.js from web/playground/index.html. Edit the source, not this file. -->

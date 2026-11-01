@@ -74,6 +74,7 @@ export function rhythmPrompt(raga, template, opts = {}) {
       att.forEach(a => { const s = getSource(a.source); L.push('  - ' + a.pitches.map(sw).join(' ') + ' (' + a.type + '; ' + (s ? s.title : a.source) + ')'); });
     }
   } else L.push('No detailed profile is available: rest on S and P and keep to the scale.');
+  L.push('Contour: vary it from phrase to phrase, as a singer does: runs down and up, arches, valleys, janta, each swara doubled (S S R R G G), zigzags of skips (S G R M G P), circling one swara. Do not make every phrase a rise and a fall, and never swing between two swaras (S R S R S). The cadence (the last statements) may run down into its landing.');
   L.push('Range: from mandra P (P.) up to tara G (G\'), mostly in the middle octave. Move mostly by step, sometimes a skip; no leap wider than a fifth inside a phrase or a sixth between phrases.');
   L.push('');
   // the rhythm
@@ -99,7 +100,7 @@ export function rhythmPrompt(raga, template, opts = {}) {
   L.push(landing);
   L.push('Creativity ' + D.T.toFixed(1) + ' of 2: ' + (D.T < 0.6 ? 'conventional; stepwise, familiar turns of the raga, clear sequences.' : D.T < 1.3 ? 'balanced; familiar idiom with some surprises, varied repetitions.' : 'adventurous; unexpected turns, skips and contrasts, still within the raga.'));
   L.push('');
-  L.push('How to write each phrase: exactly one token for each syllable, separated by spaces. A token is a swara, which starts on that syllable, or a comma, which holds the swara before it. Do not give every syllable its own swara: let lines breathe with held swaras, as singers do, keeping a swara on the first syllable of each phrase and usually on the beat. In a fast gati about half to two-thirds of the syllables carry a new swara.');
+  L.push('How to write each phrase: exactly one token for each syllable, separated by spaces. A token is a swara, which starts on that syllable, or a comma, which holds the swara before it. Give most syllables their own swara. Add a held swara only now and then, at irregular places and never as a pattern: about one in every twelve syllables, always at the end of a sollu word of three or more (tha ka dhi mi → S R G ,), never on the first syllable of a word or the last of a phrase.');
   L.push('Swaras: S R G M P D N (the variant number is optional, e.g. ' + lab(raga.aro[1]) + '); an apostrophe after a swara for the upper octave (S\'), a dot after it for the lower (P.).');
   L.push('Answer with JSON only: {"idea": "the musical idea in a sentence", "phrases": [{"phrase": 1, "swaras": "S , R G"}, ...]} with every phrase from 1 to ' + ph.length + '.');
   const system = 'You are an experienced Carnatic musician who sings kalpana swaras. You suggest swara lines for a rhythm that is already fixed, keeping strictly to the raga\'s grammar. Your lines are taken as inspiration by a rule-based engine that checks every rule, so be idiomatic and musical rather than exhaustive.';
