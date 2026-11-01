@@ -67,6 +67,8 @@ node scripts/listening-kit.js --out <dir> --seed 2   # a second, differently ord
 
 ## 6. Constants: current values and why
 
+These are the v0.4 contour's constants. Since v0.5 the default contour is the natural one, and its timing, overshoot, preparation, fluctuation and intensity dial are set out with their reasons in `docs/research/gamaka-naturalness.md` §3. The kit renders `--gamaka off` and `full`. To test the performative middle too, add clips at `--gamaka 55`; §4 of that document lists what to listen for.
+
 None of these values has been tuned by ear yet. Each is set from the literature as the plan describes, and changes only with listening or calibration evidence recorded here.
 
 | Constant | Value | Why this value |

@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vocal Gym Playground</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5,6 +7,7 @@
 <style>
 /* @include ../shared/theme.css */
 /* @include ../shared/components.css */
+/* @include ../shared/korvai-lab.css */
 /* playground page */
 .page{max-width:1080px;margin:0 auto}
 .page section{border-bottom:0;padding-top:24px}
@@ -18,7 +21,7 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
 <header class="top">
   <p class="kicker">Vocal Gym · playground</p>
   <h1>Raga and tala, with a creativity dial</h1>
-  <p class="lede">Three generators that cannot break the rules of raga or tala, and a judge for jathis you write yourself. Temperature is the performer's creativity: 0 keeps to patterns a listener recognises, 2 reaches for unconventional ones. No setting can produce a wrong one.</p>
+  <p class="lede">Two generators that cannot break the rules of raga or tala, and a lab that teaches how moras, tihais and korvais are counted to land, in any of the 35 talas. Creativity 0 keeps to what a listener recognises; 2 reaches for the unconventional. No setting can produce a wrong one.</p>
   <div class="meta"><span><a href="research-plan.html">Research and build plan</a></span><span><a href="pitch.html">Pitch deck</a></span><span><a href="index.html">All pages</a></span></div>
 </header>
 
@@ -31,8 +34,8 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
   <div class="howto">
     <div class="verdict"><h3>Alankaras</h3>
       <ul><li>The first pattern in each of the 35 talas is the line from the 35 tala alankara sheet.</li><li>New pattern gives one you have not seen for this raga and tala; Previous and Next step through them.</li><li>Janya ragas get the sheet line adapted; swaras changed to keep the raga's direction rules are underlined.</li></ul></div>
-    <div class="verdict"><h3>Jathis</h3>
-      <ul><li>Generate: set tala, nadai, avartanams, eduppu and yati. Open in editor shows the jathi as JathiScript.</li><li>Compose and judge: write your own. The gate checks the arithmetic; six craft scores total 100; the first suggestion says which line to fix.</li></ul></div>
+    <div class="verdict"><h3>Korvai &amp; tihai lab</h3>
+      <ul><li>Choose your tala (any of the 35, or a chapu), its gati and kalai once, at the top; every lesson and result follows it.</li><li>Learn: nine short lessons, from counting the cycle to the korvai and the tihai of tihais, each live for your tala. Build: any form, span, start and eduppu, with every solution listed and checked.</li><li>Check: the jathi judge. A korvai you built opens there written out as JathiScript.</li></ul></div>
     <div class="verdict"><h3>Kalpana swaras</h3>
       <ul><li>Choose the raga, the length, the opening swara and the swara the composition resumes on. The round ends on the raga's swara just below or just above it, so you step straight into the eduppu.</li><li>Violet swaras come from unconventional devices, teal from the mora. Raise the temperature to hear more of them.</li></ul></div>
   </div>
@@ -51,6 +54,13 @@ $A $A tha , dhi , | tha-ki-ta (tha-ka)x2 ...   # one word = one matra; , and ; a
 
 <script>
 /* @engine */
+</script>
+<script>
+/* @include ../shared/solkattu-bank.js */
+/* @include ../shared/solkattu.js */
+/* @include ../shared/mridangam.js */
+/* @include ../shared/voice.js */
+/* @include ../shared/korvai-lab.js */
 </script>
 <script>
 /* @include ../demo/demo.js */

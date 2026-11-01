@@ -174,9 +174,12 @@ test('graded mora: three similar statements with equal gaps, landing next to the
       ok(s1.join() !== s2.join() && s2.join() !== s3.join() && s1.join() !== s3.join(), r.name + ': no two statements identical');
       ok(s3[s3.length - 1] === nb.lo || s3[s3.length - 1] === nb.hi, r.name + ': S3 ends on lo(e) or hi(e)');
       const L = s1.length, u = en.style === 'srotovaha' ? s1.length : s1.length;
-      const sum = s1.length + s2.length + s3.length + 2 * en.q;
+      // v0.4 expand and contract: equal swaras, the statements lasting u, u + 1, u + 2 slots (or the reverse)
+      const timed = en.style === 'expand' || en.style === 'contract';
+      const sum = (timed ? en.timing.reduce((a, b) => a + b, 0) : s1.length + s2.length + s3.length) + 2 * en.q;
       ok(en.style === 'shift' ? s2.length === u && s3.length === u && sum === 3 * u + 2 * en.q
         : en.style === 'gopuccha' ? s2.length === u - 1 && s3.length === u - 2 && sum === 3 * u - 3 + 2 * en.q
+        : timed ? s2.length === u && s3.length === u && en.timing.join() === (en.style === 'expand' ? [u, u + 1, u + 2] : [u + 2, u + 1, u]).join() && sum === 3 * u + 3 + 2 * en.q
         : s2.length === u + 1 && s3.length === u + 2 && sum === 3 * u + 3 + 2 * en.q, r.name + ': ' + en.style + ' arithmetic');
       ok(en.start + sum === K * 2, 'the mora fills the end of the round exactly');
       // a shared contour: equal relative steps, aligned at the end (gopuccha trims, srotovaha grows, at the front)

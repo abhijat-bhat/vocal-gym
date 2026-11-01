@@ -1,6 +1,6 @@
 # Plan: gamaka rendering for kalpana swara audio (v0.4)
 
-**Status:** proposed. Implement it after `docs/plans/kalpana-v0.3.md`, Phase 1 at the earliest, because it reuses that plan's profile compiler.
+**Status:** implemented in v0.4. v0.5 replaced the contour's motion (rounded turns, natural timing, overshoot, preparation, fluctuation) and `depth` with an intensity dial, following `docs/research/gamaka-naturalness.md`. §2's constants and §3.5 describe the v0.4 contour, which `natural: false` still produces. v0.6 adds the papers' timing, coarticulation and grammar refinements (`docs/research/gamaka-papers.md`), the expression layer, and a sung voice for playback (`docs/research/expressive-voice.md`); the oscillator voice of §5 remains as "Simple tone".
 **Read first:** `CLAUDE.md`, `docs/plans/kalpana-v0.3.md` §1 (profile compilation), `data/raga-profiles.json` (the `gamaka` and `swaraRoles` blocks), `web/demo/demo.js` (`tone`, `playPitched`), `src/engine/kalpana.js` (the `units` output).
 
 ## Goal

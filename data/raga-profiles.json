@@ -1538,6 +1538,90 @@
       "reliability": "medium",
       "note": "Gamaka presence and type predicted from neighbouring notes.",
       "key": "nitk-flute"
+    },
+    "S200": {
+      "title": "Saitou, Goto, Unoki & Akagi, \"Speech-to-singing synthesis: converting speaking voices to singing voices by controlling acoustic features unique to singing voices\", IEEE WASPAA 2007",
+      "url": "https://staff.aist.go.jp/m.goto/PAPER/WASPAA2007saitou.pdf",
+      "reliability": "high",
+      "note": "Natural singing F0 = step melody plus overshoot, preparation, vibrato and fine fluctuation (second-order models, fitted parameters); F0 fluctuations matter more for naturalness than spectrum.",
+      "key": "saitou-waspaa2007"
+    },
+    "S201": {
+      "title": "Krishnaswamy, \"Melodic atoms for transcribing Carnatic music\", ISMIR 2004",
+      "url": "https://archives.ismir.net/ismir2004/paper/000219.pdf",
+      "reliability": "high",
+      "note": "Real pitch tracks: anchored, asymmetric inflexions with flexible turning points; Todi G2 rendered as R2+.",
+      "key": "krishnaswamy-atoms"
+    },
+    "S202": {
+      "title": "R. Vedavalli, \"Gamakas\", lecture-demonstration at the 76th Annual Conference (24 December 2002), Journal of the Music Academy Madras 74-76 (2003-2005), pp. 26-31",
+      "url": "https://musicacademymadras.in/catalogue/files/jindex/74-76_2003-2005-15-17.pdf",
+      "reliability": "high",
+      "note": "If one svara is oscillated the adjacent svara is held flat (Kalyani G vs Sankarabharanam R); notes stressed or flat depending on the following note (Harikambhoji D before N2); a gamaka borrows the shade of the next svara; Sankarabharanam madhyamam toward G or P with the phrase.",
+      "key": "vedavalli-gamakas-2002"
+    },
+    "S203": {
+      "title": "J. Schachter, \"Structural Levels in South Indian Music\", Music Theory Online 21.4 (2015)",
+      "url": "https://www.mtosmt.org/issues/mto.15.21.4/mto.15.21.4.schachter.html",
+      "reliability": "high",
+      "note": "Svaras a half step from S and P deflected into them (after Powers 1958); augmented seconds: ri and dha oscillate down into S and P, ga and ni up into ma and sa; Varali G1 up into G2; Kambhoji ma between ga and pa; kampita condenses to nokku/odukkal at speed.",
+      "key": "schachter-mto-2015"
+    },
+    "S204": {
+      "title": "M. Subramanian, \"Carnatic Music - Automatic Computer Synthesis of Gamakams\", Sangeet Natak XLIII (2009)",
+      "url": "http://gamakam.tripod.com",
+      "reliability": "high",
+      "note": "Gaayaka: gamakams as notes with transit times; the music must be split into phrases; volume and quality variation are part of the expression a synthesizer lacks.",
+      "key": "subramanian-sangeet-natak-2009"
+    },
+    "S205": {
+      "title": "M. Subramanian, \"Generating Computer Music from Skeletal Notation for Carnatic Music Compositions\", Proc. 2nd CompMusic Workshop (Istanbul, 2012)",
+      "url": "https://compmusic.upf.edu/node/130",
+      "reliability": "high",
+      "note": "Pitch tracks: Mayamalavagowla ri stays on the lower note and moves up in spurts, ga is anchored on the upper note; one oscillation takes 250-500 ms; at speed the oscillations become fewer, not faster; Bhairavi ni oscillates from da to Sa; Sankarabharanam ma in ga maa paa from the ga fret almost to pa; overshoot of peaks in the voice.",
+      "key": "subramanian-compmusic-2012"
+    },
+    "S206": {
+      "title": "L. Pearson, \"Coarticulation and Gesture: An Analysis of Melodic Movement in South Indian Raga Performance\", Music Analysis 35.3 (2016)",
+      "url": "https://doi.org/10.1111/musa.12071",
+      "reliability": "high",
+      "note": "Todi on the violin (T.K.V. Ramanujacharlu): ga oscillates with the R2 position as its lower pitch and ni with the D2 position, standardised across teachers; a wide ga schema between that pitch and ma linking ri to ma, a narrow one between ga and that pitch; a gamaka starts where the previous svara ends and continues the oscillation that came before.",
+      "key": "pearson-music-analysis-2016"
+    },
+    "S207": {
+      "title": "T. Nuttall, X. Serra & L. Pearson, \"Svara-forms and coarticulation in Carnatic music: an investigation using deep clustering\", DLfM 2024",
+      "url": "https://doi.org/10.1145/3660570.3660580",
+      "reliability": "high",
+      "note": "Bhairavi: svara-forms cluster by melodic context (ma, dha, ni most); dha forms that start at pa and end with a touch of dha, or consist largely of pa; a pa-dha kampita on dha before ma.",
+      "key": "nuttall-dlfm-2024"
+    },
+    "S208": {
+      "title": "T. Nuttall, X. Serra & L. Pearson, \"Svara-Forms in Carnatic Music: Contextual Influences on the Performance of Svara\", ICASSP 2025 workshops (WIMAGA)",
+      "url": "https://github.com/thomasgnuttall/svara-forms",
+      "reliability": "high",
+      "note": "71 svara-form groups in Bhairavi: the preceding and following svaras (both together most) and the duration decide the form; svaras tend to start at the end point of the previous svara and end at the start of the next.",
+      "key": "nuttall-icasspw-2025"
+    },
+    "S209": {
+      "title": "T. M. Krishna & V. Ishwar, \"Karnatik Music: Svara, Gamaka, Phraseology and Raga Identity\", Proc. 2nd CompMusic Workshop (Istanbul, 2012), pp. 12-18",
+      "url": "http://hdl.handle.net/10230/20494",
+      "reliability": "high",
+      "note": "Kampita: the svara meanders between its neighbours (Ma1 sung as Ga3 Pa Ga3) and need not start or end on its svarasthana; in ascent the next svara is touched before the kampita ends; G2 and N2 almost always kampita; N3 and M2 kampita very close to Sa and Pa (not in phrases without Sa or Pa); articulated svaras are followed by less articulated ones; definitions of orikai, khandippu, sphuritam.",
+      "key": "krishna-ishwar-compmusic-2012"
+    },
+    "S210": {
+      "title": "S. K. Subramanian, \"Modeling Gamakas of Carnatic Music as a Synthesizer for Sparse Prescriptive Notation\", PhD thesis, National University of Singapore (2013)",
+      "url": "https://compmusic.upf.edu/node/130",
+      "reliability": "high",
+      "note": "Veena reference performance of a Sahana varnam: movements no faster than about 100 ms a tone (50 ms a semitone); speed doubling drops transient focal pitches and keeps sustained ones; oscillatory continuity between gamakas; peaks of deep oscillations overshoot by 25 c per semitone of depth beyond one; experts on stress, dynamics and phrase boundaries. The url is the CompMusic workshop page of the companion paper (S211); a copy of the thesis is in research/.",
+      "key": "subramanian-thesis-2013"
+    },
+    "S211": {
+      "title": "S. K. Subramanian, L. Wyse & K. McGee, \"A two-component representation for modeling gamakas of Carnatic music\", Proc. 2nd CompMusic Workshop (Istanbul, 2012)",
+      "url": "https://compmusic.upf.edu/node/130",
+      "reliability": "high",
+      "note": "A gamaka as a slow \"stage\" (the melodic centre) plus a fast \"dance\" (the movement around it); the stage is often not the notated svara (Sahana G rendered from R).",
+      "key": "subramanian-wyse-mcgee-2012"
     }
   },
   "ragas": {
@@ -2147,14 +2231,15 @@
       "gamaka": {
         "S": "Mostly plain; the most-held note.",
         "R": "Mostly brief, a single oscillation from S or from below; slow oscillations of R are not common.",
-        "G": "Rarely held without gamaka; wide oscillations reaching up to about M.",
+        "G": "Rarely held without gamaka; wide oscillations reaching up to about M. The lower pitch of the oscillation is the R2 position, foreign to the scale but standardised across teachers (S206); a wide form reaching M links R to M in ascent, a narrow form between G and that pitch otherwise (S206).",
         "M": "Often one quick upward oscillation in ascent; held plain for short durations in descent.",
         "P": "Steady; the anchor from which D is oscillated.",
         "D": "Often held as an oscillation from around P, also held steady.",
-        "N": "Invariably held with gamaka.",
+        "N": "Invariably held with gamaka. Its oscillation takes the D2 position as its lower pitch (S206).",
         "general": "Without gamaka Todi drifts toward Sindhubhairavi or Hindustani Bhairavi; R, G, D and N are generally held with gamaka.",
         "sources": [
-          "S37"
+          "S37",
+          "S206"
         ]
       },
       "gamakaRender": {
@@ -2179,27 +2264,44 @@
           "G": [
             {
               "when": {
-                "minSec": 0.35
+                "dir": "up"
               },
               "body": "kampita",
-              "lo": "R",
+              "lo": "-100c",
               "hi": "M",
               "end": "self",
               "cycles": [
                 1,
                 3
               ],
-              "src": "S37"
+              "src": "S206",
+              "interpretation": "Pearson's wide schema (B-D-B-D-B in her transcription): between the R2 position, \"the correct lower pitch in the rendition of oscillations used to express ga\", and ma, linking ri to ma in an ascent. S37 names R as the lower turn; the performance analysis (and S201, \"Todi G2 rendered as R2+\") put it at the R2 position."
+            },
+            {
+              "when": {
+                "minSec": 0.35
+              },
+              "body": "kampita",
+              "lo": "-100c",
+              "hi": "M",
+              "end": "self",
+              "cycles": [
+                1,
+                3
+              ],
+              "src": "S206",
+              "interpretation": "As above, on a held ga in any direction (S37: a long G swings to its neighbours)."
             },
             {
               "body": "kampita",
-              "lo": "self",
-              "hi": "M",
+              "lo": "-100c",
+              "hi": "self",
               "cycles": [
                 1,
-                1
+                2
               ],
-              "src": "S37"
+              "src": "S206",
+              "interpretation": "Pearson's narrow schema (C-B): between ga and the R2 position, when ga is short and not rising (her phrases 3, 4 and 6)."
             }
           ],
           "M": [
@@ -2247,15 +2349,15 @@
           "N": [
             {
               "body": "kampita",
-              "lo": "D",
+              "lo": "-100c",
               "hi": "S'",
               "end": "self",
               "cycles": [
                 1,
                 3
               ],
-              "src": "S37",
-              "interpretation": "\"invariably held with gamaka\"; the D and S' targets are the neighbours, as the source does not name them."
+              "src": "S206",
+              "interpretation": "\"Invariably held with gamaka\" (S37); the lower pitch is the D2 position, standardised for ni as the R2 position is for ga (S206). The upper turn S' is S37's neighbour, which S206 does not contradict."
             }
           ]
         },
@@ -3587,7 +3689,9 @@
                 1,
                 2
               ],
-              "src": "S40"
+              "src": "S40",
+              "dwell": "lo",
+              "interpretation": "Kampita between S and R (S40), resting on S: in M. Subramanian's pitch tracks of Mayamalavagowla ri \"the voice may remain at a lower note for considerable period and move up in spurts\" (S205)."
             }
           ],
           "G": [
@@ -3602,7 +3706,7 @@
                 2
               ],
               "src": "S40",
-              "interpretation": "\"M,G M,G M,G\": the time sits on M, so the oscillation dwells on M and comes to rest there."
+              "interpretation": "\"M,G M,G M,G\": the time sits on M, so the oscillation dwells on M and comes to rest there. S205 Fig. 3 shows the same ga \"anchored on an upper note\"."
             }
           ],
           "M": [
@@ -18046,8 +18150,11 @@
         "N": "Cannot be used to ascend; the N3 shade is a passing colour in a S'-to-P glide, not a held note.",
         "sources": [
           "S75",
-          "S185"
-        ]
+          "S185",
+          "S203"
+        ],
+        "R": "In a linear ascent, rendered with an ettra jaru from S to G and a short nokku flick back down to R.",
+        "M": "Its literal pitch is never sounded: it oscillates between G and P."
       },
       "gamakaRender": {
         "style": "medium",
@@ -18088,6 +18195,48 @@
               "body": "plain",
               "src": "S185",
               "interpretation": "\"a passing colour in a S'-to-P glide, not a held note\"."
+            }
+          ],
+          "R": [
+            {
+              "when": {
+                "prev": "S",
+                "dir": "up"
+              },
+              "onset": "nokku",
+              "from": "G",
+              "body": "plain",
+              "src": "S203",
+              "interpretation": "\"rendered with an ettra jaru from sa to ga and just a short nokku flick back down to the expected svara pitch\" (Schachter ¶36): a slide up to G and a touch down onto R."
+            }
+          ],
+          "M": [
+            {
+              "when": {
+                "dir": "up"
+              },
+              "body": "kampita",
+              "lo": "G",
+              "hi": "P",
+              "end": "hi",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S203",
+              "interpretation": "\"the literal pitch of the fourth is never sounded, with the svara oscillating exclusively between ga and pa\" (Schachter ¶36); rising, it settles toward P."
+            },
+            {
+              "body": "kampita",
+              "lo": "G",
+              "hi": "P",
+              "end": "lo",
+              "cycles": [
+                1,
+                2
+              ],
+              "src": "S203",
+              "interpretation": "As above; falling or turning, it settles toward G."
             }
           ]
         },

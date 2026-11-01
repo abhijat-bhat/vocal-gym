@@ -24,7 +24,8 @@ test('well-documented ragas sing their attested phrases at T 0 (plan 7)', t => {
         if (u.kind === 'phrase') {
           const exact = ps.join(',') === src.pitches.join(','), oct = !src.octaveCertain && [12, -12].some(d => ps.join(',') === src.pitches.map(p => p + d).join(','));
           ok(exact || oct, u.phraseId + ': a phrase unit matches its profile pitches (or an octave shift when the octave was inferred): ' + ps.join(' '));
-          if (exact) ok(u.notes.map(n => n.dur).join(',') === src.durs.join(','), u.phraseId + ': and its karvais');
+          // (v0.4: a phrase that ends a planned phrase also carries the phrase's karvai on its last swara, u.karvai)
+          if (exact) ok(u.notes.map((n, k) => k === u.notes.length - 1 ? n.dur - (u.karvai || 0) : n.dur).join(',') === src.durs.join(','), u.phraseId + ': and its karvais');
         } else if (u.kind === 'phrase-fragment') {
           let found = false; for (let k = 0; k + ps.length <= src.pitches.length; k++) if (run(src.pitches, k, ps.length) === ps.join(',')) found = true;
           ok(found && ps.length >= 3 && ps.length <= 5, u.phraseId + ': a fragment is a 3 to 5 swara window of its phrase');

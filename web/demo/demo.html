@@ -1,113 +1,106 @@
   <div class="demo" id="demo">
     <div class="tabs" role="tablist" aria-label="Generators">
-      <button role="tab" id="tab-ala" aria-controls="p-ala" aria-selected="true">Alankara generator</button>
-      <button role="tab" id="tab-jathi" aria-controls="p-jathi" aria-selected="false">Jathi creator and judge</button>
-      <button role="tab" id="tab-kal" aria-controls="p-kal" aria-selected="false">Kalpana swara</button>
+      <button role="tab" id="tab-ala" aria-controls="p-ala" aria-selected="true"><b>Alankaras</b><span>warm-up patterns</span></button>
+      <button role="tab" id="tab-kal" aria-controls="p-kal" aria-selected="false"><b>Kalpana swaras</b><span>improvised rounds</span></button>
+      <button role="tab" id="tab-jathi" aria-controls="p-jathi" aria-selected="false"><b>Korvai &amp; tihai lab</b><span>learn the rhythm maths</span></button>
     </div>
 
-    <div class="panel" role="tabpanel" id="p-ala" aria-labelledby="tab-ala">
-      <div class="presets">Try:
-        <button type="button" data-ala="mela15|jhampa|7|sheet">Mayamalavagowla · Misra Jhampa (sheet 4.3)</button>
-        <button type="button" data-ala="mela29|dhruva|9|sheet">Sankarabharanam · Sankeerna Dhruva (sheet 1.5)</button>
-        <button type="button" data-ala="mohanam|ata|5|sheet">Mohanam · Khanda Ata (adapted)</button>
-        <button type="button" data-ala="mela65|triputa|4|1.6">Mechakalyani · Adi · new pattern at T 1.6</button>
-      </div>
+    <details class="soundbar" id="soundbar">
+      <summary><span class="sb-ico" aria-hidden="true">♪</span> Sound <span class="sb-sum" id="snd-sum"></span><span class="sb-edit">Change</span></summary>
       <div class="controls">
-        <label for="a-raga">Raga<select id="a-raga"></select></label>
-        <label for="a-fam">Tala family<select id="a-fam"></select></label>
-        <label for="a-jati">Jati (laghu length)<select id="a-jati"></select></label>
-        <label for="a-kalam">Speed<select id="a-kalam"><option value="1">1st speed (1 per beat)</option><option value="2">2nd speed (2 per beat)</option><option value="4">3rd speed (4 per beat)</option></select></label>
-        <label for="a-span">Span of new patterns<select id="a-span"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
-        <label for="a-temp">Temperature (creativity) <span id="a-tv">0.6</span><input id="a-temp" type="range" min="0" max="2" step="0.1" value="0.6"></label>
-        <label for="a-var">Show swarasthana numbers<select id="a-var"><option value="0">No</option><option value="1">Yes (R₂, G₃ …)</option></select></label>
+        <label for="snd-sa">Sa (pitch)<select id="snd-sa"></select></label>
+        <label for="snd-bpm">Tempo <span class="val"><span id="snd-bv">72</span> beats a minute</span><input id="snd-bpm" type="range" min="40" max="140" step="2" value="72"></label>
+        <label for="snd-drone">Tanpura drone<select id="snd-drone"><option value="1">On</option><option value="0">Off</option></select></label>
+        <label for="snd-voice">Voice (swaras)<select id="snd-voice" aria-describedby="snd-gnote"><option value="aa" selected>Sung on "aa"</option><option value="swaram">Sung swara names</option><option value="tone">Simple tone</option></select></label>
+        <label for="snd-gamaka">Gamaka <span class="val" id="snd-gv">55 · performative</span><input id="snd-gamaka" type="range" min="0" max="100" step="5" value="55" aria-describedby="snd-gnote"></label>
+        <label for="snd-sollu">Rhythm voice (sollus)<select id="snd-sollu"><option value="mrd" selected>Mridangam</option><option value="rec">Recorded syllables</option><option value="both">Syllables with mridangam</option></select></label>
       </div>
+      <p class="tempnote" id="snd-gnote">Gamaka 0 plays straight notes; around 55 is performative, the raga's own gamakas sung a little differently each time; 100 is every rule at full reach. Swaras are sung by a synthesized voice that phrases, breathes and stresses the tala; "Simple tone" is a plain tone. Sollus play on a synthesized mridangam.</p>
+    </details>
+
+    <div class="panel" role="tabpanel" id="p-ala" aria-labelledby="tab-ala">
+      <p class="lede-s">The classic patterns in all 35 talas and 86 ragas: start from the sheet line, then ask for new ones.</p>
+      <div class="presets"><span>Try</span>
+        <button type="button" data-ala="mela15|jhampa|7|sheet">Mayamalavagowla · Misra Jhampa</button>
+        <button type="button" data-ala="mela29|dhruva|9|sheet">Sankarabharanam · Sankeerna Dhruva</button>
+        <button type="button" data-ala="mohanam|ata|5|sheet">Mohanam · Khanda Ata</button>
+        <button type="button" data-ala="mela65|triputa|4|1.6">Mechakalyani · Adi · adventurous</button>
+      </div>
+      <div class="controls main">
+        <label for="a-raga">Raga<select id="a-raga"></select></label>
+        <label for="a-fam">Tala<select id="a-fam"></select></label>
+        <label for="a-jati">Jati (laghu)<select id="a-jati"></select></label>
+        <label for="a-temp">Creativity <span class="val" id="a-tv">0.6</span><input id="a-temp" type="range" min="0" max="2" step="0.1" value="0.6"></label>
+      </div>
+      <details class="more"><summary>More options</summary>
+        <div class="controls">
+          <label for="a-kalam">Speed<select id="a-kalam"><option value="1">1st speed (1 a beat)</option><option value="2">2nd speed (2 a beat)</option><option value="4">3rd speed (4 a beat)</option></select></label>
+          <label for="a-span">Span of new patterns<select id="a-span"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></label>
+          <label for="a-var">Swarasthana numbers<select id="a-var"><option value="0">Hide</option><option value="1">Show (R₂, G₃ …)</option></select></label>
+        </div>
+      </details>
       <div class="btnrow">
         <button class="btn primary" type="button" id="a-new">New pattern</button>
-        <button class="btn" type="button" id="a-prev" aria-label="Previous variation">◀ Previous</button>
-        <button class="btn" type="button" id="a-next" aria-label="Next variation">Next ▶</button>
-        <button class="btn" type="button" id="a-sheet">Sheet pattern</button>
-        <button class="btn" type="button" id="a-play">Play</button>
-        <button class="btn" type="button" id="a-copy">Copy notation</button>
+        <button class="btn play" type="button" id="a-play">Play</button>
+        <span class="grp"><button class="btn" type="button" id="a-prev" aria-label="Previous variation">◀</button><button class="btn" type="button" id="a-next" aria-label="Next variation">▶</button></span>
+        <button class="btn ghost" type="button" id="a-sheet">Sheet pattern</button>
+        <button class="btn ghost" type="button" id="a-copy">Copy notation</button>
       </div>
       <p class="info" id="a-info"></p>
       <div class="notation" id="a-out" aria-live="polite"></div>
-      <ul class="audit" id="a-audit"></ul>
-    </div>
-
-    <div class="panel" role="tabpanel" id="p-jathi" aria-labelledby="tab-jathi" hidden>
-      <div class="seg" role="group" aria-label="Jathi mode">
-        <button type="button" id="j-mode-gen" aria-pressed="true">Generate</button>
-        <button type="button" id="j-mode-comp" aria-pressed="false">Compose and judge</button>
-      </div>
-      <div id="j-gen">
-        <div class="presets">Try:
-          <button type="button" data-j="triputa|4|4|2|0|auto|0">Adi · T 0 (square)</button>
-          <button type="button" data-j="triputa|4|4|2|0|auto|1.2">Adi · T 1.2</button>
-          <button type="button" data-j="chapu|7|4|2|-2|gopuccha|0.8">Misra Chapu · atita eduppu · gopuccha</button>
-          <button type="button" data-j="rupaka|4|3|3|0|mridanga|1.5">Rupaka · tisra nadai · mridanga yati</button>
-        </div>
-        <div class="controls">
-          <label for="j-fam">Tala family<select id="j-fam"></select></label>
-          <label for="j-jati">Jati<select id="j-jati"></select></label>
-          <label for="j-nadai">Nadai (matras per akshara)<select id="j-nadai"><option value="3">Tisra 3</option><option value="4" selected>Chatusra 4</option><option value="5">Khanda 5</option><option value="7">Misra 7</option><option value="9">Sankeerna 9</option></select></label>
-          <label for="j-n">Avartanams<select id="j-n"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
-          <label for="j-off">Eduppu (matras; + after sam, − before)<input id="j-off" type="number" value="0"></label>
-          <label for="j-land">Landing<select id="j-land"><option value="sam">Last syllable on sam</option><option value="end">Ends exactly at sam</option></select></label>
-          <label for="j-yati">Yati<select id="j-yati"><option value="auto">Auto</option><option value="none">None</option><option value="sama">Sama (equal)</option><option value="gopuccha">Gopuccha (tapering)</option><option value="srotovaha">Srotovaha (widening)</option><option value="mridanga">Mridanga (wide middle)</option><option value="damaru">Damaru (narrow middle)</option></select></label>
-          <label for="j-temp">Temperature (creativity) <span id="j-tv">1.0</span><input id="j-temp" type="range" min="0" max="2" step="0.1" value="1"></label>
-        </div>
-        <div class="btnrow"><button class="btn primary" type="button" id="j-new">New variation</button><button class="btn" type="button" id="j-play">Play</button><button class="btn" type="button" id="j-copy">Copy notation</button><button class="btn" type="button" id="j-edit">Open in editor</button></div>
-        <p class="info" id="j-info"></p>
-        <div class="notation syl" id="j-out" aria-live="polite"></div>
-        <div class="legend"><span style="color:var(--fg)">body</span><span style="color:var(--violet)">yati</span><span style="color:var(--saffron)">teermanam</span><span>, karvai</span><span>· outside the jathi</span></div>
-        <ul class="audit" id="j-audit"></ul>
-      </div>
-      <div id="j-comp" hidden>
-        <div class="controls">
-          <label for="j-ex">Start from<select id="j-ex"><option value="adi">Worked example: Adi, gopuccha, 100/100</option><option value="short">Exercise: one matra short (find it)</option><option value="chapu">Misra Chapu with atita eduppu</option><option value="speed">Rupaka with a speed change</option><option value="blank">Blank template</option></select></label>
-        </div>
-        <label for="j-src" class="srclabel">JathiScript (one word = one matra; see the reference in Module B)</label>
-        <textarea id="j-src" class="src" spellcheck="false" autocomplete="off" autocapitalize="off" rows="14"></textarea>
-        <div class="btnrow"><button class="btn primary" type="button" id="j-judge">Judge</button><button class="btn" type="button" id="j-cplay">Play</button><button class="btn" type="button" id="j-ccopy">Copy script</button></div>
-        <div id="j-result" aria-live="polite"></div>
-      </div>
+      <details class="checks"><summary>Why this is correct</summary><ul class="audit" id="a-audit"></ul></details>
     </div>
 
     <div class="panel" role="tabpanel" id="p-kal" aria-labelledby="tab-kal" hidden>
-      <div class="presets">Try:
-        <button type="button" data-k="mela65|triputa|4|8|2|0|7|0|auto">Kalyani · Adi · T 0 (conventional)</button>
-        <button type="button" data-k="mela65|triputa|4|16|2|0|0|0|mora">Kalyani · 2 avartanams · T 0 · resumes on Sa · graded mora</button>
-        <button type="button" data-k="mela65|triputa|4|8|2|0|7|2|free">Kalyani · Adi · T 2 (adventurous)</button>
-        <button type="button" data-k="mohanam|triputa|4|16|2|7|12|0.4|mora">Mohanam · 2 avartanams, resumes on Ṡa, mora</button>
-        <button type="button" data-k="bilahari|rupaka|4|6|2|0|4|1.2|free">Bilahari · Rupaka, resumes on Ga</button>
+      <p class="lede-s">Model improvisations that fit the tala exactly and step straight into the composition's eduppu.</p>
+      <div class="rhythm-banner" id="k-rhythm" hidden></div>
+      <div class="presets"><span>Try</span>
+        <button type="button" data-k="mela65|triputa|4|8|2|0|7|0|auto">Kalyani · Adi · conventional</button>
+        <button type="button" data-k="mela65|triputa|4|16|2|0|0|0|mora">Kalyani · 2 avartanams · mora</button>
+        <button type="button" data-k="mela65|triputa|4|8|2|0|7|2|free">Kalyani · adventurous</button>
+        <button type="button" data-k="mohanam|triputa|4|16|2|7|12|0.4|mora">Mohanam · resumes on Ṡa</button>
+        <button type="button" data-k="bilahari|rupaka|4|6|2|0|4|1.2|free">Bilahari · Rupaka</button>
       </div>
-      <div class="controls">
+      <div class="controls main">
         <label for="k-raga">Raga<select id="k-raga"></select></label>
-        <label for="k-fam">Tala family<select id="k-fam"></select></label>
-        <label for="k-jati">Jati<select id="k-jati"></select></label>
+        <label for="k-fam">Tala<select id="k-fam"></select></label>
+        <label for="k-jati">Jati (laghu)<select id="k-jati"></select></label>
         <label for="k-len">Length<select id="k-len"></select></label>
-        <label for="k-pa">Swaras per akshara<select id="k-pa"><option value="1">1 (first speed)</option><option value="2" selected>2 (second speed)</option></select></label>
-        <label for="k-start">Start on<select id="k-start"></select></label>
-        <label for="k-end">Composition resumes on (eduppu swara)<select id="k-end"></select></label>
-        <label for="k-ending">Ending<select id="k-ending"><option value="auto">Auto</option><option value="mora">Mora (three statements)</option><option value="free">Free</option></select></label>
-        <label for="k-mora">Mora style<select id="k-mora"><option value="auto">Auto (shift, gopuccha or srotovaha)</option><option value="shift">Shift: same contour, one step nearer each time</option><option value="gopuccha">Gopuccha: one swara shorter each time</option><option value="srotovaha">Srotovaha: one swara longer each time</option><option value="identical">Identical (v0.2)</option></select></label>
-        <label for="k-temp">Temperature (creativity) <span id="k-tv">1.0</span><input id="k-temp" type="range" min="0" max="2" step="0.1" value="1"></label>
+        <label for="k-scope">Scope<select id="k-scope"><option value="round" selected>One round</option><option value="session">Whole session (four parts)</option></select></label>
+        <label for="k-temp">Creativity <span class="val" id="k-tv">1.0</span><input id="k-temp" type="range" min="0" max="2" step="0.1" value="1"></label>
       </div>
-      <div class="btnrow"><button class="btn primary" type="button" id="k-new">New variation</button><button class="btn" type="button" id="k-play">Play</button><button class="btn" type="button" id="k-wav">Download WAV</button><button class="btn" type="button" id="k-copy">Copy notation</button></div>
+      <details class="more"><summary>More options: speed, start, eduppu, ending</summary>
+        <div class="controls">
+          <label for="k-pa">Swaras a beat<select id="k-pa"><option value="1">1 (first speed)</option><option value="2" selected>2 (second speed)</option></select></label>
+          <label for="k-start">Start on<select id="k-start"></select></label>
+          <label for="k-end">Composition resumes on (eduppu)<select id="k-end"></select></label>
+          <label for="k-ending">Ending<select id="k-ending"><option value="auto">Auto</option><option value="mora">Mora (three statements)</option><option value="free">Free</option><option value="korvai">Korvai (three descending units)</option></select></label>
+          <label for="k-mora">Mora style<select id="k-mora"><option value="auto">Auto</option><option value="shift">Shift: a step nearer each time</option><option value="gopuccha">Gopuccha: a swara shorter each time</option><option value="srotovaha">Srotovaha: a swara longer each time</option><option value="expand">Expand: a slot longer each time</option><option value="contract">Contract: a slot shorter each time</option><option value="identical">Identical</option></select></label>
+        </div>
+      </details>
+      <div class="btnrow"><button class="btn primary" type="button" id="k-new">New variation</button><button class="btn play" type="button" id="k-play">Play</button><button class="btn ghost" type="button" id="k-wav">Download WAV</button><button class="btn ghost" type="button" id="k-copy">Copy notation</button></div>
       <p class="info" id="k-info"></p>
       <div class="notation" id="k-out" aria-live="polite"></div>
-      <div class="legend"><span style="color:var(--saffron)">attested phrase</span><span style="color:var(--saffron);opacity:.72">phrase fragment</span><span style="color:var(--violet);font-style:italic">phrase variant</span><span style="color:var(--fg)">generic device</span><span style="color:var(--violet)">unconventional device</span><span style="color:var(--teal)">mora</span><span>│ device boundary</span><span style="font-weight:700;text-decoration:underline">last swara, next to the eduppu</span></div>
+      <div class="legend"><span class="sw ph">attested phrase</span><span class="sw frag">phrase fragment</span><span class="sw var">phrase variant</span><span class="sw gen">generic device</span><span class="sw nov">unconventional device</span><span class="sw mora">mora</span><span class="sw land">last swara</span></div>
       <p class="info" id="k-gamaka"></p>
       <div class="pitch" id="k-pitch"></div>
-      <ul class="audit" id="k-audit"></ul>
+      <details class="checks"><summary>How this round was built</summary><ul class="audit" id="k-audit"></ul></details>
     </div>
-    <div class="panel" style="border-top:1px solid var(--line-2);padding-top:12px">
-      <div class="controls">
-        <label for="snd-sa">Sa for playback<select id="snd-sa"></select></label>
-        <label for="snd-bpm">Tempo (aksharas per minute) <span id="snd-bv">72</span><input id="snd-bpm" type="range" min="40" max="140" step="2" value="72"></label>
-        <label for="snd-drone">Tanpura drone<select id="snd-drone"><option value="1">On</option><option value="0">Off</option></select></label>
-        <label for="snd-gamaka">Gamaka (kalpana playback)<select id="snd-gamaka"><option value="0">Off: plain tones</option><option value="0.5" selected>Light</option><option value="1">Full</option></select></label>
+
+    <div class="panel" role="tabpanel" id="p-jathi" aria-labelledby="tab-jathi" hidden>
+      <p class="lede-s">How a mora, tihai or korvai is counted so that it lands on sam, in any of the 35 talas: learn it step by step, build your own, then check it in the judge.</p>
+      <div id="kl-root"></div>
+      <div id="j-comp-home" hidden>
+        <div id="j-comp" class="kl-checker">
+          <p class="lede-s">The jathi judge reads JathiScript (one word is one matra), checks that it adds up and lands, and scores its craft. Korvais from the lab open here already written out.</p>
+          <div class="controls">
+            <label for="j-ex">Start from<select id="j-ex"><option value="adi">Worked example: Adi, gopuccha, 100/100</option><option value="short">Exercise: one matra short (find it)</option><option value="chapu">Misra Chapu with atita eduppu</option><option value="speed">Rupaka with a speed change</option><option value="blank">Blank template</option></select></label>
+          </div>
+          <label for="j-src" class="srclabel">JathiScript</label>
+          <textarea id="j-src" class="src" spellcheck="false" autocomplete="off" autocapitalize="off" rows="12"></textarea>
+          <div class="btnrow"><button class="btn primary" type="button" id="j-judge">Judge</button><button class="btn play" type="button" id="j-cplay">Play</button><button class="btn ghost" type="button" id="j-ccopy">Copy script</button></div>
+          <div id="j-result" aria-live="polite"></div>
+        </div>
       </div>
-      <p class="tempnote">Playback uses equal temperament and plain tones, so it shows swaras and timing, not gamakas. Temperature is creativity: 0 keeps to the most recognisable choices, 2 favours unconventional ones. The rules hold at every setting.</p>
     </div>
   </div>

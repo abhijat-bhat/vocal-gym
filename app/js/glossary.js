@@ -1,0 +1,52 @@
+/* Plain-English definitions of every Carnatic term the app uses.
+   Shown in pop-ups wherever a term appears, and in full on the Learn page. */
+export const GROUPS = [
+  { id: 'melody', title: 'Melody', terms: ['swara', 'octave', 'raga', 'arohana', 'avarohana', 'melakarta', 'janya'] },
+  { id: 'rhythm', title: 'Rhythm', terms: ['tala', 'akshara', 'avartanam', 'sam', 'anga', 'laghu', 'dhrutam', 'anudhrutam', 'jati', 'chapu', 'kriya', 'speed'] },
+  { id: 'improv', title: 'Exercises and improvisation', terms: ['alankara', 'kalpana', 'device', 'mora', 'karvai', 'creativity'] },
+  { id: 'dance', title: 'Korvais, tihais and jathis', terms: ['korvai', 'tihai', 'purvanga', 'uttaranga', 'trikaala', 'jathi', 'sollu', 'nadai', 'matra', 'eduppu', 'atita', 'anagata', 'yati', 'teermanam', 'jathiscript', 'gate'] }
+];
+
+export const TERMS = {
+  swara: { name: 'Swara', text: 'A note. The seven are Sa Ri Ga Ma Pa Dha Ni, written S R G M P D N. Sa is the home note. Most have two or three possible pitches, written with a number: R₁ is lower than R₂.' },
+  octave: { name: 'Octave dots', text: 'A dot above a swara (Ṡ) means the upper octave; a dot below (Ṣ) means the lower octave. Ṡ is the Sa an octave above home.' },
+  raga: { name: 'Raga', text: 'The melodic framework of a piece: which swaras you may use, and in which direction. Two ragas can share notes but sound different because of how they move.' },
+  arohana: { name: 'Arohana', text: 'The ascending scale of a raga. When the melody goes up, it may only use these swaras.' },
+  avarohana: { name: 'Avarohana', text: 'The descending scale of a raga. When the melody comes down, it may only use these swaras. It can differ from the arohana.' },
+  melakarta: { name: 'Melakarta', text: 'One of the 72 parent ragas. Each uses all seven swaras going up and down, and is identified by a number from 1 to 72.' },
+  janya: { name: 'Janya', text: 'A raga derived from a melakarta. It may skip swaras (Mohanam uses five) or move in a zig-zag. Vocal Gym knows 14 common janyas.' },
+  tala: { name: 'Tala', text: 'The rhythmic cycle, kept with the hand. It is a fixed number of beats split into sections. Adi tala is 8 beats: 4 + 2 + 2.' },
+  akshara: { name: 'Akshara', text: 'One beat of the tala. Adi tala has 8 aksharas.' },
+  avartanam: { name: 'Avartanam', text: 'One full cycle of the tala, from sam back to sam. Each row of notation in Vocal Gym is one avartanam.' },
+  sam: { name: 'Sam', text: 'Beat 1 of the tala cycle, where phrases most often begin and land. Marked with a saffron outline in the notation.' },
+  anga: { name: 'Anga', text: 'A section of the tala. There are three kinds: laghu, dhrutam and anudhrutam. In the notation each anga is one rounded box.' },
+  laghu: { name: 'Laghu', text: 'An anga of variable length: a clap followed by finger counts. Its length (3, 4, 5, 7 or 9 beats) is set by the jati.' },
+  dhrutam: { name: 'Dhrutam', text: 'An anga of 2 beats: a clap and a wave of the hand.' },
+  anudhrutam: { name: 'Anudhrutam', text: 'An anga of 1 beat: a single clap.' },
+  jati: { name: 'Jati (of a tala)', text: 'The length of the laghu: Tisra 3, Chatusra 4, Khanda 5, Misra 7, Sankeerna 9. Seven tala families × five jatis gives the 35 talas.' },
+  chapu: { name: 'Chapu', text: 'Short, fast talas used often in dance: Tisra (1 + 2), Khanda (2 + 3) and Misra (3 + 2 + 2). They are counted rather than shown with claps and waves.' },
+  kriya: { name: 'Kriya', text: 'The hand action on each beat. In the notation’s ruler: a filled circle is a clap, a hollow circle is a wave, a small dot is a finger count.' },
+  speed: { name: 'Speed (kalam)', text: 'How many swaras you sing per beat. First speed is 1, second speed is 2, third speed is 4. The tempo does not change; you fit more notes into each beat.' },
+  alankara: { name: 'Alankara', text: 'A foundational exercise. A short pattern is sung starting on each swara of the raga in turn, going up to the upper Sa and back down. Traditionally there is one pattern for each of the 35 talas.' },
+  kalpana: { name: 'Kalpana swaras', text: 'Improvised passages sung in swara syllables during a concert. They must stay in the raga, fill an exact number of beats and land back on the song’s starting point. It is the hardest skill to practise alone.' },
+  device: { name: 'Device', text: 'A short melodic figure used to build kalpana swaras: a run, a janta (each note twice), a dattu (skipping pattern), a leap, an arpeggio and so on. Familiar devices sound traditional; unusual ones sound adventurous.' },
+  mora: { name: 'Mora', text: 'A closing phrase sung three times with equal gaps, so the last note lands exactly on the target. A satisfying way to finish a round.' },
+  karvai: { name: 'Karvai', text: 'A held note or a rest, written as a comma (,). In jathis it gives the dancer a moment of stillness.' },
+  creativity: { name: 'Creativity', text: 'Vocal Gym’s dial from 0 to 2. Low values choose the most traditional, recognisable moves; high values choose rarer ones. At every setting the result still obeys every rule of raga and tala.' },
+  jathi: { name: 'Jathi', text: 'A rhythmic passage spoken in drum syllables, to which a Bharatanatyam dancer performs footwork. It fills an exact number of cycles and usually ends with a teermanam.' },
+  sollu: { name: 'Sollu', text: 'The spoken drum syllables of a jathi: tha, dhi, thom, nam, ki-ta, tha-ka, jho-nu and so on. Each syllable lasts one matra.' },
+  nadai: { name: 'Nadai', text: 'How many matras (syllables) fit in one beat: Tisra 3, Chatusra 4, Khanda 5, Misra 7, Sankeerna 9. It sets the feel of the rhythm.' },
+  matra: { name: 'Matra', text: 'The smallest unit of a jathi: one syllable or one rest. In nadai 4 there are 4 matras per beat.' },
+  eduppu: { name: 'Eduppu', text: 'Where a composition (or a passage) starts relative to sam. On sam is 0; a positive number starts that many matras after sam; a negative number starts before it. A korvai or mora that ends a passage lands on the eduppu.' },
+  korvai: { name: 'Korvai', text: 'A cadence in two parts: the purvanga, which develops an idea, and the uttaranga, a mora that ends it. Their lengths add up to the span, in a balance between 30 : 70 and 70 : 30. Normally played three times.' },
+  tihai: { name: 'Tihai', text: 'The Hindustani name for a mora: a phrase three times with two equal gaps, 3P + 2G, landing on sam. Tabla players count the final stroke on sam, so one cycle of 16 is 17.' },
+  purvanga: { name: 'Purvanga', text: 'The first part of a korvai. If its length divides by 3, a phrase and its karvai three times; otherwise a yati, or Balaji’s 1-2-4 rule.' },
+  uttaranga: { name: 'Uttaranga', text: 'The ending part of a korvai: a mora, or a series of six or nine statements.' },
+  trikaala: { name: 'Trikaala', text: 'Reciting a phrase in three speeds: once at one syllable a beat, twice at two, four times at four. Each speed takes the same time.' },
+  atita: { name: 'Atita eduppu', text: 'Starting before sam (a negative eduppu). The phrase leads into the cycle.' },
+  anagata: { name: 'Anagata eduppu', text: 'Starting after sam (a positive eduppu). The phrase enters a little late.' },
+  yati: { name: 'Yati', text: 'A shape made by a sequence of phrases of changing length. Sama: equal. Gopuccha: tapering, like a cow’s tail. Srotovaha: widening, like a river. Mridanga: wide in the middle. Damaru: narrow in the middle.' },
+  teermanam: { name: 'Teermanam', text: 'The ending of a jathi: one phrase said three times with equal gaps, so the final syllable lands exactly on sam. Shown in saffron capitals.' },
+  jathiscript: { name: 'JathiScript', text: 'Vocal Gym’s plain-text notation for writing jathis. Each syllable is one matra, a comma is a rest, and {phrase}/gap writes a teermanam. The judge reads it and checks the arithmetic.' },
+  gate: { name: 'Correctness gate', text: 'The checks a jathi must pass before its craft is scored: the right length, starting at the eduppu, bars in the right places and a proper teermanam. Until it passes, the score is capped at 49.' }
+};

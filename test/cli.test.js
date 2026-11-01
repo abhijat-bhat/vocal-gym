@@ -28,8 +28,12 @@ test('command line', () => {
   r = run('kalpana', '--raga', 'kalyani', '--mora-style', 'zigzag');
   assert.equal(r.status, 2); assert.match(r.stderr, /Mora style must be one of/);
   // gamaka: marks in the notation, the contour as JSON, and a WAV rendered from it
-  r = run('kalpana', '--raga', 'todi', '--aksharas', '8', '--temp', '0', '--gamaka', 'full');
-  assert.equal(r.status, 0); assert.match(r.stdout, /^Gamaka \(full, 72 aksharas a minute\) · heavy, from S37/m); assert.match(r.stdout, /G~\(R–M\)/);
+  r = run('kalpana', '--raga', 'todi', '--aksharas', '8', '--temp', '0', '--gamaka', 'full', '--seed', '4');   // a round with ga's R2-position turn
+  assert.equal(r.status, 0); assert.match(r.stdout, /^Gamaka \(full, 100%, 72 aksharas a minute\) · heavy, from S37/m); assert.match(r.stdout, /~\([RḌD]₂\*–/);   // Todi ga and ni turn at the R2 and D2 positions (S206)
+  r = run('kalpana', '--raga', 'todi', '--aksharas', '8', '--temp', '0', '--gamaka', '55');
+  assert.equal(r.status, 0); assert.match(r.stdout, /^Gamaka \(55%, 72 aksharas a minute\)/m);
+  assert.equal(run('kalpana', '--raga', 'kalyani', '--gamaka', '140').status, 2);
+  assert.doesNotMatch(run('kalpana', '--raga', 'todi', '--aksharas', '8', '--gamaka', '0').stdout, /^Gamaka/m, 'level 0 is straight notes');
   r = run('kalpana', '--raga', 'mela1', '--aksharas', '8', '--gamaka', 'light');
   assert.equal(r.status, 0); assert.match(r.stdout, /generic: no raga-specific data yet/);
   assert.equal(run('kalpana', '--raga', 'kalyani', '--gamaka', 'loud').status, 2);
@@ -67,4 +71,34 @@ test('command line', () => {
   r = run('talas'); assert.equal(r.status, 0); assert.match(r.stdout, /Sankeerna jati Dhruva +\|9 O \|9 \|9 +29 aksharas/); assert.match(r.stdout, /Misra Chapu/);
   r = run('sheet', '--tala', 'misra jhampa'); assert.equal(r.status, 0); assert.match(r.stdout, /4\.3 Mishra Jāti Jhampa/);
   r = run('example', 'adi'); assert.equal(r.status, 0); assert.match(r.stdout, /\{tha-dhi-gi-na-thom\}\/3/);
+});
+
+test('cli: korvai works out moras, korvais, chakradars and trikaala, and its script passes the judge', () => {
+  let r = run('korvai', '--tala', 'adi', '--form', 'korvai');
+  assert.equal(r.status, 0); assert.match(r.stdout, /33 \+ 31 = 64/); assert.match(r.stdout, /ok {3}The closing “tha” sounds at cycle 3, beat 1: sam/);
+  r = run('korvai', '--tala', 'khanda triputa', '--form', 'trikaala', '--n', '5');
+  assert.equal(r.status, 0); assert.match(r.stdout, /2 × 9 − 15 = 3 beats to leave/);
+  for (const form of ['mora', 'korvai', 'chakradar']) {
+    r = run('korvai', '--tala', 'misra chapu', '--gati', '2', '--cycles', '6', '--form', form, '--script');
+    assert.equal(r.status, 0, form); assert.match(r.stdout, /^# Korvai lab/);
+    const j = spawnSync(process.execPath, [BIN, 'judge', '-'], { input: r.stdout, encoding: 'utf8' });
+    assert.equal(j.status, 0, form + ' passes the judge:\n' + j.stdout);
+  }
+  r = run('korvai', '--tala', 'adi', '--gati', '11');
+  assert.notEqual(r.status, 0); assert.match(r.stderr, /gati/);
+});
+
+test('cli: korvai forms from the Unit 3 notes: statements, progressive, chakkardar, build-up', () => {
+  let r = run('korvai', '--tala', 'khanda ata', '--form', 'statements', '--kind', 'fib');
+  assert.equal(r.status, 0); assert.match(r.stdout, /37 \+ 37 \+ 38/); assert.match(r.stdout, /Fibonacci/);
+  r = run('korvai', '--tala', 'adi', '--form', 'statements', '--cycles', '3', '--terms', '3,4,5,6,7', '--script');
+  assert.equal(r.status, 0);
+  const j = spawnSync(process.execPath, [BIN, 'judge', '-'], { input: r.stdout, encoding: 'utf8' });
+  assert.equal(j.status, 0, 'three statements pass the judge');
+  r = run('korvai', '--tala', 'adi', '--form', 'progressive', '--cycles', '3');
+  assert.equal(r.status, 0); assert.match(r.stdout, /A progressive korvai/);
+  r = run('korvai', '--tala', 'adi', '--form', 'chakkardar', '--cycles', '2');
+  assert.equal(r.status, 0); assert.match(r.stdout, /9 × \d+ \+ 6 × \d+ \+ 2 × \d+ = 64/);
+  r = run('korvai', '--tala', 'adi', '--form', 'mora', '--series', 'buildup', '--cycles', '3');
+  assert.equal(r.status, 0); assert.match(r.stdout, /One, two, three statements/);
 });

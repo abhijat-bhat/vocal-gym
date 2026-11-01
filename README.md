@@ -16,6 +16,7 @@ npm test             # 36 tests, 1,199,784 checked properties, about 15 seconds
 npm run build        # bundles the engine and writes the pages to site/
 npm run smoke        # loads every page in jsdom and drives every control
 node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
+npm start            # the web app at http://localhost:3000
 ```
 
 ---
@@ -56,9 +57,11 @@ node bin/vocal-gym.js alankara --raga mohanam --tala "misra jhampa"
 | Raga direction rules and contour-preserving projection for janyas | Done, tested | `src/engine/projection.js` |
 | Alankaras: the 35 sheet patterns, new patterns with no repeats, creativity dial | Done, tested | `src/engine/alankara/` |
 | Raga profiles: sourced swara roles, phrases and avoid lists for all 86 ragas, compiled for the engine | Done, tested; phrases for 32 ragas | `data/`, `src/engine/profiles.js` |
-| Kalpana swaras: phrase-driven rounds, reasoned jumps, landing next to the eduppu, graded mora, creativity dial | Done, tested | `src/engine/kalpana/` |
-| Gamaka rendering for kalpana playback: sourced rules for 23 ragas, a conservative default for the rest, pitch view, WAV | Done, tested; rules await musician review and a listening test | `src/engine/gamaka/` |
-| Jathi generator (35 + 3 talas, any nadai, atita and anagata eduppu, seven yati settings) | Done, tested | `src/engine/jathi/generator.js` |
+| Kalpana swaras: phrase-driven rounds planned in tala-shaped phrases with focal notes, no jumps at device joins, repetition, yatis, graded and timed moras, the korvai, whole sessions, creativity dial | Done, tested | `src/engine/kalpana/` |
+| Gamaka rendering for kalpana and alankara playback: sourced rules for 23 ragas, a swara grammar for every raga, timing and coarticulation from analysed performances, pitch view, WAV | Done, tested; rules await musician review and a listening test | `src/engine/gamaka/` |
+| Sung voice: source–filter synthesis with phrasing, breaths, stress and dynamics, on "aa" or the swara names, in the playground, the app and WAV export | Done, tested; not yet in a listening test | `web/shared/voice.js`, `src/engine/gamaka/expression.js` |
+| Korvai and tihai lab: the arithmetic of moras, tihais, series, korvais, chakradars and trikaala for the 35 talas, any gati, kalai and eduppu; nine lessons and a builder (§8.6) | Done, tested against Balaji 2024’s charts and the jathi judge | `src/engine/korvai/`, `web/shared/korvai-lab.js` |
+| Jathi generator (35 + 3 talas, any nadai, atita and anagata eduppu, seven yati settings); kept in the API and CLI, no longer in the pages | Done, tested | `src/engine/jathi/generator.js` |
 | JathiScript parser | Done, tested | `src/engine/jathi/script.js` |
 | Jathi judge: correctness gate, six craft aspects, computed fixes | Done, tested; weights not yet calibrated with teachers | `src/engine/jathi/judge.js` |
 | Command line tool | Done, tested | `bin/vocal-gym.js`, `src/cli/` |
@@ -121,7 +124,7 @@ vocal-gym/
 ├── CLAUDE.md                    working rules for code assistants
 ├── CHANGELOG.md                 what changed between versions
 ├── package.json                 scripts: profiles, test, build, smoke, check; bin: vocal-gym
-├── package-lock.json            exact versions of the two dev dependencies
+├── package-lock.json            exact versions of the dependencies (the server's Claude SDK, two dev tools)
 ├── bin/vocal-gym.js             command line entry point
 ├── src/
 │   ├── engine/                  the constraint engine (pure ES modules, no dependencies)
@@ -148,7 +151,13 @@ vocal-gym/
 │   │   │   ├── devices.js       generic cells and anchored phrase devices
 │   │   │   ├── leaps.js         licensing, resolution, budget, leap statistics
 │   │   │   ├── landing.js       eduppu neighbours
-│   │   │   └── mora.js          graded mora
+│   │   │   ├── phrases.js       the phrase plan: tala-shaped phrases, focal notes, contours (v0.4)
+│   │   │   ├── session.js       a whole svara kalpana: first speed, second speed, koraippu, korvai (v0.4)
+│   │   │   ├── rhythm.js        kalpana swaras on a lab rhythm: families, breath, inspiration fitting (v0.8.3–0.8.5)
+│   │   │   ├── inspire.js       rhythmPrompt: the prompt and JSON schema for a language model (v0.8.5)
+│   │   │   ├── sargam.js        reading suggested swara lines (v0.8.5)
+│   │   │   └── mora.js          graded and timed moras, the korvai
+│   │   ├── korvai/index.js      the korvai and tihai arithmetic: frames, moras, series, korvais, chakradars, trikaala (v0.8)
 │   │   ├── sollu.js             sollukattu vocabulary, aliases, idiom test
 │   │   └── jathi/
 │   │       ├── generator.js     jathi generator
@@ -161,12 +170,17 @@ vocal-gym/
 │   ├── raga-profiles.md         the profile format and how the generator uses it
 │   ├── research/raga-profiles-report.md   the research behind the profiles
 │   ├── research/gamaka-eval.md  the gamaka listening test: protocol, kit, analysis (results pending)
-│   └── plans/kalpana-v0.3.md, gamaka-audio.md   the plans for v0.3 and v0.4
+│   ├── research/gamaka-papers.md   what the papers in research/ add to the renderer (v0.6)
+│   ├── research/expressive-voice.md   the sung voice for kalpana and alankara (v0.6)
+│   ├── research/kalpana-structure.md   what a kalpana round is, from the literature, and why v0.6 rounds lacked it
+│   └── plans/kalpana-v0.3.md, kalpana-v0.4.md, gamaka-audio.md   the plans
 ├── examples/*.jathi             the worked JathiScript examples as files
-├── test/                        node:test suite: helpers.js and 9 *.test.js files (36 tests)
+├── test/                        node:test suite: helpers.js and 15 *.test.js files (98 tests)
 ├── web/                         page sources
 │   ├── shared/theme.css         colour tokens (dark first, light variant) and base type
 │   ├── shared/components.css    layout and component styles
+│   ├── shared/voice.js          the singing voice (pages, app and Node share it)
+│   ├── shared/korvai-lab.js, .css  the korvai & tihai lab (playground, research plan and app share it)
 │   ├── demo/demo.html, demo.js  the three interactive demos (shared by two pages)
 │   ├── index.html               landing page
 │   ├── playground/index.html    the demos on their own
@@ -175,7 +189,7 @@ vocal-gym/
 ├── scripts/build.js             compiles the profiles, bundles the engine, expands web/ templates into site/
 ├── scripts/compile-profiles.js  data/raga-profiles.json → src/engine/data/profiles.generated.js
 ├── scripts/check-raga-profiles.js   validates the profiles against the engine (--fix recomputes fields)
-├── scripts/render-wav.js        a kalpana round with gamaka to a 16-bit WAV (Node, additive synthesis)
+├── scripts/render-wav.js        a kalpana round with gamaka to a 16-bit WAV (Node, the sung voice or the tone)
 ├── scripts/listening-kit.js     blind WAV clips, form and key for the gamaka listening test (npm run listening-kit)
 ├── scripts/smoke.js             jsdom smoke test of every page in site/
 ├── site/                        built pages (generated; committed so they open without a build)
@@ -521,6 +535,75 @@ tha-ka-tha-ki-ta ka-tha-ki-ta tha-ki-ta     # gopuccha yati 5 → 4 → 3
 {tha-dhi-gi-na-thom}/3              # teermanam 3 × 5 + 2 × 3 = 21
 ```
 
+### 8.6 The korvai and tihai lab (v0.8)
+
+The lab teaches the arithmetic that makes a mora, a tihai or a korvai land, and it works it out for any of the 35 suladi talas and the chapu talas, in any gati and kalai, from any start to any eduppu. It replaced the jathi creator in the playground and the app; the judge (§10) is its Check tab. The research is in `docs/research/korvai-tihai.md`. The method follows J. Balaji, "Korvais in Karnatak Music" (2024, open access), and is checked against his charts and worked korvais. The Hindustani tihai and chakradar follow digitabla, and the mora rules follow Nelson (via Field 2018) and Raberg (2017).
+
+**The arithmetic** (`src/engine/korvai/`, also `E.korvai`):
+
+```
+one avartanam   C = aksharas × kalai × gati pulses          Adi, chatusra: 8 × 4 = 32
+space to fill   N = cycles × C + eduppu − start             counted to the landing; + 1 if the last stroke on it counts
+mora / tihai    3P + 2G = N          series   6a + 2k,  9a + 2k
+offset          start = (eduppu − N) mod C                  Balaji's "off" column: count back from sam
+korvai          purvanga V + uttaranga U = N,  30 % ≤ V / N ≤ 70 %
+purvanga        V = 3 × (phrase + karvai), or a yati, or V − 7 (14, 28) = 3x → 1(x) 2(x) 4(x)
+chakradar       3 × (M + 3t + 2g) + 2G = N
+trikaala        n + n + n beats at 1, 2 and 4 a beat; start on beat k·beats − 3n + 1
+```
+
+**Learn** has fifteen lessons, each worked live for the learner's tala:
+
+1. counting the cycle;
+2. the mora (damdar and bedam);
+3. counting back from sam with Balaji's chart;
+4. every solution of a span, with half-pulse gaps;
+5. a repeating phrase (graha-bheda and nadai-bheda);
+6. shapes and series, with the build-up;
+7. the six yatis;
+8. purvanga patterns (AP, GP, Fibonacci-like, squares, polite numbers, kuraippu);
+9. the korvai, purvanga + uttaranga;
+10. three statements and progressive korvais;
+11. the Samam and Edapu algorithms;
+12. the same total in a new korvai;
+13. the eduppu;
+14. trikaala;
+15. the tihai of tihais (chakkardar and chakradar).
+
+**Build** has every form (mora or tihai, korvai as purvanga + mora, korvai as three statements, progressive korvai, tihai of tihais, trikaala), any span, start and eduppu, and both ways of counting the closing syllable. Every solution is listed, the grid plays on the mridangam with the cell lit, and the result can be checked: it is exported as JathiScript and judged.
+
+**Guarantees.** Every layout fills its span exactly and a syllable sounds on the landing (`layoutParts` checks it cell by cell). The order of solutions is taste, never a filter; the 30–70 ratio is the one filter, because the source states it. `test/korvai.test.js`:
+
+* reproduces all 264 entries of Balaji's four charts;
+* rebuilds his worked korvais and trikaalas, and the digitabla chakradars;
+* lays out 113,064 moras, 14,735 korvais and 1,640 chakradars over 12,600 frames of the 35 talas;
+* has the jathi judge pass 4,653 exported scripts.
+
+**Breath and inspiration (0.8.5).** A run of syllables no longer means a swara on every pulse. Each phrase starts on a swara, the beat's strong pulses carry one, and weak pulses are often held, more often in a fast gati (`density: 'full'` restores one a syllable). `rhythmPrompt` writes a complete prompt (the raga's grammar and attested phrases, the rhythm beat by beat, the landing) for a language model. Its answer is sung as inspiration: each line is fitted to the rhythm and the raga and kept only where every hard rule holds. The app asks Claude for it (`POST /api/kalpana/inspire`, with `ANTHROPIC_API_KEY` set); the playground copies the prompt and takes a pasted answer.
+
+**Singing the rhythm (0.8.3).** "Sing it as kalpana swaras →" hands the chosen variation to the kalpana generator. `kalpanaRhythm` (`src/engine/kalpana/rhythm.js`) sings it pulse for pulse in the raga. Phrases the lab built as one family (a yati, an AP, GP or kuraippu purvanga, a shaped mora) share one descending line, each the end of it, so the pattern is heard in the melody as well as the rhythm. A repeated rhythm is not a repeated melody: at low creativity a repeated phrase keeps its shape from another swara, as an alankara climbs the scale; at higher creativity it is re-sung. The cadence lands next to the eduppu. The explorer's filter counts follow the other filters.
+
+**Exploring every variation (0.8.2).** For the settings chosen, the lab enumerates every complete variation of the form: thousands for a korvai (split × uttaranga × purvanga of every kind × mora shape × sollu texture). The explorer steps through them, jumps or searches, filters by facet, sorts them and draws a surprise. Its creativity dial orders them by (1 − c)·F + c·N, spread so neighbours differ (`exploreSpace`, `exploreOrder`, `exploreSurprise`, `exploreRealize` in `src/engine/korvai/explore.js`).
+
+**Hearing the structure.** The lab plays each phrase with an accented first stroke over a bass thom. The cadence (mora statements, uttarangas) opens on tham. A phrase tone, tuned to the chosen Sa, rises with each phrase's length, so the shape of an AP, GP, kuraippu or yati purvanga is heard as a melody. Sa, tempo and the tones are set from the lab's own player (`VGMridangam.arrange` and `playArranged` in `web/shared/mridangam.js`).
+
+**v0.8.1: the Unit 3 notes.** The MA375TGR *Mathematics of Music* Unit 3 guide (`research/UNIT 3 Notes.pdf`) is covered in full for cadences; `docs/research/korvai-tihai.md` §8 maps each topic to the code. `src/engine/korvai/patterns.js` holds the purvanga patterns:
+
+* AP, GP, Fibonacci-like, squares, polite numbers by the odd-divisor recipe, and kuraippu;
+* the six yatis with their closed forms, solved to fill a span, and a classifier for any list of lengths.
+
+`src/engine/korvai/compose.js` holds the constructions:
+
+* the notes' korvai of three statements, 3(P + U) = kN, with the length condition, unequal statements or an eduppu;
+* progressive korvais;
+* the Samam and Edapu algorithms;
+* Methods A and B for a new korvai with the same total;
+* tihais with half-pulse gaps, drawn at twice the resolution;
+* the chakkardar 9P₁ + 6G₁ + 2G₂;
+* drift, by lcm and gcd.
+
+The mora statements use the slides' Thadhin,ginathom family. The phrases of a yati are one phrase trimmed from the front, so the ending is kept. `test/korvai-unit3.test.js` reproduces every worked example and practice answer the lab computes.
+
 ---
 
 ## 9. JathiScript language reference
@@ -851,13 +934,14 @@ Construction, all exact:
 
 ### 12.7 Building a round
 
+0. **Phrase plan (v0.4, §12.10).** Divide the round into tala-shaped phrases, each ending on a held swara.
 1. **Landing.** Work out `lo(e)` and `hi(e)` (or take `targetPitch`).
-2. **Forward reachability** from the opening swara (held 1 or 2 slots), over states (slot, swara, arriving move class).
+2. **Forward reachability** from the opening swara (held 1 or 2 slots), over states (slot, swara, arriving move class). With a plan, devices stay inside their phrase and the held swara carries the state to the next phrase.
 3. **Ending.** Collect the moras for each neighbour, choose the neighbour, then mora or free.
 4. **Backward feasibility** for the body.
 5. **Sampling.** Left to right, among devices that keep the round finishable, with weights `exp(score / τ)`. Scores are computed in two passes, an upper bound and then the exact leap, register and avoid terms, until the remaining bounds are more than 15τ below the best.
 
-The result lists `units` (each with `kind`: `start`, `step`, `conv`, `nov`, `phrase`, `phrase-fragment`, `phrase-variant` or `mora`; phrase units also carry `phraseId`, `source`, `type` and `variant`) and `stats`: `phraseShare`, `variantShare`, `novelShare` (unconventional devices plus variants), `convShare` (conventional devices, attested phrases and the mora), `profileCoverage` (`phrases`, `roles-only` or `none`), the phrases used with their sources, device counts, `leaps` and `relaxed`.
+The result lists `units` (each with `kind`: `start`, `step`, `conv`, `nov`, `phrase`, `phrase-fragment`, `phrase-variant`, `mora` or `korvai`; with a plan also `phrase`, its phrase index, and `karvai`, the slots held at a phrase end; phrase units also carry `phraseId`, `source`, `type` and `variant`) and `stats`: `phraseShare`, `variantShare`, `novelShare` (unconventional devices plus variants), `convShare` (conventional devices, attested phrases and the mora), `profileCoverage` (`phrases`, `roles-only` or `none`), the phrases used with their sources, device counts, `leaps` and `relaxed`.
 
 ### 12.8 Measured
 
@@ -893,7 +977,7 @@ T 2   S , Ṇ , Ḍ Ṇ , Ḍ | Ṇ Ḍ G M | S R M D → eduppu P
 
 Two avartanams at T = 0 resuming on Sa (seed 3) open with the whole dattu phrase mela65#13 (`R G R Ṇ , Ḍ Ṇ Ḍ G R S Ṇ Ḍ`, source S144) and end with the shift mora `D P M , , · P M G , , · M G R` landing on R. In such rounds the body before the mora is about three quarters attested phrases; the round as a whole is about 40%.
 
-### 12.9 Gamaka rendering (v0.4)
+### 12.9 Gamaka rendering (v0.4, natural motion v0.5)
 
 When a round is played, each swara can sound with the raga's gamaka instead of a flat keyboard tone: Todi's G swings up towards M, Sankarabharanam's G stays flat, Kalyani's descending notes are flicked from the note above, Mayamalavagowla's G oscillates against a held M. Gamaka is a **rendering layer**: `renderGamaka(notes, opts)` reads a finished note list and never changes it, and depth 0 is exactly the old plain playback. The plan is `docs/plans/gamaka-audio.md`; the code is in `src/engine/gamaka/`.
 
@@ -912,15 +996,128 @@ Shapes: `plain`; `kampita` (STAs alternating between two raga notes, resting on 
 
 **Choosing a rule.** For each note the resolver works out its neighbours, direction (up, down, turn), duration in seconds, janta and leap, and takes the most specific matching rule of that swara (list order breaks ties; `variety` and `humanize`, both off by default, are seeded). Then four overrides: the **landing** swara is held plain for at least 0.25 s, so the singer gets a clean pitch reference before the eduppu; no default jaru across a wide leap; after 4 notes with an oscillating body, the next note of 0.15 s or more is plain (the chain limit, S193); and the three **mora** statements share statement 1's template, moved along the scale, except that a swara the raga holds plain stays plain.
 
-**Playback and views.** In the demo, a "Gamaka" select (off, light, full; light by default) sits with the sound controls. Each legato group is one continuous voice: a single `setValueCurveAtTime` pitch curve, a few harmonics through two "aa" formants, no vibrato, and a short dip at each swara boundary except inside a jaru. A pitch view under the notation draws the contour against the raga's swara lines, with each swara's rule and source on hover, and a badge says whether the gamaka is raga-specific, partly interpreted text, or the generic default. "Download WAV" renders the same graph offline. On the command line, `--gamaka` prints the round with marks (`G~(R–M)` kampita, `(M)G` touched from M, `→G` jaru, `G/` orikkai), `--contour json` prints the rendered contour, and `scripts/render-wav.js` turns it into a WAV.
+**Natural motion and the intensity dial (v0.5).** The research behind this is in `docs/research/gamaka-naturalness.md`. Real Carnatic pitch curves do not sit on flat plateaus at exact semitones: turning points are momentary and their reach varies by tens of cents without loss of correctness (S193, S194, S201), and a natural singing voice overshoots, prepares and fluctuates (S200). So the renderer's natural contour has:
+
+- rounded turns instead of 60 ms plateaus;
+- moves of about 80–130 ms, depending on the interval;
+- seeded variation of reach and timing, which yields when a note is short;
+- a small overshoot on arriving at a held note and a small preparation before leaving it;
+- a few cents of slow drift and fine flutter;
+- a truncated inflexion (one turn) as a ladder rung before a gamaka is dropped.
+
+Swaras held plain stay inside the ±0.3-semitone constant-pitch band. `renderGamaka(notes, { intensity })` (0–1) is the dial:
+
+| Intensity | What is sung |
+| --- | --- |
+| 0 | Straight notes: exactly the plain playback |
+| up to about 0.3 | Natural motion between notes, and only the raga-defining gamakas (rules from the data: oscillations from about 0.07, onsets from about 0.23), at reduced reach |
+| about 0.55 | Performative: raga rules at 70–90% reach with the most variation; the generic default's swings on long notes from about 0.5 |
+| 0.85–1 | Heavy and accurate: every rule at full cycles and full reach on the raga's notes, the medium default on unmentioned swaras, longer gamaka chains; no variation at 1 |
+
+`depth` (v0.4, scales every swing) is deprecated: alone, it is read as the intensity, and `natural: false` keeps the v0.4 contour.
+
+**The swara grammar (v0.5).** Gamakas are swara-specific and depend on the phrase (`src/engine/gamaka/grammar.js`, `docs/research/gamaka-grammar.md`). Swaras the raga's data does not cover, or covers only with "takes gamaka", follow sourced rules (Vedavalli 2002, S202; Schachter 2015 after Powers, S203):
+
+- S and P are plain.
+- R1 and D1 lean into S and P.
+- A swara a semitone below the next is held straight: **R2 before G2 is straight and G2 takes the gamaka**. Across an augmented second it rises into that neighbour instead (Mayamalavagowla's G3 into M, N3 into S).
+- A swara with a whole tone above oscillates toward the neighbour the phrase heads for: Sankarabharanam's M toward P in *s r g m p*, toward G in *s r g m m*.
+- If one svara is oscillated, the adjacent one is held flat: **R2 before G3 oscillates and G3 is straight**, while Kalyani's G oscillates and its R is flat.
+- Long notes get full kampitas, middling ones a swing, quick ones a single touch.
+
+Each decision names its rule and source in the pitch view.
+
+**Playback and views.** In the demo, a "Gamaka" slider from 0 to 100 (55 by default) sits with the sound controls; since v0.6 the sung voice above plays it. With "Simple tone", the v0.5 player remains: each legato group is one continuous voice: a single `setValueCurveAtTime` pitch curve, a loudness curve that follows the pitch (a little louder above the swara, softer in fast moves), 16 harmonics through three formants, no vibrato, and a soft dip at each swara boundary except inside a jaru. A pitch view under the notation draws the contour against the raga's swara lines, with each swara's rule and source on hover, and a badge says whether the gamaka is raga-specific, partly interpreted text, or the generic default. "Download WAV" renders the same graph offline. On the command line, `--gamaka` (0–100, or `off`, `light` 30, `performative` 55, `full` 100) prints the round with marks (`G~(R–M)` kampita, `(M)G` touched from M, `→G` jaru, `G/` orikkai), `--contour json` prints the rendered contour, and `scripts/render-wav.js` turns it into a WAV.
 
 ```
-$ vocal-gym kalpana --raga todi --aksharas 8 --temp 0 --gamaka light
-Gamaka (light, 72 aksharas a minute) · heavy, from S37, S193 · 60% of swaras with gamaka
-S G~(R–M)  M~(G–M) ,  G~(R–M) M~(M–P)  P D~(P–D) | D~(P–D) Ṡ  N~(D–Ṡ) Ṡ | (Ṡ)Ṙ Ṡ  (Ṡ)Ṙ D ||
+$ vocal-gym kalpana --raga todi --aksharas 8 --temp 0 --gamaka full
+Gamaka (full, 100%, 72 aksharas a minute) · heavy, from S37, S193, S206 · 47% of swaras with gamaka
+S (S)R  G~(R₂*–M) ,  M~(M–P) D~(P–D)  N~(D₂*–Ṡ) M~(M–P) | P M~(M–P)  P D | P D~(D–N)  N D ||
 ```
 
-**Limits.** The rules are transcriptions of prose, not measurements, and need a musician's review (the `interpretation` notes) and the listening test in `docs/research/gamaka-eval.md` (kit: `npm run listening-kit`; no sessions run yet) before `full` becomes the default. The synthetic voice has no consonants or breath, and the Node renderer has no formant filters. Alankara and jathi playback keep plain tones.
+`R₂*` is a turn outside the raga's scale: Todi's ga and ni oscillate down to the R2 and D2 positions (S206).
+
+**What the research folder added (v0.6).** The eight papers in `research/` are summarised, with what was and was not implemented, in `docs/research/gamaka-papers.md`. The changes:
+
+- **Timing.**
+  - A swing inside a gamaka takes at least 50 ms a semitone (Srikumar Subramanian's speed limit, S210).
+  - An oscillation cycle takes 250–500 ms (M. Subramanian, S205). At speed there are fewer cycles, never faster ones.
+  - The dwell side of a kampita is an anchor: a long note waits there and moves in spurts (S205).
+  - Short peaks of deep oscillations overshoot by 25 c a semitone of depth, in the sung contour only (S210).
+- **Coarticulation.** An oscillation starts where the previous swara left the voice (Pearson, S206; Nuttall et al., S208). Rising to a swara its upper turn reaches, it touches that swara before it settles (Krishna & Ishwar, S209).
+- **Grammar.**
+  - R1 and D1 rest on S and P and rise to themselves in spurts (G2).
+  - N3 and M2 sung next to S and P are a kampita close to them (G3c, S209). In D2 N3 S, D2 keeps the gamaka and N3 is straight, as with R2 G3.
+  - M1 rising from G3 to P is sung G3 P G3 (G4m, S209, S205).
+- **Data.** Todi's ga and ni turn at the R2 and D2 positions, with Pearson's wide and narrow ga schemas. Mayamalavagowla's ri rests on S. Sources S204–S211 are new.
+- **Expression** (`src/engine/gamaka/expression.js`). `renderGamaka` returns `expression: { phrases, notes, gain }`:
+  - phrases, with breaths between phrases sung without a rest;
+  - stress on the samam, anga starts, phrase starts and long swaras;
+  - a lighter swara after a gamaka (S209);
+  - a phrase arch, swells on long swaras, softer phrase endings and a long final release;
+  - each swara's syllable.
+- **The legato voice.** `renderGamaka(notes, { intensity: 0, voice: true })` sings straight notes legato, with natural motion but no gamaka.
+
+**The sung voice (v0.6).** Kalpana and alankara are sung by `web/shared/voice.js` (`docs/research/expressive-voice.md`). It is a source–filter voice computed per harmonic:
+
+- vowel formants (with F1 tuned above the pitch);
+- a spectrum that brightens with loudness;
+- breath noise, jitter and shimmer;
+- the expression layer's phrasing and dynamics.
+
+It sings on "aa", or on the swara names (sa ri ga ma pa dha ni) with their consonants placed before the beat. The demo's "Voice" select and the app's transport choose between "aa", the swara names and the earlier simple tone. The gamaka slider now applies to alankaras as well. The app gets its contour from `POST /api/render`. `scripts/render-wav.js --timbre aa|swaram|tone` uses the same voice; the listening kit keeps the tone, as its protocol specifies.
+
+**Limits.** The rules are transcriptions of prose and of a few analysed performances, not a corpus. They need a musician's review (the `interpretation` notes) and the listening test in `docs/research/gamaka-eval.md` (kit: `npm run listening-kit`; no sessions run yet) before `full` becomes the default. The voice has one voice type (women's formants), synthesized consonants rather than recorded ones, and no vibrato by design. Jathi playback uses the mridangam or recorded syllables.
+
+
+### 12.10 Phrase structure (kalpana v0.4, release 0.7)
+
+v0.6 rounds were note-to-note idiomatic but had no shape. 8.1% of the joins between devices leapt three or more raga steps and 1.7% an octave, karvais fell anywhere, and nothing grouped the devices into phrases.
+
+`docs/research/kalpana-structure.md` records what the literature says a round is:
+
+- Sambamoorthy's *South Indian Music* Book IV;
+- Field 2018 and 2024 (*AAWM*), including the transcriptions in the figures;
+- Vidya Subramanian's essay;
+- Morris 2011.
+
+The plan is `docs/plans/kalpana-v0.4.md`. The changes:
+
+- **Joins.** A move into the next device may step, skip a third, or make a move the raga's attested phrases make. A phrase that starts after its predecessor's held swara may restart up to a fifth away. An octave join only echoes the focal note.
+- **Phrases** (`kalpana/phrases.js`).
+  - The round is planned as phrases of about half an avartanam of Adi, on the tala's angas (`opts.angas`).
+  - Each phrase ends on a held swara the raga rests on.
+  - Each group of phrases has a **focal note** (from the profile's nyasa, landing and jiva swaras) that moves across the round and ends on the landing.
+  - Each phrase has a **contour**: descending by default, rising or arched as it climbs to its focus.
+  - A lookahead table keeps the focus reachable. At T 0 about 70% of phrases end on their focal note and 84% within a step.
+- **Repetition.** A phrase may open with the last one's opening (initial rhyme), restate it one raga step lower (sequence), or end with its tail moved to the new focus (end rhyme).
+- **Designs.**
+  - **Yatis:** gopuccha and srotovaha runs onto the focus.
+  - **Timed moras:** `expand` and `contract`, statements of u, u + 1, u + 2 slots.
+  - **The korvai** (`ending: 'korvai'`): three descending units, each a run with shrinking rests and a mora, after Field's Todi korvai.
+- **Sessions.** `kalpanaSession(raga, opts)` gives the whole svara kalpana:
+  - first speed ½, 1 and 2 avartanams, favouring the raga's phrases (`pidi`);
+  - second speed 1 and 2;
+  - a koraippu of 1, 1, ½, ½, ¼, ¼ around one focal note;
+  - a final korvai.
+
+  The focus climbs across the rounds, and every round lands next to the eduppu.
+- **Shorter holds (0.8).**
+  - **Problem:** a phrase-end karvai of a whole beat made 25–28% of a round sustained swaras, twice the 13.3% of the raga’s attested phrases. Rounds sounded like a string of long notes.
+  - **Fix:** the karvai is now one slot (two in a long phrase at four a beat), and about a third of the inner phrase ends flow on without one. This follows the streams of Field 2018 Ex. 9 and 10, which run on between their statements.
+  - **Result:** the sustained share is 14.5% at second speed and T 0, and 17–20% elsewhere (86 ragas × 4 seeds).
+  - **Display:** the playground draws a whole session one round at a time, each on its own grid at its own speed. It no longer uses a doubled grid with rows of theme rests.
+
+Rounds keep every v0.3 guarantee. `opts.phrases: false` gives the v0.3 round (with the join rule); `res.phrases` lists each phrase's focus, contour and held swara; `stats.plan` says whether the round was planned. On the command line:
+
+```
+$ vocal-gym kalpana --raga todi --aksharas 16 --temp 0 --seed 7
+S R  G M  D M  , , | D P  M , | P M  , , ||
+D P  M ,  R ,  S , | R G  R , | G M  G M ||  → eduppu P
+Phrases: 3 (focus M, held M · focus M, held M · focus R); 2 of 2 end on their focal note · gopuccha yati, initial rhyme
+```
+
+The session mode is `vocal-gym kalpana --session`, and the playground's Scope select.
 
 ---
 
@@ -991,6 +1188,8 @@ A `Motif` is `[{ d: scaleDegree, dur: 1 | 2 }]`.
 | Export | Description |
 | --- | --- |
 | `kalpanaRound(raga, { aksharas, perAkshara, startPitch, eduppuPitch, T, seed, ending: 'auto'\|'mora'\|'free', moraStyle: 'auto'\|'shift'\|'gopuccha'\|'srotovaha'\|'identical', allowExceptions })` | Returns `{ notes: [{ p, dur }], slots, units, ending, stats, dial }` (section 12), or `{ error, code }` |
+| v0.4 options of `kalpanaRound` | `angas` (anga lengths in aksharas, for the phrase plan), `phrases: false` (no plan: the v0.3 round), `focus` (the first focal pitch), `pidi` (0–1, more attested phrases), `yati` (0–1, how often a yati is on offer), `ending: 'korvai'`, `moraStyle: 'expand'|'contract'`. The result adds `phrases` and `stats.plan` (12.10) |
+| `kalpanaSession(raga, { eduppuPitch, startPitch, angas, perAkshara, T, seed, korvai, moraStyle }) → { rounds: [{ part, index, avartanas, aksharas, per, focus, round }], failed, cycle }` | A whole svara kalpana: first speed, second speed, koraippu and korvai (12.10) |
 | `kalpana(raga, opts)` | The same, returning `null` instead of an error. `targetPitch` (the last swara itself) is deprecated but still accepted; `eduppuPitch` wins when both are given |
 | `eduppuNeighbours(raga, e) → { eduppu, lo, hi, inRange } \| { error, code }` | The legal neighbours of an eduppu swara (12.5) |
 | `getProfile(ragaOrId) → Profile \| null`, `setProfiles(table \| null)`, `getSource(id) → { title, url, reliability } \| null` | The compiled raga profiles (12.2) |
@@ -1011,6 +1210,34 @@ A `Motif` is `[{ d: scaleDegree, dur: 1 | 2 }]`.
 | `SOLLU`, `ALIAS`, `KNOWN`, `HEAVY`, `CADENCE`, `LIB`, `norm`, `idiomatic`, `splitCompound` | Vocabulary |
 | `TEER`, `yatiBlocks`, `TICKS`, `fmtTicks`, `JATHI_EXAMPLES` | Constants and helpers |
 
+### Korvais and tihais (v0.8)
+
+All of these are in `E.korvai` (the module `src/engine/korvai/index.js`); the first five are also exported directly.
+
+| Export | Description |
+| --- | --- |
+| `korvaiFrame({ fam, L \| tala, gati = 4, kalai = 1, cycles = 1, start = 0, land = 0, counting = 'end' })` | The space to fill: `{ ok, tala, cycle, C, span, total, steps }`, or `{ error }`. `start` and `land` are pulses from sam (− before); `counting: 'on'` counts the last syllable on the landing |
+| `moraSolutions(total, { n = 3 \| 6 \| 9, gati, maxG })` | Every (P, G) with n·P + 2G = total, best first, each with `eq`, `beatAligned`, `gapless` |
+| `korvaiPlans(frame, { series, all, limit })` | Purvanga + uttaranga splits with their purvanga shapes and alternatives |
+| `chakradarSolutions(total, { gati, limit })` | 3 × (M + 3t + 2g) + 2G = total |
+| `trikaala({ fam, L \| tala, kalai, n, variant: 'full' \| 'gap' \| 'lead' })` | A jati in three speeds, placed to end on sam |
+| `moraPlan(frame, { P, G, n, shape, d })`, `korvaiPlan(frame, plan, { shape })`, `chakradarPlan(frame, sol)` | Lay a solution out: `{ ok, parts, layout: { cells, sylls, landIndex, checks }, steps }` |
+| `checkMora(total, P, G, n)`, `offsetFor(total, C, { land, counting })`, `seriesChart(C, n)`, `purvangaShapes(V, gati)`, `moraShape(P, shape, d)`, `gatiFits(total, beats)`, `korvaiThrice(frame)` | The pieces: a learner's guess and its fixes, Balaji's offset and chart, purvanga shapes, shaped moras, gati changes, playing it three times |
+| `toJathiScript(frame, result)` | The layout as JathiScript for the judge |
+| `rhythmTemplate(frame, layout, meta)`, `parseRhythmTemplate(t)`, `kalpanaRhythm(raga, template, { eduppuPitch \| targetPitch, T, seed, karvai, melody, density, inspiration })` | v0.8.3: a lab variation as a rhythm, and kalpana swaras sung on it (onsets on its syllables, families, direction rule, landing); v0.8.5: `density` (`auto` holds weak pulses, `full`) and `inspiration` (suggested lines, fitted and checked) |
+| `rhythmPrompt(raga, template, { eduppuPitch \| targetPitch, T })`, `INSPIRATION_SCHEMA`, `parseInspiration(answer, raga)`, `parseSwaras(text, raga)`, `rhythmPhrases(template)` | v0.8.5: the prompt for a language model, the answer's JSON schema, and reading its swara lines |
+| `exploreFacetCounts(space, filters)` | Each facet value's count given the other filters |
+| `exploreSpace(frame, form, o)`, `exploreOrder(space, { T, sort, filters })`, `exploreSurprise(space, order, { T, seed, avoid })`, `exploreRealize(frame, item)`, `TEXTURES`, `altStatement`, `altPhrase` | v0.8.2: every variation of a form, its facets and scores, the creative order, a seeded surprise, and the laid-out plan |
+| `layoutParts`, `talaCycle`, `jatiOf`, `statementOf`, `phraseOf`, `yatiLineOf`, `nestedPhrases`, `kaarvaiOf`, `beatsText`, `offsetText`, `JATI_SYLLABLES`, `SERIES_GROUPS`, `GATIS`, `KALAIS`, `GATI_NAME`, `YATI_NAME` | Helpers and constants; `moraSolutions(…, { n: 'buildup' })` is the slides' 1, 2, 3 uttaranga (6P + 2G) |
+| `patternInfo({ kind, … })`, `patternsFor(V, { kinds, minN, maxN, maxTerm })`, `politeRuns(S)`, `apTerms`, `gpTerms`, `fibTerms`, `squareTerms`, `kuraippuTerms`, `PATTERN_KINDS` | v0.8.1: purvanga patterns (AP, GP, Fibonacci-like, squares, polite numbers, kuraippu) and every pattern that sums to V |
+| `yatiTerms(kind, p)`, `yatiSum(kind, p)`, `fitYati(kind, S, p)`, `classifyYati(lengths)`, `YATIS`, `YATI_INFO` | The six yatis: lengths, closed-form sums, solving for the first phrase, naming a shape |
+| `statementKorvai(frame, { terms, pattern })`, `statementOptions(frame, { kinds })`, `lengthCondition(C)`, `targetSplit(T, r)` | The notes' korvai: three statements, unequal or with an eduppu (`.eduppu`) |
+| `progressiveKorvai(frame, { m, d, U, r })`, `progressiveOptions(frame)` | Progressive korvais |
+| `samamAlgorithm(n, TP)`, `samamKorvai({ tala…, phrase, kaarvai, k, form })`, `edapuAlgorithm(n, k)` | The Samam and Edapu algorithms |
+| `constantTotal({ f, p, form, u, g })`, `constantTotalPlan(opts, variant)` | Methods A and B: a new korvai with the same total |
+| `halfTihais(T)`, `doubledFrame(frame)`, `chakkardarSolutions(T, { halves })`, `chakkardarPlan(frame, sol)`, `drift(L, C, g)`, `gcd`, `lcm` | Half-pulse gaps, the chakkardar and drift (graha-bheda, nadai-bheda) |
+
+
 ---
 
 ## 14. Command line
@@ -1025,9 +1252,10 @@ node bin/vocal-gym.js <command> [options]     # or: npm link, then vocal-gym <co
 | `talas` | List the 35 suladi talas and the chapu talas |
 | `sheet [--tala "misra jhampa"]` | The sheet's first lines |
 | `alankara --raga R --tala T [--new N] [--temp T] [--seed S] [--span s] [--speed 1\|2\|4] [--numbers]` | The sheet pattern through the raga, then N new patterns |
-| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--eduppu-swara P] [--ending auto\|mora\|free] [--mora-style auto\|shift\|gopuccha\|srotovaha\|identical] [--allow-exceptions] [--gamaka off\|light\|full] [--bpm 72] [--contour json] [--temp T] [--seed S]` | One round, with its devices and their phrase sources, the phrase share, the mora style and the leaps; `--gamaka` adds the round with gamaka marks, `--contour json` prints the rendered contour instead. `--land X` (deprecated) ends on X itself |
+| `kalpana --raga R --tala T [--aksharas K] [--per 1\|2] [--start S] [--eduppu-swara P] [--ending auto\|mora\|free\|korvai] [--session] [--phrases off] [--mora-style auto\|shift\|gopuccha\|srotovaha\|identical] [--allow-exceptions] [--gamaka off\|light\|performative\|full\|0-100] [--bpm 72] [--contour json [--voice]] [--temp T] [--seed S]` | One round, with its devices and their phrase sources, the phrase share, the mora style and the leaps; `--gamaka` adds the round with gamaka marks (`R₂*`: a turn off the scale), `--contour json` prints the rendered contour instead, with its legato groups and expression layer; `--voice` sings straight notes legato at `--gamaka off`. `--land X` (deprecated) ends on X itself |
 | `jathi --tala T [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam\|end] [--temp T] [--seed S] [--script]` | Generate; `--script` prints JathiScript |
 | `judge <file \| -> [--json]` | Judge a JathiScript file (exit code 1 if the gate fails) |
+| `korvai --tala T [--form mora\|korvai\|statements\|progressive\|chakradar\|chakkardar\|trikaala] [--series 3\|6\|9\|buildup] [--kind ap\|gp\|fib\|squares\|polite\|kuraippu\|yati] [--terms 3,4,5] [--halves] [--gati 4] [--kalai 1] [--cycles 2] [--start 0] [--land 0] [--counting end\|on] [--series 3\|6\|9] [--shape sama\|srotovaha\|gopuccha] [--n 5] [--variant full\|gap\|lead] [--pick N] [--script]` | The lab’s arithmetic: the steps, the solutions and the grid; `--script` prints JathiScript for `judge` |
 | `example <adi\|short\|chapu\|speed>` | Print a worked example |
 
 **Arguments:**
@@ -1073,7 +1301,7 @@ $ node bin/vocal-gym.js judge mine.jathi
 | Page (`site/`) | Content |
 | --- | --- |
 | `index.html` | Landing page |
-| `playground.html` | The three demos with a short guide and a JathiScript cheat sheet |
+| `playground.html` | Alankaras, kalpana swaras and the korvai & tihai lab, with a short guide and a JathiScript cheat sheet |
 | `research-plan.html` | The full research and build plan, with the same demos inline |
 | `pitch.html` | The pitch deck |
 | `vocal-gym-engine.js` | The browser bundle of the engine |
@@ -1089,21 +1317,32 @@ The research plan covers: verdict, novelty assessment, the engine, Modules A to 
   - Play (Web Audio: equal-tempered tones, tala clicks, an optional tanpura drone);
   - Copy notation;
   - an audit of every rule.
-- **Jathi, Generate mode:**
-  - all 38 talas, nadai, avartanams, atita or anagata eduppu, landing, yati and temperature;
-  - Play and Copy;
-  - an audit, including the judge's score of the generated jathi;
-  - Open in editor.
-- **Jathi, Compose and judge mode:**
+- **Layout (v0.8).** Each tab shows its essential controls, with the rest under *More options*. The checks fold under *Why this is correct*. A one-line sound bar under the tabs (Sa, tempo, drone, voice, gamaka, sollus) opens to change them.
+- **Korvai & tihai lab** (`web/shared/korvai-lab.js` and `.css`, shared with the app; §8.6):
+  - one tala bar for the lab: family and jati (35 + chapu), gati, kalai and the cycle in pulses with its kriya;
+  - Learn (nine lessons) and Build (mora or tihai, korvai, tihai of tihais, trikaala), each with the worked steps, the solutions, a tala grid that plays, and the checks;
+  - Check: the judge below, with any built korvai written out in it.
+- **Jathi judge (the lab's Check tab):**
   - examples and a JathiScript editor that re-judges as you type;
   - a notation grid (teermanam in saffron, phrase boundaries marked);
   - the gate, computed fixes, aspect bars with notes, and warnings;
   - Play.
 - **Kalpana:**
-  - raga, tala, length, speed, opening swara, the swara the composition resumes on, ending, mora style and temperature;
+  - raga, tala, length, scope and creativity; under More options, speed, opening swara, the swara the composition resumes on, ending and mora style;
+  - a whole session drawn round by round, each round on its own grid at its own speed, with the composition’s line between rounds as a divider (v0.8);
   - attested phrases in saffron, fragments in lighter saffron, variants in violet italics, the mora in teal; each phrase's title names its source;
   - an audit with the creativity readout, the phrases used and their sources (or "phrase data: none for this raga"), the leaps and their licences, and the mora's style and contour;
-  - a gamaka select (off, light, full), a pitch view of the contour with each swara's rule and source, a badge for how raga-specific the gamaka is, and Download WAV.
+  - a gamaka slider (0 straight notes to 100 heavy), a pitch view of the contour with each swara's rule and source, a badge for how raga-specific the gamaka is, and Download WAV.
+- **Voice (kalpana and alankara):** sung on "aa" (default), sung swara names, or the simple tone. `web/shared/voice.js` sings the engine's contour and expression layer (`docs/research/expressive-voice.md`); the gamaka slider applies to both tabs.
+- **Mridangam (jathi playback, the default):** `web/shared/mridangam.js` plays each sollu as a synthesized mridangam stroke.
+  - The sollus are realized as strokes group by group, following the Karya library's standard realizations: *ta din gin na thom* → Ki Ta Ki Nam Thom, *ta ka* → Ki Tha, and so on.
+  - Each of the ten strokes (thi, tha, ta, thom, num, dhin, dheem, tham, cha, bheem; plus Mi and gumki) is decaying partials plus 1/3-octave noise. They are fitted to the CompMusic Mridangam Stroke Dataset and tuned to the playback Sa, with chapu on Sa.
+  - The method, the sollu-to-stroke table and how close it comes to the recordings are in `docs/research/mridangam-synthesis.md`; the calibration scripts are in `research/calibration/mridangam/`.
+  - `node scripts/mridangam-wav.js` renders strokes or a line of sollus to WAV.
+- **Sollu voice:** the mridangam; recorded spoken syllables; or the syllables over a softer mridangam. Anything not recorded falls back to the mridangam.
+  - `web/shared/solkattu.js` plays them; `web/shared/solkattu-bank.js` holds them (empty until someone records). The playground, the research plan and the app (served at `/shared/`) all use the same files.
+  - Each syllable is cut with a short fade where the next one starts, and a karvai lets it ring on. Takes alternate so repeated syllables are not identical.
+  - No reusable per-syllable solkattu audio exists online, so `docs/solkattu-recording.md` explains how to record the 28 syllables. `node scripts/solkattu-bank.js` slices, trims, level-matches and packs the recording (16 kHz µ-law, about 10 KB per syllable) and writes a preview WAV to check by ear.
 
 **Design.** The palette is midnight indigo with saffron for the voice and teal for the machine. Pages are dark first, with a light variant from `prefers-color-scheme`. Type is Cormorant Garamond, DM Sans and IBM Plex Mono. Colours are tokens in `web/shared/theme.css`.
 
@@ -1122,6 +1361,34 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 
 ---
 
+### The web app (`server/` and `app/`)
+
+`npm start` runs a small Node server at http://localhost:3000. Its one runtime dependency, the Claude SDK (`@anthropic-ai/sdk`), is loaded only when a page asks Claude for kalpana lines; set `ANTHROPIC_API_KEY` to enable that. `PORT` and `HOST` change where it listens. It serves a guided site with one page per feature:
+
+| Page | What the user does |
+| --- | --- |
+| Home | Hears a sample alankara and picks a tool |
+| Alankaras | Picks a raga and tala, plays the sheet pattern, and steps through new patterns |
+| Kalpana swaras | Chooses length, start and landing swaras, ending and creativity, and sees which devices were used |
+| Korvai lab | Chooses a tala (any of the 35) once, then learns the counting in nine lessons or builds any mora, korvai, tihai of tihais or trikaala, and sends it to the judge (`#/jathi` now opens it) |
+| Jathi judge | Edits JathiScript and gets the gate, exact fixes, craft scores and a playable grid as they type |
+| Learn | A primer and glossary; every dotted term in the app opens its definition |
+
+The korvai lab computes in the page: the server also serves `src/engine/` as ES modules at `/engine/` (and `web/shared/` at `/shared/`). The rest of the engine runs on the server, behind a JSON API that `server/api.js` validates and annotates with plain-English explanations:
+
+| Route | Body |
+| --- | --- |
+| `GET /api/meta` | — (ragas, talas with hand actions, the sheet, the JathiScript examples) |
+| `POST /api/alankara` | `{ raga, fam, L }`, plus `generate: { T, span, seed, avoid }` for a new pattern, or `motif` to redraw a saved one |
+| `POST /api/kalpana` | `{ raga, fam, L, aksharas, per, start, land, ending, T, seed }`, or `{ raga, rhythm, land, T, seed, density, inspiration }` for a lab rhythm |
+| `POST /api/kalpana/prompt` | `{ raga, rhythm, land, T }`: the prompt and JSON schema for inspired lines (v0.8.5) |
+| `POST /api/kalpana/inspire` | `{ raga, rhythm, land, T, seed, density }`: asks Claude (`claude-opus-5-5`) for lines and sings them as inspiration; 503 when no API key is set |
+| `POST /api/jathi/generate` | `{ fam, L, nadai, avartanams, eduppu, yati, land, T, seed }` |
+| `POST /api/jathi/judge` | `{ script }` |
+| `POST /api/render` | `{ raga, notes: [{ p, dur }], bpm, per, intensity, seed, cycleBeats, angaStarts, units }`: the contour and expression layer the voice sings |
+
+The browser plays the results with Web Audio and lights each cell as it sounds. Swaras are sung (the transport's Voice and Gamaka controls): the page asks `/api/render` for the contour and `web/shared/voice.js` sings it. `app/` is plain ES modules with no build step. `test/server.test.js` covers the API, and `npm run e2e` drives every page in headless Chrome or Edge.
+
 ## 16. Tests
 
 `npm test` runs `node --test test/*.test.js`. Each test counts its checked properties, reports the count as a diagnostic, and fails with the first twenty messages.
@@ -1131,14 +1398,22 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 | `ragas-talas.test.js` | Melakarta formula (12 spot values, ordering, 72 distinct scales, names); the class and parent of every janya, and that each uses only its parent's swaras; tala totals for all 35; chapu; invalid tala arguments; tala-spec parsing and round trips | 647 |
 | `alankara.test.js` | **All 35 sheet first lines, ascending and descending, note for note** in Mayamalavagowla; bars on anga lines; row counts equal the sheet's for every tala; all ten lines of 1.1; variation 0 is the sheet. Direction rule on every step of 23,992 lines (217,320 notes) in 86 ragas × 35 talas. 1,248 new patterns: legal, never a repeat, direction-valid in every line, conventionality falling with temperature, the sheet's span by default, every Tisra Eka alternative found, `null` only when all are shown | 310,676 |
 | `kalpana.test.js` | The v0.2 sweep (every other melakarta and every janya, 4 lengths, 2 speeds, 3 temperatures, 3 endings): exact length, start, landing, range, direction, three different mora statements with equal gaps, novelty rising with temperature. Eduppu neighbours (the table in 12.5) and 2,022 rounds landing next to every eduppu. Structured errors and backward compatibility. Leap acceptance over 86 ragas × 10 seeds × 3 temperatures; the relaxation over 2,696 short spans. Graded mora acceptance over 1,032 moras and the Mayamalavagowla golden mora | 185,467 |
+| `kalpana-structure.test.js` | v0.4 structure over the 86 ragas: every join larger than a third is attested, a restart within a fifth after a held swara, or the focal echo; devices stay inside their phrases and held swaras are ones the raga rests on; at T 0 most phrases end on their focal note; rhymes and sequences repeat the last phrase (a step lower); yatis shrink or grow onto the focus; the korvai's three units descend a step each and land; sessions are deterministic, in order, landing, with the focus climbing | — |
 | `kalpana-phrases.test.js` | Attested phrases at T = 0 in Kalyani, Todi, Mohanam, Hamsadhwani and Hemavati, with every phrase and fragment unit matching its profile; the phrase-share acceptance over the 27 phrase-rich ragas; profile coverage and the fallback with no profile; exceptions only with `allowExceptions`; no erratic jumps (leap-size caps over 86 ragas, the share of moves in each raga's idiom, and the reported Kalyani S → N openings) | 30,983 |
-| `gamaka.test.js` | The gamakaRender transcriptions validate and compile, and crafted bad rules are rejected; the geometry (depth 0 is plain, exact timing, no jumps, anchors, the 5 Hz rate cap, the ladder lightening faster tempos); `renderGamaka` on 258 kalpana rounds (determinism, untouched notes, targets on raga notes, the landing held plain); golden Todi, Sankarabharanam, Kalyani and Mayamalavagowla cases; mora templates; the default for data-less ragas; the listening kit is balanced, blind and reproducible | 605,357 |
+| `gamaka.test.js` | The gamakaRender transcriptions validate and compile, and crafted bad rules are rejected; the geometry (depth 0 is plain, exact timing, no jumps, anchors, the 5 Hz rate cap, the ladder lightening faster tempos); `renderGamaka` on 258 kalpana rounds (determinism, untouched notes, targets on raga notes, the landing held plain); golden Todi, Sankarabharanam, Kalyani and Mayamalavagowla cases; mora templates; the swara grammar over every data-less raga; the natural contour and the intensity dial; the listening kit is balanced, blind and reproducible. v0.6: the speed limit and the 250 ms cycle floor, G2's anchor on S, Todi's coarticulated ga, G3c and G4m; the expression layer (phrases, stress, breaths, loudness, syllables) and the legato straight voice | — |
 | `raga-profiles.test.js` | The profile file covers the 86 engine ragas with the engine's scales; every phrase parses and its computed flags match; sources and enums are valid; the compiled module is up to date and loads in the engine | 15,994 |
+| `korvai.test.js` | Balaji’s four charts (264 entries); his worked korvais (Adi, Misra Chapu, the gopuccha of 20, 1-2-4, damaru 47, the averaged uttaranga), the gati change and trikaala placement; the digitabla tihais and chakradars; 12,600 frames of the 35 talas × gati × kalai × spans × start and landing × counting: every solution of 3P + 2G, exact and complete, and 113,064 moras, 14,735 korvais and 1,640 chakradars laid out cell by cell; purvanga shapes; errors; 4,653 exported scripts passing the jathi judge’s gate | 350,000+ |
+| `kalpana-rhythm.test.js` | Lab rhythms sung as kalpana swaras: about 1,670 passages over five forms, four frames and seven ragas, with onsets on syllables (phrase starts and cadence endings always, most beats), the breath, the direction rule, the landing, nested families as the ends of one line, repeats moved or varied, trikaala, determinism and template errors; the inspiration prompt, the swara notation and fitting suggested lines | 24,000+ |
+| `korvai-explore.test.js` | The explorer: complete, faceted, deterministic spaces for every form; every variation of the smaller spaces and a spread of the large ones laid out; the creativity dial leading with the familiar at 0 and the unusual at 2; neighbours that differ; sorts, filters and seeded surprise; the takadhom texture through the judge; 2,062 explored variations over the 35 talas | 4,500+ |
+| `korvai-unit3.test.js` | The Unit 3 notes: the pattern sums and closed forms, polite runs over 1–600 (odd divisors − 1, none for powers of 2), the six yatis and their classifier, every pattern found for 3–240, the notes' korvais (Ex. 7.9–7.15, Q14, Q17), progressive korvais, the Samam algorithm on the slides' korvais, Edapu over every n and k, Methods A and B, tihai solution sets with half gaps, chakkardars, drift; 4,831 constructions over the 35 talas | 13,000+ |
 | `jathi.test.js` | 12,417 generated jathis over 38 talas, nadai 3–5, 1–2 avartanams, eduppu −2, 0 and +2, seven yati settings and three temperatures: exact sums, slot formula, yati shapes, threefold teermanam. 2,452 exported to JathiScript all pass the gate (scores 71–100, median 88). 1,947 combinations are refused with a message because no teermanam fits the span with the chosen yati | 50,570 |
 | `jathiscript.test.js` | Worked examples (100 for the guide example; the short example fails with a fix at line 11); syntax errors with line and column; compound and vocabulary warnings; land `end` and `+n`; inferred avartanams; kalai; atita and anagata eduppu and their aliases; speed changes; bar errors; missing teermanam; opening karvai; written-out teermanams; trailing karvai; generator–parser round trips | 90 |
-| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions`, `--gamaka`, `--contour json` and a WAV from `scripts/render-wav.js` | — |
+| `voice.test.js` | The sung voice: the same line gives the same samples; finite, audible and unclipped; Sa, Pa and tara Sa in tune within 15 cents (autocorrelation), and Sa follows the playback Sa; the swara names differ from aa, pa is closed before its beat, the last swara fades; the CLI's JSON sings the same samples | — |
+| `server.test.js` | Every API route including the inspiration routes (Claude mocked, and the 503 without credentials) and `/api/render` (deterministic, spans the round, gamaka at 55, none at 0, loudness in range, unchanged notes), validation errors, static files and no path traversal | — |
+| `solkattu.test.js`, `mridangam.test.js` | The recorded-syllable bank (µ-law, slicing, playback fallbacks) and the synthesized mridangam (realization, determinism, Sa tracking, decays) | — |
+| `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions`, `--gamaka`, `--contour json` (with Todi's off-scale `R₂*` turns) and a WAV from `scripts/render-wav.js` | — |
 
-Total: 1,199,784 checked properties, in about 15 seconds on a laptop CPU at full speed (test files run in parallel).
+Total: about 3 million checked properties in 98 tests, in about 30 seconds on a laptop CPU (test files run in parallel).
 
 `npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, checks that kalpana presets land next to their eduppu and that the audit names phrase sources, leaps and every mora style, and switches tabs. It also checks the gamaka select, the pitch view, the gamaka badges and, with Web Audio stubbed, one finite pitch curve per legato group (and none when gamaka is off). It times 100 Kalyani rounds (best of three; the limit is 1 s at full CPU speed, scaled up by a calibration loop on a throttled machine). It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
 
@@ -1202,7 +1477,7 @@ Evaluation hooks already in the engine:
 - **Path-dependent leap rules are soft, except one.** Unlicensed and unresolved leaps, the leap budget and the register cap are scores. The same-direction double-leap ban is exact below T = 1.5 because the tables carry the arriving move's class; the hard-avoid lists are exact for one swara of look-behind and avoided by the sampler for longer junctions.
 - **Sollu vocabulary and spellings vary by bani.** Unknown syllables are warnings, not errors, and aliases map common spellings (ta/tha, di/dhi, tom/thom, tei/tai, …).
 - **Chapu support covers Tisra, Khanda and Misra.** Sankeerna Chapu is not included because counting conventions for it differ.
-- **Playback is a sketch.** Equal temperament and a synthetic voice. Kalpana playback has rule-based gamaka (12.9), transcribed from prose and not yet reviewed by a musician or tested by ear; alankara and jathi playback stay plain.
+- **Playback is a sketch.** Equal temperament and a synthetic voice. Kalpana playback has rule-based gamaka (12.9), transcribed from prose and not yet reviewed by a musician or tested by ear; alankara playback stays plain. Jathi playback uses a synthesized mridangam calibrated against recorded strokes (`docs/research/mridangam-synthesis.md`), not yet reviewed by a mridangist; its sollu-to-stroke realizations are one convention among several banis. Recorded syllables can be added (`docs/solkattu-recording.md`).
 
 ---
 

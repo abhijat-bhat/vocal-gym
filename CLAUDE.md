@@ -8,6 +8,8 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 - `npm run smoke`: loads the built pages in jsdom and drives every control.
 - `npm run check`: all of the above, plus `npm run profiles` once the plan adds it.
 - `node scripts/check-raga-profiles.js`: validates `data/raga-profiles.json`. Add `--fix` to recompute its checked fields.
+- `node scripts/solkattu-bank.js`: builds `web/shared/solkattu-bank.js`, the recorded syllables for jathi playback, from WAV recordings (`docs/solkattu-recording.md`). `--clear` empties it.
+- `node scripts/mridangam-wav.js --strokes --out dir/` (or `--sollus "tha ka dhi mi" --out x.wav`): renders the synthesized mridangam of `web/shared/mridangam.js`. Its stroke table comes from `research/calibration/mridangam/` (`docs/research/mridangam-synthesis.md`); regenerate it there rather than editing the numbers.
 
 ## Rules
 - **Hard rules belong in the feasibility tables. Taste belongs in scores.** Never relax a hard guarantee (exact length, raga direction rule, range, landing) to reach a soft goal.
@@ -21,3 +23,5 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 
 ## Current work
 `docs/plans/kalpana-v0.3.md` is the approved plan for the kalpana swara generator. Implement it phase by phase, running `npm run check` and committing after each phase.
+
+Next, `docs/plans/gamaka-audio.md` adds gamaka rendering to kalpana playback. Start it once kalpana-v0.3 Phase 1 (profile compilation) is committed. Gamaka is a rendering layer only: it must never change the generated notes. Raga-specific gamaka rules go in `gamakaRender` in `data/raga-profiles.json`, and every rule needs a source.

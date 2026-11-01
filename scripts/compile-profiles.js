@@ -30,6 +30,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const PROFILES_JSON = join(root, 'data', 'raga-profiles.json');
 export const PROFILES_MODULE = join(root, 'src', 'engine', 'data', 'profiles.generated.js');
 export const MIN_WEIGHT = 0.15;
+/* sources of the gamaka renderer's natural motion (docs/research/gamaka-naturalness.md), exported for the pages */
+export const RENDER_SOURCES = ['S194', 'S195', 'S200', 'S201', 'S202', 'S203', 'S204', 'S205', 'S206', 'S207', 'S208', 'S209', 'S210', 'S211'];
 
 /* Durations of a phrase string: 1 per swara, plus 1 for every karvai that follows it. */
 function durations(str) {
@@ -116,6 +118,7 @@ export function compileProfiles(doc) {
   const cited = new Set();
   ids.forEach(id => table[id].phrases.concat(table[id].exceptions).forEach(ph => cited.add(ph.source)));
   ids.forEach(id => table[id].gamaka.sources.forEach(s => cited.add(s)));
+  RENDER_SOURCES.forEach(s => cited.add(s));   // the natural-motion model behind every gamaka contour
   const sids = Array.from(cited).sort((a, b) => +a.slice(1) - +b.slice(1));
   lines.push('export const SOURCES = {');
   sids.forEach((s, n) => lines.push('  ' + s + ': ' + J({ title: doc.sources[s].title, url: doc.sources[s].url, reliability: doc.sources[s].reliability }) + (n < sids.length - 1 ? ',' : '')));

@@ -1,10 +1,17 @@
 import { mod12 } from '../projection.js';
 import { rng } from '../random.js';
+import { HEAVY_AT, originOf, salience, reach, cyclesAt } from './intensity.js';
+import { swaraRule, adjacency } from './grammar.js';
 
 /* Vocal Gym engine · gamaka resolver (docs/plans/gamaka-audio.md §3.1, 3.2, 4)
    For each note: work out its context, pick the raga's most specific matching rule (or the style
    default), apply the overrides, and return a shape for the contour builder. Shapes carry targets as
-   semitone offsets from the note, already scaled by the rule's own depth. Nothing here changes notes. */
+   semitone offsets from the note, already scaled by the rule's own depth. Nothing here changes notes.
+   opts.intensity (0–1, optional) applies the dial of gamaka/intensity.js: components below their
+   salience threshold are left out, the rest get a reach and a cycle count; from HEAVY_AT up, the
+   chain limit is longer. With it, swaras the raga's data does not cover (or covers only vaguely, as
+   "takes gamaka") follow the swara grammar of gamaka/grammar.js, which reads the phrase, and the
+   adjacency rule holds one of two neighbouring oscillations flat. Without it, v0.4 behaviour. */
 
 /* the raga's union scale as pitch classes, and offsets to the next swara up or down from a pitch */
 export function scaleOf(raga) {
@@ -77,9 +84,25 @@ function styleDefault(style, ctx, sc) {
   return out;
 }
 
+/* the intensity dial on one shape: leave out components below their threshold, set reach and cycles */
+function applyIntensity(sh, rule, a) {
+  const origin = originOf(rule), r = {};
+  const comp = (name, active, drop) => {
+    if (!active) return;
+    const x = reach(a, salience(origin, name));
+    if (x > 0) r[name] = x; else { drop(); sh.thinned = true; }
+  };
+  comp('onset', sh.onset !== 'none', () => { sh.onset = 'none'; delete sh.from; });
+  comp('body', sh.body !== 'plain', () => { sh.body = 'plain'; ['lo', 'hi', 'end', 'cycles', 'dwell'].forEach(k => delete sh[k]); });
+  comp('exit', sh.exit !== 'none', () => { sh.exit = 'none'; delete sh.exitTo; });
+  if (sh.body !== 'plain' && sh.cycles) { const n = cyclesAt(a, sh.cycles); sh.cycles = [Math.min(sh.cycles[0], n), n]; }
+  sh.reach = r;
+}
+
 /* choose a rule for each note and turn it into a shape */
 export function resolveNotes(notes, opts, gamaka, raga) {
   const o = opts || {}, sc = scaleOf(raga), slotSec = o.slotSec;
+  const a = o.intensity == null ? null : Math.min(1, Math.max(0, +o.intensity || 0)), heavy = a != null && a >= HEAVY_AT;
   const style = o.style && o.style !== 'auto' ? o.style : gamaka.style;
   const rules = gamaka.rules || {};
   const out = new Array(notes.length);
@@ -103,11 +126,25 @@ export function resolveNotes(notes, opts, gamaka, raga) {
         rule = Object.assign({}, pick.r, { why: 'raga rule' });
       }
     }
-    // heavy ragas leave unmentioned swaras to the light default
-    if (!rule) rule = styleDefault(style === 'heavy' ? 'light' : style === 'default' ? 'light' : style, ctx, sc);
+    if (a != null && style !== 'plain') {
+      // the swara grammar: for swaras without a rule, and for vague ones ("takes gamaka" says that the
+      // swara moves, not how or where); a vague rule keeps its source alongside the grammar's
+      if (!rule) rule = swaraRule(ctx, sc, raga);
+      else if (rule.basis === 'text-vague' && (rule.body || 'plain') !== 'plain') {
+        const g = swaraRule(ctx, sc, raga);
+        rule = Object.assign(g, { src: rule.src, also: g.src, why: g.why + ' (the raga\'s text: gamaka on this swara)' });
+      }
+    } else if (!rule) {
+      // v0.4: heavy ragas leave unmentioned swaras to the light default
+      const fallback = style === 'heavy' || style === 'default' ? 'light' : style;
+      rule = styleDefault(heavy && fallback === 'light' ? 'medium' : fallback, ctx, sc);
+    }
     out[i] = { ctx, rule: rule || { onset: 'none', body: 'plain', exit: 'none', src: null, basis: 'plain', why: 'plain style' } };
-    out[i].plainByRule = (out[i].rule.body || 'plain') === 'plain';
   });
+  // the adjacency rule across the phrase (grammar G6): one of two neighbouring oscillations is held flat
+  if (a != null && style !== 'plain') adjacency(out, sc, raga);
+  // swaras the raga holds plain, whatever the phrase (a plain rule, achala S and P, a semitone below its neighbour)
+  out.forEach(x => { if (x) x.plainByRule = (x.rule.body || 'plain') === 'plain' && !(x.rule.onset && x.rule.onset !== 'none') && x.rule.grammar !== 'G6'; });
 
   // shapes: offsets scaled by the rule's depth; janta-only and pair-only onsets checked against context
   const shapeOf = (rule, ctx) => {
@@ -118,6 +155,7 @@ export function resolveNotes(notes, opts, gamaka, raga) {
     if (sh.body !== 'plain') Object.assign(sh, { lo: d * (rule.lo || 0), hi: d * (rule.hi || 0), end: rule.end || 'self', cycles: rule.cycles || [1, 1], dwell: rule.dwell });
     if (sh.exit === 'orikkai') sh.exitTo = d * (sc.step(ctx.p, 1) - ctx.p);
     sh.ruleDepth = d;
+    if (a != null) applyIntensity(sh, rule, a);
     return sh;
   };
   out.forEach((x, i) => { if (x) x.shape = shapeOf(x.rule, x.ctx); });
@@ -156,7 +194,7 @@ export function resolveNotes(notes, opts, gamaka, raga) {
   // overrides: leap, chain limit, landing. The chain counts oscillating bodies: a note touched by a
   // nokku or odukkal still keeps its constant-pitch anchor, so a descent flicked note by note is not a chain
   let chain = 0, chainBreaks = 0;
-  const maxChain = gamaka.maxChain || 4, inMora = new Set(moraNotes.flat());   // mora statements keep statement 1's template
+  const maxChain = (gamaka.maxChain || 4) + (heavy ? 2 : 0), inMora = new Set(moraNotes.flat());   // mora statements keep statement 1's template
   out.forEach((x, i) => {
     if (!x) { chain = 0; return; }
     const sh = x.shape;
@@ -172,5 +210,43 @@ export function resolveNotes(notes, opts, gamaka, raga) {
       x.landing = true;
     }
   });
+  if (a != null && style !== 'plain') coarticulate(out);
   return { resolved: out, chainBreaks, style, sounding };
+}
+
+/* Coarticulation across the phrase (docs/research/gamaka-papers.md §4.3), natural contour only. Each
+   oscillating swara is joined to its neighbours the way the voice actually moves:
+     flowIn   its gamaka starts where the previous swara left the voice: arriving from below at or under
+              its lower turn, it starts on that turn; arriving from above at or over its upper turn, on
+              that one, with no detour to the swara's own pitch (Pearson 2016, S206: Todi ga "starting
+              from B because it is the pitch at which the previous svara ends"; Nuttall et al. 2025,
+              S208: svaras begin at the end point of the previous svara; S210 §6.3.4 oscillatory continuity)
+     antic    rising to a swara its upper turn reaches, it touches that swara once more before coming to
+              rest (Krishna & Ishwar 2012, S209: "during many ascending melodic phrases with the Kampita
+              gamaka, the next svara is touched upon before the gamaka of this svara ends")
+   Both only rearrange the turns the rule already has; no new pitch is added. */
+function coarticulate(out) {
+  const osc = sh => sh && (sh.body === 'kampita' || sh.body === 'andolita') && (sh.onset || 'none') === 'none';
+  const r = (sh, k) => sh.reach && sh.reach[k] != null ? sh.reach[k] : 1;
+  // where a swara leaves the voice, as a pitch
+  const endOf = x => {
+    const sh = x.shape, p = x.ctx.p;
+    if (sh.exit === 'orikkai') return p + r(sh, 'exit') * (sh.exitTo != null ? sh.exitTo : 1);
+    if (sh.body !== 'plain' && (sh.end === 'hi' || sh.end === 'lo')) return p + r(sh, 'body') * (sh.end === 'hi' ? sh.hi : sh.lo);
+    return p;
+  };
+  out.forEach((x, i) => {
+    if (!x || !x.shape) return;
+    const sh = x.shape;
+    delete sh.flowIn; delete sh.antic;
+    if (!osc(sh)) return;
+    const p = x.ctx.p, lo = p + r(sh, 'body') * (sh.lo || 0), hi = p + r(sh, 'body') * (sh.hi || 0);
+    const prev = i > 0 ? out[i - 1] : null, next = i + 1 < out.length ? out[i + 1] : null;
+    if (prev && prev.shape) {
+      const from = endOf(prev);
+      if (from < p - 0.05 && lo < p - 1e-9 && from <= lo + 0.5) sh.flowIn = 'lo';
+      else if (from > p + 0.05 && hi > p + 1e-9 && from >= hi - 0.5) sh.flowIn = 'hi';
+    }
+    if (next && next.ctx && (sh.end || 'self') === 'self' && next.ctx.p > p && hi > p + 1e-9 && Math.abs(hi - next.ctx.p) <= 0.5) sh.antic = 'hi';
+  });
 }

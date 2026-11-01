@@ -7,7 +7,7 @@
 const CELL_DEFS = [
   // id, name, kind, F0 (familiarity prior), N0 (novelty prior), steps [[degree step, duration], ...]
   ['step', 'step', 'step', 0.2, -0.2, [[1, 1]]],
-  ['skip', 'skip', 'step', 0.0, 0.2, [[2, 1]]],
+  ['skip', 'skip', 'step', -0.3, 0.2, [[2, 1]]],   // a lone third: a filler, so less familiar than a figure that resolves it
   ['hold', 'held step', 'step', 0.1, -0.1, [[1, 2]]],
   ['run3', 'run', 'conv', 1.0, -0.4, [[1, 1], [1, 1], [1, 1]]],
   ['run4', 'run', 'conv', 1.1, -0.5, [[1, 1], [1, 1], [1, 1], [1, 1]]],
@@ -26,13 +26,20 @@ const CELL_DEFS = [
   ['leapfill', 'leap and fall back', 'nov', -0.3, 0.9, [[3, 1], [-1, 1], [-1, 1]]],
   ['zigzag', 'zig-zag', 'nov', -0.8, 1.1, [[2, 1], [-3, 1], [2, 1]]],
   ['synco', 'syncopated hold', 'nov', -0.3, 0.7, [[1, 2], [1, 1]]],
-  ['skipjanta', 'displaced janta', 'nov', -0.2, 0.8, [[2, 1], [0, 1], [-1, 1], [0, 1]]]
+  ['skipjanta', 'displaced janta', 'nov', -0.2, 0.8, [[2, 1], [0, 1], [-1, 1], [0, 1]]],
+  // phrase openings (v0.4, docs/research/kalpana-structure.md §3.2): after the held swara that ends a
+  // phrase, the next one restarts higher and runs down toward its focus (Field 2018, Ex. 2.1, 3, 8.2,
+  // 18: (RGM)[P,P,P,,](RGM); every korvai unit descends). Only a phrase may begin with one: the leap is
+  // the restart, and inside a phrase it would be a jump at a join. The mirror images rise from below.
+  ['restart3', 'restart and fall', 'conv', 0.9, -0.3, [[3, 1], [-1, 1], [-1, 1]], 'start'],
+  ['restart4', 'restart and fall', 'conv', 0.9, -0.3, [[4, 1], [-1, 1], [-1, 1], [-1, 1]], 'start'],
+  ['restart2', 'restart and fall', 'conv', 0.7, -0.2, [[2, 1], [-1, 1], [-1, 1], [-1, 1]], 'start']
 ];
 const CELLS = (function () {
   const out = [];
   CELL_DEFS.forEach(b => [1, -1].forEach(dir => {
     const shape = b[5].map(([d, u]) => [d * dir, u]);
-    out.push({ id: b[0] + (dir > 0 ? '+' : '-'), base: b[0], name: b[1], kind: b[2], F0: b[3], N0: b[4], shape, dir, len: shape.reduce((s, x) => s + x[1], 0) });
+    out.push({ id: b[0] + (dir > 0 ? '+' : '-'), base: b[0], name: b[1], kind: b[2], F0: b[3], N0: b[4], shape, dir, len: shape.reduce((s, x) => s + x[1], 0), start: b[6] === 'start' });
   }));
   return out;
 })();

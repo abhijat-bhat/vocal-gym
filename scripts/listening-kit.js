@@ -43,7 +43,8 @@ function main(argv) {
   if (!out) { console.error('listening-kit: give --out <dir>'); return 2; }
   mkdirSync(out, { recursive: true });
   const manifest = buildManifest(seed);
-  if (!only) manifest.forEach(c => { const ct = contourFromArgs(c.args); writeFileSync(join(out, c.file), wav(synthesize(ct, { drone: true }))); });
+  // the clips keep the protocol's tone (docs/research/gamaka-eval.md), not the sung voice
+  if (!only) manifest.forEach(c => { const ct = contourFromArgs(c.args); writeFileSync(join(out, c.file), wav(synthesize(ct, { drone: true, timbre: 'tone' }))); });
   writeFileSync(join(out, 'form.csv'), form(manifest));
   writeFileSync(join(out, 'key.json'), JSON.stringify({ seed, clips: manifest.map(({ file, part, raga, name, round, gamaka, args }) => ({ file, part, raga, name, round, gamaka, command: 'vocal-gym kalpana ' + args.join(' ') })) }, null, 2) + '\n');
   writeFileSync(join(out, 'README.txt'), 'Vocal Gym gamaka listening test (seed ' + seed + ').\nGive listeners the WAV files and form.csv only. key.json reveals which clips have gamaka; keep it with the experimenter.\nProtocol: docs/research/gamaka-eval.md\n');

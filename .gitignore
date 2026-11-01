@@ -3,3 +3,6 @@ dist/
 *.log
 .DS_Store
 listening-kit/
+
+# copyrighted papers kept locally for reading (see docs/research/)
+research/*.pdf

@@ -11,7 +11,7 @@ const check = (cond, msg) => { if (!cond) { failures++; console.log('  FAIL ' + 
 
 /* A Web Audio stand-in that records what playback schedules (jsdom has no audio). */
 function stubAudio(w) {
-  const log = w.__audio = { curves: [], oscillators: 0, sets: 0 };
+  const log = w.__audio = { curves: [], oscillators: 0, sets: 0, sources: 0, buffers: [] };
   const param = v => ({ value: v, setValueAtTime() { log.sets++; }, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {},
     setValueCurveAtTime(curve, t, d) { log.curves.push({ curve, t, d }); } });
   const node = extra => Object.assign({ connect(n) { return n; }, disconnect() {} }, extra || {});
@@ -22,8 +22,8 @@ function stubAudio(w) {
     createGain() { return node({ gain: param(1) }); }
     createBiquadFilter() { return node({ type: 'lowpass', frequency: param(350), Q: param(1) }); }
     createPeriodicWave(re, im) { return { re, im }; }
-    createBuffer(c, n) { return { getChannelData: () => new Float32Array(n) }; }
-    createBufferSource() { return node({ buffer: null, start() {} }); }
+    createBuffer(c, n, r) { const d = new Float32Array(n); log.buffers.push(d); return { duration: n / (r || 44100), length: n, getChannelData: () => d }; }
+    createBufferSource() { log.sources++; return node({ buffer: null, start() {}, stop() {} }); }
   }
   w.AudioContext = Ctx;
 }
@@ -43,7 +43,7 @@ function load(file) {
   return { dom, w: dom.window, d: dom.window.document, errors };
 }
 
-function driveDemos(file) {
+async function driveDemos(file) {
   const { w, d, errors } = load(file);
   const $ = id => d.getElementById(id);
   const click = el => el.dispatchEvent(new w.Event('click'));
@@ -64,12 +64,93 @@ function driveDemos(file) {
     const cell = Array.from(d.querySelectorAll('.pdfcell')).find(b => b.dataset.f === 'dhruva' && b.dataset.l === '9');
     click(cell); check($('a-span').value === '7' && /1\.5 Sankeer/.test(text('a-info')), 'sheet cell loads into the demo');
   }
-  // jathi: generate
-  d.querySelectorAll('[data-j]').forEach(b => { click(b); check(/correctness gate passed/.test(text('j-audit')), 'jathi preset passes the judge: ' + b.textContent.trim()); });
-  $('j-fam').value = 'chapu'; fire($('j-fam'), 'change'); $('j-off').value = '-6'; fire($('j-off'), 'input');
-  check(/before sam \(atita\)/.test(text('j-info')) && $('j-out').querySelectorAll('.row').length >= 3, 'chapu with atita eduppu');
-  $('j-land').value = 'end'; fire($('j-land'), 'input'); check(/Ends exactly at sam/.test(text('j-audit')), 'land at end');
-  click($('j-edit')); check(!$('j-comp').hidden && $('j-result').querySelector('.big'), 'open in editor judges the script');
+  // korvai & tihai lab (v0.8): every lesson draws a grid that lands, the tala bar drives them, every form builds
+  const lab = $('kl-root'), q = s => lab.querySelector(s), qa = s => Array.from(lab.querySelectorAll(s));
+  const NL = qa('.kl-rail button').length;
+  check(q('.kl-lesson') && NL === 15, 'the lab opens on its fifteen lessons (' + NL + ')');
+  const lessonOK = tag => {
+    const bad = qa('.kl-note.bad, .kl-checks li.bad');
+    // a grid, or a warning that says why these settings have none (never an error)
+    check(!bad.length && (qa('.kl-c').length > 0 || qa('.kl-note.warn').length > 0), tag + (bad.length ? ': ' + bad.map(x => x.textContent).join(' | ') : ': no grid and no reason'));
+  };
+  [['triputa', '4', '4'], ['triputa', '5', '4'], ['chapu', '7', '2'], ['dhruva', '9', '5'], ['eka', '3', '3']].forEach(([fam, L, gati]) => {
+    const fs = q('[data-fk="fam"]'); fs.value = fam; fire(fs, 'change');
+    const js = q('[data-fk="jati"]'); js.value = L; fire(js, 'change');
+    click(q('[data-chips="gati"] [data-v="' + gati + '"]'));
+    const C = w.VGEngine.korvai.talaCycle(w.VGEngine.tala(fam, +L), +gati).pulses;
+    check(new RegExp(C + ' pulses').test(q('.kl-cyclebox').textContent), fam + L + ' gati ' + gati + ': ' + C + ' pulses in the tala bar');
+    if (q('[data-mode="learn"]').getAttribute('aria-selected') !== 'true') click(q('[data-mode="learn"]'));
+    for (let i = 0; i < NL; i++) { click(qa('.kl-rail button')[i]); lessonOK(fam + L + ' g' + gati + ' lesson ' + (i + 1)); }
+  });
+  const fs0 = q('[data-fk="fam"]'); fs0.value = 'triputa'; fire(fs0, 'change'); const js0 = q('[data-fk="jati"]'); js0.value = '4'; fire(js0, 'change'); click(q('[data-chips="gati"] [data-v="4"]'));
+  click(qa('.kl-rail button')[2]);
+  const cell = q('[data-ak="7,5"]'); click(cell);
+  check(/leave 1/.test(q('.kl-big').textContent) && q('.kl-c.land.r-close'), 'Balaji’s 7 (5) 7 (5) 7: leave 1, closing tha on sam');
+  click(qa('.kl-rail button')[1]); click(q('[data-st="P"][data-d="1"]'));
+  check(/3 × 6 \+ 2 × 2 = 22/.test(q('.kl-big').textContent), 'the mora stepper recomputes 3P + 2G');
+  click(q('[data-mode="build"]'));
+  check(q('.kl-build'), 'build mode');
+  ['mora', 'korvai', 'statements', 'progressive', 'chakradar', 'trikaala'].forEach(form => {
+    click(q('[data-ck="form"] [data-v="' + form + '"]'));
+    lessonOK('build ' + form);
+    check(qa('.kl-checks li.ok').length >= 2, 'build ' + form + ' lands');
+  });
+  // the explorer (v0.8.2): every variation of a form, stepped, filtered, searched and surprised, each one landing
+  click(q('[data-ck="form"] [data-v="korvai"]'));
+  const exCount = () => +(q('.kl-exhead b') ? q('.kl-exhead b').textContent.replace(/[^0-9]/g, '') : 0), cur = () => q('.kl-excur b') && q('.kl-excur b').textContent;
+  check(exCount() > 1000, 'the korvai explorer lists every variation (' + exCount() + ')');
+  const seenEx = new Set([cur()]);
+  for (let i = 0; i < 8; i++) { click(q('[data-ex="next"]')); seenEx.add(cur()); check(qa('.kl-checks li.ok').length >= 2 && !qa('.kl-checks li.bad').length, 'variation ' + (i + 2) + ' lands: ' + cur()); }
+  check(seenEx.size >= 8, 'next steps through different variations (' + seenEx.size + ')');
+  click(q('[data-ex="prev"]')); check(/Variation/.test(q('.kl-expos').textContent) && +q('[data-ex="pos"]').value === 8, 'previous steps back');
+  click(q('[data-ex="surprise"]')); check(qa('.kl-checks li.ok').length >= 2, 'surprise me draws a variation that lands: ' + cur());
+  const fsel = q('[data-exf="purvanga"]'); const opt = Array.from(fsel.options).find(o => /gopuccha/.test(o.value));
+  fsel.value = opt.value; fire(fsel, 'change');
+  check(exCount() > 0 && /gopuccha/.test(q('.kl-extags').textContent) && /match the filters/.test(q('.kl-exhead').textContent), 'a facet filter narrows the list to gopuccha purvangas');
+  const dsel = q('[data-ex="sort"]'); dsel.value = 'novel'; fire(dsel, 'change'); check(qa('.kl-checks li.ok').length >= 2, 'sorting by the most unusual still lands');
+  click(q('[data-ex="clear"]')); check(!/match the filters/.test(q('.kl-exhead').textContent), 'clear filters');
+  const qb = q('[data-ex="q"]'); qb.value = 'gopuccha 1'; fire(qb, 'input');
+  await new Promise(r => setTimeout(r, 350));
+  const lis = qa('.kl-exlist button'); check(lis.length > 0 && lis.every(b => /gopuccha/i.test(b.textContent)), 'search finds the gopuccha purvangas (' + lis.length + ')');
+  if (lis.length) { click(lis[0]); check(/gopuccha/.test(cur()) && qa('.kl-checks li.ok').length >= 2, 'picking from the list draws it'); }
+  q('[data-ex="q"]').value = ''; fire(q('[data-ex="q"]'), 'input'); await new Promise(r => setTimeout(r, 350));
+  ['mora', 'statements', 'progressive', 'chakradar'].forEach(form => {
+    click(q('[data-ck="form"] [data-v="' + form + '"]'));
+    check(q('.kl-ex') && exCount() > 1, form + ': explorer with ' + exCount() + ' variations');
+    for (let i = 0; i < 4; i++) { click(q('[data-ex="next"]')); check(qa('.kl-checks li.ok').length >= 2 && !qa('.kl-checks li.bad').length, form + ' variation lands: ' + cur()); }
+  });
+  click(q('[data-ck="form"] [data-v="mora"]'));
+  const src0 = w.__audio.sources; click(q('.kl-play'));
+  check(w.__audio.sources - src0 >= 6, 'the lab plays its grid on the mridangam (' + (w.__audio.sources - src0) + ' buffer sources)'); click(q('.kl-play'));
+  // the phrase tones (pitched, tuned to Sa) sound with the drum, and the lab's Sa drives the sound bar
+  { const o0 = w.__audio.oscillators; click(q('.kl-play')); const withTones = w.__audio.oscillators - o0; click(q('.kl-play'));
+    click(q('.kl-tones')); const o1 = w.__audio.oscillators; click(q('.kl-play')); const without = w.__audio.oscillators - o1; click(q('.kl-play')); click(q('.kl-tones'));
+    check(withTones > without, 'phrase tones add pitched voices (' + withTones + ' with, ' + without + ' without)');
+    const sa = q('.kl-sa'); sa.value = '2'; fire(sa, 'change'); check($('snd-sa').value === '2', 'the lab sets Sa for the page'); sa.value = '0'; fire(sa, 'change'); }
+  click(q('[data-ck="form"] [data-v="korvai"]'));
+  { const so = q('[data-ex="sort"]'); so.value = 'familiar'; fire(so, 'change'); const p = q('[data-ex="pos"]'); p.value = '1'; fire(p, 'change'); }
+  click(q('.kl-check'));
+  check(lab.contains($('j-comp')) && /korvai/.test($('j-src').value) && /correctness gate/i.test(text('j-result')) && !/capped at 49/.test(text('j-result')), 'a korvai opens in the judge and passes its gate');
+  // v0.8.3: the lab's rhythm, sung by the kalpana generator
+  click(q('[data-mode="build"]')); click(q('[data-ck="form"] [data-v="korvai"]'));
+  click(q('.kl-kalpana'));
+  check(!$('p-kal').hidden && !$('k-rhythm').hidden && /korvai lab/.test(text('k-rhythm')), 'Sing it as kalpana swaras opens the kalpana tab, following the lab');
+  check($('k-out').querySelectorAll('.s').length > 0 && /Exactly \d+ pulses/.test(text('k-audit')) && /Family 1/.test(text('k-audit')) && !$('k-audit').querySelector('.bad'), 'the lab rhythm is sung, every check passing');
+  check($('k-fam').disabled && $('k-len').disabled, 'the tala and length come from the lab');
+  { const o0 = w.__audio.oscillators + w.__audio.sources; click($('k-play')); check(w.__audio.oscillators + w.__audio.sources > o0, 'it plays'); click($('k-play')); }
+  // v0.8.5: breath, and inspiration pasted from an AI assistant
+  { const m = /(\d+) swaras on (\d+) syllables/.exec(text('k-audit')); check(m && +m[1] < +m[2], 'the lines breathe: fewer swaras than syllables (' + (m ? m[1] + ' of ' + m[2] : 'none') + ')');
+    const d = $('k-rh-dens'); d.value = 'full'; fire(d, 'change'); const f = /(\d+) swaras on (\d+) syllables/.exec(text('k-audit')); check(f && f[1] === f[2], 'one swara on every syllable on request'); d.value = 'auto'; fire(d, 'change');
+    click($('k-rh-prompt')); check(!$('k-rh-ptext').hidden && /Arohana/.test($('k-rh-ptext').value) && /Phrase 1 \(/.test($('k-rh-ptext').value), 'the prompt describes the raga and the rhythm');
+    const n = ($('k-rh-ptext').value.match(/^Phrase \d+ \(/gm) || []).length;
+    $('k-rh-ans').value = JSON.stringify({ idea: 'falling runs', phrases: Array.from({ length: n }, (_, k) => ({ phrase: k + 1, swaras: k % 2 ? 'P , M G , R S ,' : 'S R G , M , P D' })) });
+    click($('k-rh-use')); check(/suggested phrases sung/.test(text('k-audit')) && /falling runs/.test(text('k-audit')) && !$('k-audit').querySelector('.bad'), 'the pasted lines are sung as inspiration, every check passing');
+    check($('k-out').querySelectorAll('.s.insp').length > 0, 'inspired phrases are marked');
+    click($('k-rh-clear')); check(!/suggested phrases sung/.test(text('k-audit')), 'clearing returns to the engine’s own lines'); }
+  click($('k-rh-stop')); check($('k-rhythm').hidden && !$('k-fam').disabled, 'stop following gives the controls back');
+  click($('tab-jathi'));
+  click(q('[data-mode="learn"]'));
+  check(!lab.contains($('j-comp')) && $('j-comp-home').contains($('j-comp')), 'the judge goes back when the lab leaves Check');
   // jathi: compose and judge
   const expect = { adi: '100', short: '49' };
   ['adi', 'short', 'chapu', 'speed'].forEach(k => {
@@ -80,7 +161,6 @@ function driveDemos(file) {
   $('j-ex').value = 'short'; fire($('j-ex'), 'change');
   check(/Start with line 11/.test($('j-result').textContent), 'short example points at line 11');
   $('j-src').value = 'tala: adi\n(tha ka'; click($('j-judge')); check(/Missing "\)"/.test(text('j-result')), 'syntax error shown');
-  click($('j-mode-gen')); check(!$('j-gen').hidden, 'back to generate mode');
   // kalpana
   check(/Composition resumes on/.test(d.querySelector('label[for="k-end"]').textContent), 'kalpana asks where the composition resumes');
   d.querySelectorAll('[data-k]').forEach(b => {
@@ -110,29 +190,65 @@ function driveDemos(file) {
     check(mo.length > 0 && new RegExp(st + ' mora').test(text('k-audit')), 'mora style ' + st + ' shown in the notation and the audit');
   });
   $('k-mora').value = 'auto'; fire($('k-mora'), 'input');
+  // v0.4: the phrase plan in the audit, the korvai ending and the whole-session scope
+  check(/Phrase plan: \d+ phrases shaped by the tala/.test(text('k-audit')), 'the audit describes the phrase plan');
+  $('k-len').value = '16'; fire($('k-len'), 'input'); $('k-pa').value = '2'; fire($('k-pa'), 'input');
+  $('k-ending').value = 'korvai'; fire($('k-ending'), 'input');
+  check(/Korvai ending|no korvai|Free ending|Mora ending/.test(text('k-audit')), 'the korvai ending is offered and explained');
+  $('k-ending').value = 'auto'; fire($('k-ending'), 'input');
+  if ($('k-scope')) {
+    $('k-scope').value = 'session'; fire($('k-scope'), 'input');
+    check($('k-audit').querySelectorAll('li').length >= 12 && /first speed/.test(text('k-audit')) && /koraippu/.test(text('k-audit')) && /korvai/.test(text('k-audit')), 'the whole session lists its rounds: first speed, second speed, koraippu, korvai');
+    check($('k-out').querySelectorAll('.s').length > 200, 'the session is laid out on the tala grid');
+    $('k-scope').value = 'round'; fire($('k-scope'), 'input');
+  } else check(false, 'the scope select exists');
   // gamaka playback (gamaka plan test 17): the select, the pitch view, and one pitch curve per legato group
-  check(!!$('snd-gamaka') && $('snd-gamaka').options.length === 3, 'gamaka select with off, light and full');
+  check(!!$('snd-gamaka') && $('snd-gamaka').type === 'range' && $('snd-gamaka').min === '0' && $('snd-gamaka').max === '100', 'gamaka slider from 0 to 100');
+  check(/performative/.test(text('snd-gv')), 'the slider names its level');
   $('k-raga').value = 'mela65'; fire($('k-raga'), 'input'); $('k-len').value = '8'; fire($('k-len'), 'input'); $('k-ending').value = 'auto'; fire($('k-ending'), 'input');
   const pv = $('k-pitch').querySelector('svg');
   check(pv && pv.querySelector('path.pv-path') && pv.querySelectorAll('rect.pv-note title').length > 0, 'the pitch view draws the contour with per-swara rules');
   check(/Raga-specific gamaka|Gamaka from text/.test(text('k-gamaka')), 'Kalyani shows its gamaka sources');
-  ['0.5', '1'].forEach(v => {
-    $('snd-gamaka').value = v; fire($('snd-gamaka'), 'change');
+  // the sung voice (docs/research/expressive-voice.md): one rendered buffer, finite and audible, no oscillators
+  const sung = (label, play) => {
+    w.__audio.curves.length = 0; w.__audio.buffers.length = 0;
+    click(play);
+    const bufs = w.__audio.buffers.filter(b => b.length > 44100 * 0.5), y = bufs[0];
+    let pk = 0, fin = true; if (y) for (let i = 0; i < y.length; i++) { if (!Number.isFinite(y[i])) fin = false; pk = Math.max(pk, Math.abs(y[i])); }
+    check(bufs.length === 1 && fin && pk > 0.05 && pk < 1, label + ': the voice sings one finite, audible buffer (peak ' + pk.toFixed(2) + ')');
+    check(w.__audio.curves.length === 0, label + ': no oscillator pitch curves (the voice is the rendered buffer)');
+    click(play);   // stop
+  };
+  check(!!$('snd-voice') && $('snd-voice').value === 'aa', 'the voice select starts on the voice sung on aa');
+  ['0', '55', '100'].forEach(v => { $('snd-gamaka').value = v; fire($('snd-gamaka'), 'change'); sung('kalpana, gamaka ' + v, $('k-play')); });
+  $('snd-voice').value = 'swaram'; fire($('snd-voice'), 'change');
+  sung('kalpana sung on the swara names', $('k-play'));
+  sung('alankara sung on the swara names', $('a-play'));
+  $('snd-voice').value = 'aa'; fire($('snd-voice'), 'change');
+  sung('alankara sung on aa', $('a-play'));
+  // the simple tone (the earlier playback): one pitch curve per legato group with gamaka, plain tones at 0
+  $('snd-voice').value = 'tone'; fire($('snd-voice'), 'change');
+  ['20', '55', '100'].forEach(v => {
+    $('snd-gamaka').value = v; fire($('snd-gamaka'), 'input'); fire($('snd-gamaka'), 'change');
     w.__audio.curves.length = 0;
     click($('k-play'));
-    const curves = w.__audio.curves;
+    // per legato group: a pitch curve (in Hz) and a loudness curve (around 1)
+    const peak = c => Math.max.apply(null, Array.from(c.curve)), curves = w.__audio.curves.filter(c => peak(c) > 20), loud = w.__audio.curves.filter(c => peak(c) <= 20);
     check(curves.length === 1 && curves.every(c => c.curve instanceof w.Float32Array || c.curve instanceof Float32Array) && curves.every(c => Array.from(c.curve).every(Number.isFinite) && c.d > 0),
-      'gamaka ' + v + ': one finite pitch curve per legato group, got ' + curves.length);
+      'simple tone, gamaka ' + v + ': one finite pitch curve per legato group, got ' + curves.length);
+    check(loud.length === curves.length && loud.every(c => Array.from(c.curve).every(x => x > 0.7 && x < 1.2)), 'simple tone, gamaka ' + v + ': a loudness curve that follows the pitch');
     click($('k-play'));   // stop
   });
   $('snd-gamaka').value = '0'; fire($('snd-gamaka'), 'change');
   w.__audio.curves.length = 0; click($('k-play'));
-  check(w.__audio.curves.length === 0, 'gamaka off plays the plain tones, with no pitch curves');
+  check(w.__audio.curves.length === 0, 'simple tone, gamaka off: the plain tones, with no pitch curves');
   click($('k-play'));
-  check(/view shows full gamaka/.test(text('k-gamaka')), 'with gamaka off the view says it shows full gamaka');
+  $('snd-voice').value = 'aa'; fire($('snd-voice'), 'change');
+  check(/view shows performative gamaka/.test(text('k-gamaka')), 'with gamaka at 0 the view says it shows performative gamaka');
+  check(/straight notes/.test(text('snd-gv')), 'level 0 is named straight notes');
   $('k-raga').value = 'mela1'; fire($('k-raga'), 'input');
   check(/Generic gamaka: no raga-specific data yet/.test(text('k-gamaka')), 'data-less ragas say their gamaka is generic');
-  $('snd-gamaka').value = '0.5'; fire($('snd-gamaka'), 'change');
+  $('snd-gamaka').value = '55'; fire($('snd-gamaka'), 'change');
   // micro-benchmark (plan 8): 100 rounds of one Adi avartanam in under a second
   // (warm, best of three runs, so a moment of load elsewhere on the machine does not decide it)
   const kal = w.VGEngine.allRagas().melakartas[64], opts = s => ({ aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: s % 3, seed: s + 1 });
@@ -145,6 +261,10 @@ function driveDemos(file) {
   const calib = Math.max(1, Date.now() - tc), limit = Math.round(1000 * Math.max(1, calib / 100));
   console.log('  100 Kalyani rounds: ' + runs.join(', ') + ' ms (best ' + ms + '); calibration loop ' + calib + ' ms (about 100 at full speed), limit ' + limit + ' ms' + (acc ? '' : ''));
   check(ms < limit, '100 rounds under 1 s at full speed: best of three took ' + ms + ' ms, limit ' + limit + ' ms');
+  // a whole session: one block a round
+  $('k-scope').value = 'session'; fire($('k-scope'), 'input');
+  check($('k-out').querySelectorAll('.sround').length >= 4 && $('k-out').querySelectorAll('.theme').length >= 4, 'session rounds drawn as blocks (' + $('k-out').querySelectorAll('.sround').length + ')');
+  $('k-scope').value = 'round'; fire($('k-scope'), 'input');
   // tabs
   click($('tab-jathi')); check(!$('p-jathi').hidden && $('p-ala').hidden, 'tabs switch');
   check(errors.length === 0, 'no script errors: ' + errors.join(' | '));
@@ -156,8 +276,8 @@ function loads(file) {
   check(errors.length === 0, 'no script errors: ' + errors.join(' | '));
 }
 
-driveDemos('playground.html');
-driveDemos('research-plan.html');
+await driveDemos('playground.html');
+await driveDemos('research-plan.html');
 loads('pitch.html');
 loads('index.html');
 if (failures) { console.log(failures + ' smoke check(s) failed'); process.exit(1); }

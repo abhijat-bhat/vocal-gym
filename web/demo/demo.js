@@ -132,6 +132,27 @@ function perc(ac, out, t, syl){
   n.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = low ? 900 : 3200; ng.gain.value = low ? 0.12 : 0.18;
   n.connect(bp).connect(ng).connect(out); n.start(t);
 }
+/* the sollus of a jathi, voiced by the "Sollu voice" setting:
+     mrd   the synthesized mridangam (web/shared/mridangam.js, docs/research/mridangam-synthesis.md), the sollus
+           realized as strokes group by group (ta dhi gi na thom → ki ta ki nam thom)
+     rec   the recorded syllables (web/shared/solkattu-bank.js, docs/solkattu-recording.md); any syllable not
+           recorded falls back to the mridangam
+     both  the spoken syllable over a softer mridangam, as a performer recites while playing
+   hits: [{ t, s }] in time order. A syllable is cut where the next one starts; a karvai lets it ring on. */
+const SOLLU_KEY = 'vg.solluVoice';
+function solluMode(){ const v = $('snd-sollu') && $('snd-sollu').value; return v === 'rec' || v === 'both' ? v : 'mrd'; }
+function solluGaps(times){ return times.map((t, i) => i + 1 < times.length ? times[i + 1] - t : 0.4); }
+function solluPlay(ac, out, hits){
+  const mode = solluMode(), M = window.VGMridangam, V = window.VGSolkattu, gaps = solluGaps(hits.map(h => h.t));
+  const strokes = M ? M.realize(hits.map(h => h.s)) : [];
+  const drum = M ? M.voice(ac, out, saHz(), mode === 'both' ? 0.5 : 1) : null;
+  const say = mode !== 'mrd' && V && V.available() ? V.voice(ac, out, 0.9) : null;
+  hits.forEach((h, i) => {
+    const spoke = !!(say && say(h.t, h.s, gaps[i]));
+    if (spoke && mode === 'rec') return;
+    if (!(drum && drum(h.t, strokes[i], gaps[i])) && !spoke) perc(ac, out, h.t, h.s);
+  });
+}
 function playPitched(btn, notes, tl, per){
   // notes: [{p (semitones from Sa) | null, slots}] in order; per = slots per akshara
   startPlayback(btn, (ac, out, t0) => {
@@ -150,12 +171,29 @@ function playPitched(btn, notes, tl, per){
    (overlapping automation is not allowed for value curves); articulation dips live on a separate
    gain node. The timbre is a few harmonics through two "aa" formants, with no vibrato: plain
    Carnatic notes are steady, and vibrato would blur the plain/oscillated contrast. */
-const GAMAKA_KEY = 'vg.gamaka';
-function gamakaDepth(){ const v = +$('snd-gamaka').value; return v > 0 ? v : 0; }
+const GAMAKA_KEY = 'vg.gamakaLevel', GAMAKA_OLD = 'vg.gamaka';   // the old key held off/light/full as 0, 0.5, 1
+/* the gamaka slider, 0–100, as the renderer's intensity (docs/research/gamaka-naturalness.md §3.2) */
+function gamakaDepth(){ const v = +$('snd-gamaka').value; return v > 0 ? Math.min(1, v / 100) : 0; }
+function gamakaLabel(v){ return v <= 0 ? 'straight notes' : v < 35 ? 'light' : v < 75 ? 'performative' : v < 85 ? 'rich' : 'heavy, accurate'; }
 function voiceWave(ac){
-  const n = 9, re = new Float32Array(n), im = new Float32Array(n);
-  for (let h = 1; h < n; h++) im[h] = 1 / Math.pow(h, 1.2);
+  const n = 17, re = new Float32Array(n), im = new Float32Array(n);
+  for (let h = 1; h < n; h++) im[h] = 1 / Math.pow(h, 1.3);
   return ac.createPeriodicWave(re, im);
+}
+/* loudness that follows the pitch (S200): a little louder above the swara, a little softer in fast moves */
+function amCurve(contour, g, step){
+  const n = Math.max(2, Math.round((g.t1 - g.t0) / step) + 1), out = new Float32Array(n), pts = g.points;
+  const sw = contour.notes.filter(x => x.p != null);
+  let k = 0, q = 0;
+  for (let j = 0; j < n; j++){
+    const t = g.t0 + (g.t1 - g.t0) * j / (n - 1);
+    while (k < pts.length - 2 && pts[k + 1].t < t) k++;
+    while (q < sw.length - 1 && sw[q].t1 <= t) q++;
+    const a = pts[k], b = pts[Math.min(k + 1, pts.length - 1)], dt = b.t - a.t;
+    const p = dt > 0 ? a.p + (b.p - a.p) * Math.min(1, Math.max(0, (t - a.t) / dt)) : a.p, speed = dt > 0 ? Math.abs(b.p - a.p) / dt : 0;
+    out[j] = 1 + Math.max(-0.15, Math.min(0.15, 0.04 * (p - sw[q].p))) - 0.08 * Math.min(1, speed / 40);
+  }
+  return out;
 }
 /* resample a group's points onto an even grid, as setValueCurveAtTime spreads values evenly */
 function evenCurve(points, t0, t1, step, toHz){
@@ -174,47 +212,81 @@ function scheduleGamaka(ac, out, t0, contour, sa){
   const wave = voiceWave(ac), toHz = p => sa * Math.pow(2, p / 12);
   contour.groups.forEach(g => {
     const start = t0 + g.t0, dur = g.t1 - g.t0;
-    const osc = ac.createOscillator(), env = ac.createGain(), art = ac.createGain(), dry = ac.createGain(), mix = ac.createGain();
+    const osc = ac.createOscillator(), env = ac.createGain(), art = ac.createGain(), am = ac.createGain(), dry = ac.createGain(), mix = ac.createGain();
     osc.setPeriodicWave(wave);
     osc.frequency.setValueCurveAtTime(evenCurve(g.points, g.t0, g.t1, 0.005, toHz), start, dur);
     // envelope: a soft attack, a steady level, a short release
     env.gain.setValueAtTime(0.0001, start); env.gain.exponentialRampToValueAtTime(0.26, start + 0.03); env.gain.setValueAtTime(0.26, start + Math.max(0.04, dur - 0.06)); env.gain.exponentialRampToValueAtTime(0.0001, start + dur + 0.04);
-    // articulation: each swara is spoken, except where a jaru glides into it
+    am.gain.setValueCurveAtTime(amCurve(contour, g, 0.01), start, dur);
+    // articulation: each swara is spoken softly, except where a jaru glides into it
     art.gain.setValueAtTime(1, start);
     g.notes.forEach((i, k) => {
       if (k === 0) return;
       const n = contour.notes[i];
       if (n.shape && n.shape.indexOf('jaru') >= 0) return;
       const tb = t0 + n.t0;
-      art.gain.setValueAtTime(1, tb - 0.0125); art.gain.linearRampToValueAtTime(0.75, tb); art.gain.linearRampToValueAtTime(1, tb + 0.0125);
+      art.gain.setValueAtTime(1, tb - 0.015); art.gain.linearRampToValueAtTime(0.88, tb); art.gain.linearRampToValueAtTime(1, tb + 0.015);
     });
-    const f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter();
+    const f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), f3 = ac.createBiquadFilter();
     f1.type = 'bandpass'; f1.frequency.value = 700; f1.Q.value = 4;
     f2.type = 'bandpass'; f2.frequency.value = 1150; f2.Q.value = 5;
-    dry.gain.value = 0.5; mix.gain.value = 1.1;
-    osc.connect(env).connect(art);
-    art.connect(dry).connect(out); art.connect(f1).connect(mix); art.connect(f2).connect(mix); mix.connect(out);
+    f3.type = 'bandpass'; f3.frequency.value = 2700; f3.Q.value = 6;
+    dry.gain.value = 0.45; mix.gain.value = 1.1;
+    osc.connect(env).connect(art).connect(am);
+    am.connect(dry).connect(out); am.connect(f1).connect(mix); am.connect(f2).connect(mix); am.connect(f3).connect(mix); mix.connect(out);
     osc.start(start); osc.stop(start + dur + 0.08);
   });
   return t0 + (contour.groups.length ? contour.groups[contour.groups.length - 1].t1 : 0);
 }
+/* ---- the sung voice (web/shared/voice.js, docs/research/expressive-voice.md) ----
+   Kalpana and alankara are sung: the engine renders the contour (the raga's gamaka at the slider's level,
+   or straight notes sung legato at 0) with its phrasing and loudness, and the voice sings it on "aa" or on
+   the swara names. "Simple tone" keeps the earlier oscillator playback. */
+const VOICE_KEY = 'vg.voice';
+function voiceMode(){ const v = $('snd-voice') && $('snd-voice').value; return v === 'swaram' || v === 'tone' ? v : 'aa'; }
+const angaStarts = tl => { const s = []; let c = 0; tl.angas.forEach(a => { s.push(c); c += a.len; }); return s; };
+/* notes [{ p, dur }] in slots, rendered for playback at the current tempo */
+function lineContour(notes, raga, tl, per, depth, units, seed){
+  const beat = 60 / +$('snd-bpm').value;
+  return E.renderGamaka(notes, { raga, slotSec: beat / per, intensity: depth, voice: true, units, seed: seed || 1, per, cycleBeats: tl.total, angaStarts: angaStarts(tl) });
+}
+function beatClicks(ac, out, t0, notes, tl, per){
+  const beat = 60 / +$('snd-bpm').value, total = notes.reduce((s, n) => s + n.slots, 0), aks = Math.ceil(total / per), starts = new Set(angaStarts(tl));
+  for (let k = 0; k < aks; k++){ const inCyc = k % tl.total; click(ac, out, t0 + k * beat, inCyc === 0 || starts.has(inCyc)); }
+}
+function singLine(btn, contour, notes, tl, per, seed){
+  // sing first, then schedule: the voice renders the whole line before the first beat is placed
+  const ac = !btn.hasAttribute('data-playing') && audio(), V = window.VGVoice;
+  const sung = ac ? V.render(V.lineOf(contour), { sr: ac.sampleRate, sa: saHz(), timbre: voiceMode(), seed: seed || 1 }) : null;
+  startPlayback(btn, (ac, out, t0) => {
+    const end = V.play(ac, out, t0, sung || V.lineOf(contour), { sa: saHz(), timbre: voiceMode(), seed: seed || 1 });
+    beatClicks(ac, out, t0, notes, tl, per);
+    drone(ac, out, t0, end - t0);
+    return end;
+  });
+}
 function kalContour(c, depth){
   const beat = 60 / +$('snd-bpm').value;
-  return E.renderGamaka(c.res.notes, { raga: c.raga, slotSec: beat / c.per, depth, units: c.res.units, seed: K.seed });
+  if (voiceMode() !== 'tone') return lineContour(c.res.notes, c.raga, c.tl, c.per, depth, c.res.units, K.seed);
+  return E.renderGamaka(c.res.notes, { raga: c.raga, slotSec: beat / c.per, intensity: depth, units: c.res.units, seed: K.seed });
 }
 function playKalpana(btn){
   const c = K.cache; if (!c) return;
   const depth = gamakaDepth();
-  if (!depth) { playPitched(btn, c.notes, c.tl, c.per); return; }   // off: the plain tones, unchanged
+  if (voiceMode() !== 'tone' && window.VGVoice) { singLine(btn, kalContour(c, depth), c.notes, c.tl, c.per, K.seed); return; }
+  if (!depth) { playPitched(btn, c.notes, c.tl, c.per); return; }   // 0: straight notes, the plain tones unchanged
   const contour = kalContour(c, depth);
   startPlayback(btn, (ac, out, t0) => {
-    const beat = 60 / +$('snd-bpm').value, end = scheduleGamaka(ac, out, t0, contour, saHz());
-    const totalSlots = c.notes.reduce((s, n) => s + n.slots, 0), aks = Math.ceil(totalSlots / c.per);
-    const starts = new Set(); let a0 = 0; c.tl.angas.forEach(a => { starts.add(a0); a0 += a.len; });
-    for (let k = 0; k < aks; k++){ const inCyc = k % c.tl.total; click(ac, out, t0 + k * beat, inCyc === 0 || starts.has(inCyc)); }
+    const end = scheduleGamaka(ac, out, t0, contour, saHz());
+    beatClicks(ac, out, t0, c.notes, c.tl, c.per);
     drone(ac, out, t0, end - t0);
     return end;
   });
+}
+function playAlankara(btn){
+  const c = A.cache; if (!c) return;
+  if (voiceMode() === 'tone' || !window.VGVoice) { playPitched(btn, c.notes, c.tl, c.per); return; }
+  singLine(btn, lineContour(c.notes.map(n => ({ p: n.p, dur: n.slots })), c.raga, c.tl, c.per, gamakaDepth(), null, A.seed), c.notes, c.tl, c.per, A.seed);
 }
 /* a 16-bit mono WAV of the round with its gamaka, rendered offline through the same graph */
 function wavBytes(buf){
@@ -230,9 +302,11 @@ function downloadWav(btn){
   const c = K.cache; if (!c) return;
   const Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!Off) { btn.textContent = 'WAV unavailable'; return; }
-  const contour = kalContour(c, gamakaDepth() || 1), sr = 44100, len = Math.ceil(sr * (contour.points[contour.points.length - 1].t + 1));
+  const contour = kalContour(c, gamakaDepth()), sr = 44100, len = Math.ceil(sr * (contour.points[contour.points.length - 1].t + 1));
   const ac = new Off(1, len, sr), out = ac.createGain(); out.gain.value = 0.9; out.connect(ac.destination);
-  const end = scheduleGamaka(ac, out, 0.05, contour, saHz()); drone(ac, out, 0.05, end - 0.05);
+  const sung = voiceMode() !== 'tone' && window.VGVoice;
+  const end = sung ? window.VGVoice.play(ac, out, 0.15, window.VGVoice.lineOf(contour), { sa: saHz(), timbre: voiceMode(), seed: K.seed }) : scheduleGamaka(ac, out, 0.05, contour, saHz());
+  drone(ac, out, 0.05, end - 0.05);
   btn.textContent = 'Rendering…';
   ac.startRendering().then(buf => {
     const url = URL.createObjectURL(new Blob([wavBytes(buf)], { type: 'audio/wav' })), a = document.createElement('a');
@@ -260,8 +334,8 @@ function kalGamakaBadge(r){
 }
 function kalGamakaView(){
   const c = K.cache; if (!c) return;
-  const depth = gamakaDepth(), contour = kalContour(c, depth || 1);
-  $('k-gamaka').innerHTML = kalGamakaBadge(c.raga) + (depth ? '' : ' Playback is set to plain tones; the view shows full gamaka.');
+  const depth = gamakaDepth(), contour = kalContour(c, depth || 0.55);
+  $('k-gamaka').innerHTML = kalGamakaBadge(c.raga) + (depth ? '' : ' Playback is set to straight notes; the view shows performative gamaka (55).');
   $('k-pitch').innerHTML = kalPitchView(c.raga, contour);
 }
 
@@ -295,7 +369,7 @@ function alaRender(msg){
     for (let i = 1; i < n.dur; i++) slots.push({ t: ',', cls: 'k' });
     notes.push({ p: n.p, slots: n.dur });
   }));
-  A.cache = { slots, tl, per, notes };
+  A.cache = { slots, tl, per, notes, raga: r };
   const up = res.lines.filter(l => l.dir === 'asc').length, dn = res.lines.length - up;
   let src;
   if (v.source === 'sheet') src = r.kind === 'melakarta' ? 'Variation 0 · the sheet pattern, ' + pe.title : 'Variation 0 · the sheet pattern (' + pe.title + ') adapted to ' + r.name;
@@ -334,7 +408,7 @@ function alaInit(){
   $('a-prev').addEventListener('click', () => { const H = alaHist(); A.idx[H.k] = Math.max(0, H.i - 1); alaRender(); });
   $('a-next').addEventListener('click', () => { const H = alaHist(); A.idx[H.k] = Math.min(H.h.length - 1, H.i + 1); alaRender(); });
   $('a-sheet').addEventListener('click', () => { const H = alaHist(); A.idx[H.k] = 0; alaRender(); });
-  $('a-play').addEventListener('click', e => { const c = A.cache; if (c) playPitched(e.currentTarget, c.notes, c.tl, c.per); });
+  $('a-play').addEventListener('click', e => playAlankara(e.currentTarget));
   $('a-copy').addEventListener('click', e => { const c = A.cache; if (c) copyText(gridText(c.slots, c.tl, c.per), e.currentTarget); });
   document.querySelectorAll('[data-ala]').forEach(b => b.addEventListener('click', () => {
     const [rid, fam, L, mode] = b.dataset.ala.split('|');
@@ -362,51 +436,39 @@ function pdfTable(){
   }));
 }
 
-/* ================= Jathi tab ================= */
-const J = { seed: 5, timer: null };
-function fillFamJ(sel, val){ FAMS.concat(['chapu']).forEach(f => sel.appendChild(new Option(f[0].toUpperCase() + f.slice(1), f))); sel.value = val; }
-function fillJatiJ(sel, fam, val){
-  if (fam !== 'chapu'){ fillJati(sel, fam, val); return; }
-  sel.innerHTML = ''; [[3, 'Tisra (1 + 2)'], [5, 'Khanda (2 + 3)'], [7, 'Misra (3 + 2 + 2)']].forEach(([L, t]) => sel.appendChild(new Option(t, L)));
-  sel.value = String([3, 5, 7].includes(+val) ? val : 7);
-}
+/* ================= Korvai & tihai lab, and the jathi judge ================= */
+// v0.8: the jathi creator gave way to the lab (web/shared/korvai-lab.js, docs/research/korvai-tihai.md);
+// the judge is the lab's Check tab
+const J = { timer: null };
 const lcm = (a, b) => { const g = (x, y) => y ? g(y, x % y) : x; return a / g(a, b) * b; };
 function scaledTala(tl, kalai){ return kalai === 1 ? tl : Object.assign({}, tl, { angas: tl.angas.map(a => Object.assign({}, a, { len: a.len * kalai })), total: tl.total * kalai }); }
-function jathiRender(){
-  const fam = $('j-fam').value, L = +$('j-jati').value, g = +$('j-nadai').value, N = +$('j-n').value;
-  const tl = E.tala(fam, L), cycle = tl.total * g;
-  $('j-off').min = String(-(cycle - 1)); $('j-off').max = String(cycle - 1);
-  let off = Math.trunc(+$('j-off').value || 0); off = Math.max(-(cycle - 1), Math.min(cycle - 1, off)); $('j-off').value = off;
-  const T = +$('j-temp').value; $('j-tv').textContent = T.toFixed(1);
-  const land = $('j-land').value;
-  const res = E.jathi({ tl, nadai: g, avartanams: N, offset: off, yatiPref: $('j-yati').value, T, seed: J.seed, land });
-  $('j-info').innerHTML = '<b>' + esc(tl.name) + '</b> · ' + angaText(tl) + ' · ' + tl.total + ' aksharas × nadai ' + g + ' = ' + cycle + ' matras per avartanam · eduppu ' + (off === 0 ? 'on sam' : off > 0 ? off + ' after sam (anagata)' : (-off) + ' before sam (atita)') + ' · seed ' + J.seed;
-  if (res.error){ $('j-out').innerHTML = ''; $('j-audit').innerHTML = '<li class="bad">' + esc(res.error) + '</li>'; J.cache = null; return; }
-  const lead = off >= 0 ? off : cycle + off;
-  const slots = []; for (let i = 0; i < lead; i++) slots.push({ t: '·', cls: 'pre' });
-  const sylls = [];
-  res.segs.forEach(sg => sg.syl.forEach((s, i) => {
-    const cls = sg.role === 'teermanam' ? 'teer' : sg.role === 'yati' ? 'yati' : sg.role === 'gap' ? 'gap' : '';
-    slots.push({ t: s, cls: (s === ',' ? 'k ' : '') + cls + (i === 0 && sg.role !== 'gap' ? ' cs' : '') }); sylls.push(s);
-  }));
-  const last = slots[slots.length - 1]; last.cls += ' land'; last.title = land === 'end' ? 'Last syllable; the jathi ends at sam' : 'Lands on sam';
-  J.cache = { slots, tl, g, sylls, lead, script: res.script };
-  const atita = off < 0;
-  $('j-out').innerHTML = grid(slots, tl, g, { rowLabel: i => atita ? (i === 0 ? 'pre' : i <= N ? 'c' + i : 'sam') : (i < N ? 'c' + (i + 1) : 'sam'), partialLast: true });
-  const a = res.audit, Jg = E.judgeJathi(res.script);
-  const items = [
-    [a.span, true],
-    ['Body ' + a.body + ' + yati ' + a.yatiLen + (a.yati !== 'none' ? ' [' + a.yati + ']' : '') + ' + teermanam ' + a.teermanam + ' = ' + res.used + ' syllable slots' + (land === 'end' ? ' = ' + res.M + ' matras' : ' = ' + res.M + ' matras + the landing syllable'), a.ok],
-    ['Teermanam phrase repeats three times with equal karvais', true],
-    [land === 'end' ? 'Ends exactly at sam after ' + N + ' avartanam' + (N > 1 ? 's' : '') : 'Final syllable lands on sam after ' + N + ' avartanam' + (N > 1 ? 's' : ''), true],
-    ['Judged as JathiScript: ' + (Jg.ok ? Jg.total + '/100, ' + Jg.grade + (Jg.gatePass ? ', correctness gate passed' : '') : 'did not parse'), Jg.ok && Jg.gatePass]
-  ];
-  $('j-audit').innerHTML = items.map(([t, ok]) => '<li' + (ok ? '' : ' class="bad"') + '>' + esc(t) + '</li>').join('');
-}
-function jMode(m){
-  ['gen', 'comp'].forEach(x => { $('j-mode-' + x).setAttribute('aria-pressed', x === m ? 'true' : 'false'); $('j-' + x).hidden = x !== m; });
-  stopAll();
-  try { localStorage.setItem('vg-jmode', m); } catch(e){}
+const raf = f => (window.requestAnimationFrame || (g => setTimeout(g, 30)))(f);
+/* the lab's player: sollus on the grid's cells, tala clicks, and the cell being played lit */
+function playCells(btn, job){
+  startPlayback(btn, (ac, out, t0) => {
+    const beat = 60 / +$('snd-bpm').value, slot = beat / job.per;
+    const hits = []; job.sylls.forEach((s, i) => { if (s && s !== ',') hits.push({ t: t0 + i * slot, s }); });
+    const M = window.VGMridangam, mode = solluMode(), V = window.VGSolkattu;
+    if (job.cells && M && M.playArranged) {
+      // the lab's structure: accented phrase starts, the cadence on tham, and a phrase tone tuned to Sa
+      // that rises with each phrase's length (VGMridangam.arrange)
+      const say = mode !== 'mrd' && V && V.available() ? V.voice(ac, out, 0.9) : null, gaps = solluGaps(hits.map(h => h.t));
+      if (say) hits.forEach((h, i) => say(h.t, h.s, gaps[i]));
+      M.playArranged(ac, out, t0, slot, job.cells, { sa: saHz(), tones: job.tones !== false, drum: !(say && mode === 'rec'), gain: say ? 0.5 : 1 });
+    } else solluPlay(ac, out, hits);
+    const beats = Math.ceil(job.sylls.length / job.per);
+    for (let k = 0; k < beats; k++) click(ac, out, t0 + k * beat, job.angaStarts.has(k % job.total));
+    const cells = new Map(Array.from(job.root.querySelectorAll('[data-i]')).map(el => [+el.dataset.i, el]));
+    let last = null;
+    const frame = () => {
+      const on = btn.hasAttribute('data-playing') && btn.isConnected;
+      const el = on ? cells.get(Math.floor((ac.currentTime - t0) / slot)) : null;
+      if (el !== last) { if (last) last.classList.remove('now'); if (el) el.classList.add('now'); last = el; }
+      if (on) raf(frame);
+    };
+    raf(frame);
+    return t0 + job.sylls.length * slot + 0.2;
+  });
 }
 const TEMPLATE = '# Your jathi. One word is one matra; hyphens join a phrase.\ntala: adi\nnadai: 4\navartanams: 1\neduppu: sam\nland: sam\n\n# body here, with | at anga lines and || at the end of an avartanam\n\n{tha-dhi-gi-na-thom}/0\n';
 function jLoadExample(k){ $('j-src').value = k === 'blank' ? TEMPLATE : E.JATHI_EXAMPLES[k]; jJudge(); }
@@ -447,32 +509,6 @@ function jJudge(){
   out.innerHTML = html;
 }
 function jathiInit(){
-  fillFamJ($('j-fam'), 'triputa'); fillJatiJ($('j-jati'), 'triputa', 4);
-  $('j-fam').addEventListener('change', () => { fillJatiJ($('j-jati'), $('j-fam').value); jathiRender(); });
-  ['j-jati','j-nadai','j-n','j-off','j-yati','j-land'].forEach(id => $(id).addEventListener('input', jathiRender));
-  $('j-temp').addEventListener('input', () => { $('j-tv').textContent = (+$('j-temp').value).toFixed(1); });
-  $('j-temp').addEventListener('change', jathiRender);
-  $('j-new').addEventListener('click', () => { J.seed++; jathiRender(); });
-  $('j-play').addEventListener('click', e => {
-    const c = J.cache; if (!c) return;
-    startPlayback(e.currentTarget, (ac, out, t0) => {
-      const beat = 60 / +$('snd-bpm').value, m = beat / c.g;
-      let t = t0 + c.lead * m;
-      c.sylls.forEach(s => { if (s !== ',') perc(ac, out, t, s); t += m; });
-      const aks = Math.ceil((c.lead + c.sylls.length) / c.g), starts = E.angaStarts(c.tl);
-      for (let k = 0; k < aks; k++){ const inCyc = k % c.tl.total; click(ac, out, t0 + k * beat, starts.has(inCyc)); }
-      return t;
-    });
-  });
-  $('j-copy').addEventListener('click', e => { const c = J.cache; if (c) copyText(gridText(c.slots, c.tl, c.g), e.currentTarget); });
-  $('j-edit').addEventListener('click', () => { const c = J.cache; if (!c) return; $('j-src').value = c.script; $('j-ex').value = 'blank'; jMode('comp'); jJudge(); });
-  document.querySelectorAll('[data-j]').forEach(b => b.addEventListener('click', () => {
-    const [fam, L, g, N, off, y, T] = b.dataset.j.split('|');
-    $('j-fam').value = fam; fillJatiJ($('j-jati'), fam, +L); $('j-nadai').value = g; $('j-n').value = N; $('j-off').value = off; $('j-yati').value = y; $('j-temp').value = T; $('j-land').value = 'sam'; J.seed = 5;
-    jathiRender();
-  }));
-  $('j-mode-gen').addEventListener('click', () => jMode('gen'));
-  $('j-mode-comp').addEventListener('click', () => { jMode('comp'); if (!$('j-src').value) jLoadExample($('j-ex').value); });
   $('j-ex').addEventListener('change', () => jLoadExample($('j-ex').value));
   $('j-judge').addEventListener('click', jJudge);
   $('j-src').addEventListener('input', () => { clearTimeout(J.timer); J.timer = setTimeout(jJudge, 500); });
@@ -482,15 +518,28 @@ function jathiInit(){
     const P = c.P;
     startPlayback(e.currentTarget, (ac, out, t0) => {
       const beat = 60 / +$('snd-bpm').value, base = Math.min(0, P.E0), tt = x => t0 + (x - base) / E.TICKS * beat;
-      P.events.forEach(ev => { if (ev.k === 'syl') perc(ac, out, tt(P.E0 + ev.start), ev.v); });
+      solluPlay(ac, out, P.events.filter(ev => ev.k === 'syl').map(ev => ({ t: tt(P.E0 + ev.start), s: ev.v })).sort((a, b) => a.t - b.t));
       const endAbs = P.E0 + P.total, cyc = P.tl.total * P.kalai, starts = E.angaStarts(scaledTala(P.tl, P.kalai));
       for (let k = Math.floor(base / E.TICKS); k * E.TICKS <= endAbs; k++){ const inCyc = ((k % cyc) + cyc) % cyc; click(ac, out, tt(k * E.TICKS), starts.has(inCyc)); }
       return tt(endAbs) + 0.3;
     });
   });
-  let m = 'gen'; try { m = localStorage.getItem('vg-jmode') || 'gen'; } catch(e){}
-  $('j-src').value = E.JATHI_EXAMPLES.adi;
-  jathiRender(); jJudge(); jMode(m === 'comp' ? 'comp' : 'gen');
+  $('j-src').value = E.JATHI_EXAMPLES.adi; jJudge();
+  const home = $('j-comp-home'), comp = $('j-comp');
+  if (!window.VGKorvaiLab || !$('kl-root')) return;
+  J.lab = window.VGKorvaiLab.mount($('kl-root'), {
+    K: E.korvai, store: 'vg-korvai-lab',
+    // the lab's own Sa and tempo controls drive the playground's sound bar
+    audio: { play: playCells, stop: stopAll, sound: () => ({ sa: +$('snd-sa').value, bpm: +$('snd-bpm').value }),
+      setSound: (k, v) => { const el = $(k === 'sa' ? 'snd-sa' : 'snd-bpm'); el.value = String(v); el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } },
+    // v0.8.3: the lab's rhythm, sung by the kalpana generator (E.kalpanaRhythm)
+    kalpana: { open(F, layout, meta){ K.rhythm = E.rhythmTemplate(F, layout, meta); K.seed = 3; showTab('tab-kal'); kalRender(); const p = $('p-kal'); if (p.scrollIntoView) p.scrollIntoView({ block: 'start' }); } },
+    check: {
+      open(script){ $('j-src').value = script; $('j-ex').value = 'blank'; J.lab.setMode('check'); jJudge(); },
+      show(el){ el.appendChild(comp); },
+      hide(){ if (comp.parentNode !== home) home.appendChild(comp); }
+    }
+  });
 }
 
 /* ================= Kalpana tab ================= */
@@ -529,7 +578,11 @@ function kalRender(){
   const r = byId($('k-raga').value), tl = E.tala($('k-fam').value, +$('k-jati').value);
   const K0 = +$('k-len').value, per = +$('k-pa').value, sp = +$('k-start').value, tp = +$('k-end').value, T = +$('k-temp').value, ending = $('k-ending').value, moraStyle = $('k-mora').value;
   $('k-tv').textContent = T.toFixed(1);
-  const res = E.kalpanaRound(r, { aksharas: K0, perAkshara: per, startPitch: sp, eduppuPitch: tp, T, seed: K.seed, ending, moraStyle });
+  kalRhythmControls();
+  if (K.rhythm) { kalRenderRhythm(r, tp, T); return; }
+  if ($('k-scope') && $('k-scope').value === 'session') { kalRenderSession(r, tl, per, sp, tp, T, moraStyle); return; }
+  // v0.4: the phrase plan follows the tala's angas (docs/research/kalpana-structure.md)
+  const res = E.kalpanaRound(r, { aksharas: K0, perAkshara: per, startPitch: sp, eduppuPitch: tp, T, seed: K.seed, ending, moraStyle, angas: tl.angas.map(a => a.len) });
   $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · ' + K0 + ' aksharas × ' + per + ' = ' + K0 * per + ' slots, then the composition resumes on ' + esc(swara(r, tp, true)) + ' at the eduppu · seed ' + K.seed;
   if (res.error){
     const nb = E.eduppuNeighbours(r, tp), near = [nb.lo, nb.hi].filter(p => p != null).map(p => swara(r, p, true)).join(' or ');
@@ -547,21 +600,147 @@ function kalRender(){
   });
   let lastNote = slots.length - 1; while (lastNote > 0 && slots[lastNote].t === ',') lastNote--; slots[lastNote].cls += ' land'; slots[lastNote].title += ' · last swara, next to the eduppu';
   K.cache = { slots, tl, per, notes, res, raga: r };
+  $('k-out').classList.remove('session');
   $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i+1) }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
   const st = res.stats, dev = Object.keys(st.devices).map(k => k + (st.devices[k] > 1 ? ' ×' + st.devices[k] : '')).join(', ');
   const D = res.dial, fin = swara(r, res.ending.final, true), edp = swara(r, tp, true);
   const nearTxt = fin + ', the ' + (res.ending.approach === 'below' ? 'arohana swara just below ' + edp + ', so the line rises into the eduppu' : 'avarohana swara just above ' + edp + ', so the line descends into the eduppu');
-  const MS = { shift: 'shift mora: one contour, a scale step nearer the eduppu each time', gopuccha: 'gopuccha mora: one swara shorter each time', srotovaha: 'srotovaha mora: one swara longer each time', identical: 'identical mora: one statement three times' };
-  const en = res.ending, endTxt = en.type === 'mora' ? 'Mora ending, ' + MS[en.style] + ' (' + (en.template === 'generic' ? 'a generic contour' : 'the contour of ' + en.templatePhrase) + (en.adjusted ? '; one statement adjusted to keep the raga' : '') + '): ' + en.statements.map(st => st.map(p => swara(r, p, false)).join(' ')).join(' · ') + ', with ' + (en.q ? en.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
+  const MS = { shift: 'shift mora: one contour, a scale step nearer the eduppu each time', gopuccha: 'gopuccha mora: one swara shorter each time', srotovaha: 'srotovaha mora: one swara longer each time', expand: 'expanding mora: the same swaras, each statement one slot longer', contract: 'contracting mora: the same swaras, each statement one slot shorter', identical: 'identical mora: one statement three times' };
+  const en = res.ending, endTxt = en.type === 'korvai' ? 'Korvai ending: three descending units, each a run with shrinking rests and a mora, landing on ' + nearTxt : en.type === 'mora' ? 'Mora ending, ' + MS[en.style] + ' (' + (en.template === 'generic' ? 'a generic contour' : 'the contour of ' + en.templatePhrase) + (en.adjusted ? '; one statement adjusted to keep the raga' : '') + '): ' + en.statements.map(st => st.map(p => swara(r, p, false)).join(' ')).join(' · ') + ', with ' + (en.q ? en.q + '-slot karvais' : 'no gaps') + ', landing on ' + nearTxt : 'Free ending on ' + nearTxt + (res.ending.fallbackFrom ? ' (no mora fits this span, so the ending is free)' : '');
   $('k-audit').innerHTML = [
     ['Creativity at temperature ' + D.T.toFixed(1) + ' (c = ' + D.c.toFixed(2) + '): ' + Math.round(st.novelShare * 100) + '% of swaras from unconventional devices and phrase variants, ' + Math.round(st.convShare * 100) + '% from attested phrases and conventional devices', true],
     ['Devices: ' + (dev || 'single steps only'), true],
     [kalPhraseText(r, st), true],
+    [kalPlanText(r, res), true],
     [kalLeapText(st.leaps) + (st.relaxed ? ' The leap filter was relaxed one level to fit this short span.' : ''), true],
     [endTxt, true],
     ['Exactly ' + K0 * per + ' slots (' + K0 + ' aksharas at ' + per + ' per akshara), starting on ' + swara(r, sp, true), true],
     ['Every upward step lands on an arohana swara and every downward step on an avarohana swara', true]
   ].map(([t, ok]) => '<li' + (ok ? '' : ' class="bad"') + '>' + esc(t) + '</li>').join('');
+  kalGamakaView();
+}
+/* v0.8.3: a rhythm from the korvai lab, sung in the raga (E.kalpanaRhythm): the lab's phrases, gaps and
+   cadence, pulse for pulse; nested families (yatis, AP, GP, kuraippu …) share one line and keep its ending */
+const RHYTHM_LOCKED = ['k-fam', 'k-jati', 'k-len', 'k-pa', 'k-start', 'k-ending', 'k-mora', 'k-scope'];
+function kalRhythmControls(){
+  const on = !!K.rhythm;
+  // the lab sets these: hidden while following, so they cannot disagree with the rhythm
+  RHYTHM_LOCKED.forEach(id => { const el = $(id); if (!el) return; el.disabled = on; const lab = el.closest('label'); if (lab) lab.hidden = on; });
+  const b = $('k-rhythm'); if (!b) return;
+  b.hidden = !on;
+  if (!on) { b.innerHTML = ''; b._for = null; K.inspiration = ''; return; }
+  // drawn once for each rhythm, so a pasted answer survives re-rendering
+  if (b._for === K.rhythm) return;
+  b._for = K.rhythm; K.inspiration = '';
+  const t = K.rhythm, tn = t.tala.fam === 'custom' ? 'a custom tala' : E.tala(t.tala.fam, t.tala.L).name;
+  b.innerHTML = '<div><b>Singing the korvai lab’s rhythm</b><span>' + esc((t.label || t.form || 'a korvai') + ' · ' + tn + ' · gati ' + t.gati) + '. The tala, length, speed and ending come from the lab; choose the raga, the eduppu swara and the creativity.</span></div>' +
+    '<label class="rh-dens">Swaras <select id="k-rh-dens"><option value="auto">breathe: weak pulses held</option><option value="full">one on every syllable</option></select></label>' +
+    '<button type="button" class="btn" id="k-rh-lab">← Back to the lab</button><button type="button" class="btn ghost" id="k-rh-stop">Stop following</button>' +
+    // v0.8.5: inspiration from an AI assistant, by copy and paste (the playground has no server and no key)
+    '<details class="rhythm-insp" id="k-rh-insp"><summary>Inspiration from an AI assistant</summary>' +
+    '<p>Copy a prompt that describes this rhythm and the raga in full, give it to Claude or another assistant, and paste its JSON answer below. Its lines are inspiration: each is fitted to the rhythm and the raga and sung only where every rule of the raga still holds.</p>' +
+    '<div class="rh-row"><button type="button" class="btn" id="k-rh-prompt">Copy the prompt</button><span id="k-rh-copied" class="muted"></span></div>' +
+    '<textarea id="k-rh-ptext" rows="5" readonly hidden aria-label="The prompt"></textarea>' +
+    '<textarea id="k-rh-ans" rows="4" placeholder="Paste the answer here: {&quot;idea&quot;: …, &quot;phrases&quot;: [{&quot;phrase&quot;: 1, &quot;swaras&quot;: &quot;S , R G&quot;}, …]}" aria-label="The assistant’s answer"></textarea>' +
+    '<div class="rh-row"><button type="button" class="btn" id="k-rh-use">Sing with these lines</button><button type="button" class="btn ghost" id="k-rh-clear">Clear</button></div></details>';
+  $('k-rh-lab').onclick = () => showTab('tab-jathi');
+  $('k-rh-stop').onclick = () => { K.rhythm = null; kalRender(); };
+  $('k-rh-dens').onchange = () => kalRender();
+  $('k-rh-prompt').onclick = () => {
+    const pr = E.rhythmPrompt(byId($('k-raga').value), K.rhythm, { eduppuPitch: +$('k-end').value, T: +$('k-temp').value });
+    if (pr.error) { $('k-rh-copied').textContent = pr.error; return; }
+    const text = pr.system + '\n\n' + pr.prompt, box = $('k-rh-ptext');
+    box.value = text; box.hidden = false;
+    const done = ok => { $('k-rh-copied').textContent = ok ? 'Copied. The prompt is also shown below.' : 'Select the prompt below and copy it.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); else done(false);
+  };
+  $('k-rh-use').onclick = () => { K.inspiration = $('k-rh-ans').value.trim(); kalRender(); };
+  $('k-rh-clear').onclick = () => { $('k-rh-ans').value = ''; K.inspiration = ''; kalRender(); };
+}
+function kalRenderRhythm(r, tp, T){
+  const dens = $('k-rh-dens') ? $('k-rh-dens').value : 'auto';
+  const res = E.kalpanaRhythm(r, K.rhythm, { eduppuPitch: tp, T, seed: K.seed, density: dens, inspiration: K.inspiration || null });
+  $('k-out').classList.remove('session');
+  if (res.error){ $('k-out').innerHTML = ''; $('k-audit').innerHTML = '<li class="bad">' + esc(res.error) + '</li>'; K.cache = null; $('k-pitch').innerHTML = ''; $('k-gamaka').innerHTML = ''; return; }
+  const tl = res.kalai > 1 ? scaledTala(res.tala, res.kalai) : res.tala, per = res.per;
+  const CLS = { mora: 'mora', nov: 'nov', conv: '', gap: '' };
+  const slots = [], notes = [], all = [], units = [];
+  if (res.lead){ for (let i = 0; i < res.lead; i++) slots.push({ t: '·', cls: 'pre', title: 'before the passage starts' }); notes.push({ p: null, slots: res.lead }); all.push({ p: null, dur: res.lead }); units.push({ kind: 'rest', notes: [{ p: null, dur: res.lead }] }); }
+  res.units.forEach(u => {
+    u.notes.forEach((n, j) => {
+      if (n.p == null){ for (let k = 0; k < n.dur; k++) slots.push({ t: ',', cls: 'k', title: 'karvai' }); }
+      else { slots.push({ t: swara(r, n.p, false), cls: (CLS[u.kind] || '') + (u.inspired ? ' insp' : '') + (j === 0 ? ' cs' : ''), title: u.name }); for (let k = 1; k < n.dur; k++) slots.push({ t: ',', cls: 'k ' + (CLS[u.kind] || '') + (u.inspired ? ' insp' : ''), title: u.name + ' · karvai' }); }
+      notes.push({ p: n.p, slots: n.dur }); all.push({ p: n.p, dur: n.dur });
+    });
+    units.push({ kind: u.kind, notes: u.notes });
+  });
+  let ln = slots.length - 1; while (ln > 0 && (slots[ln].t === ',' || slots[ln].cls === 'pre')) ln--; slots[ln].cls += ' land';
+  K.cache = { slots, tl, per, notes, res: { notes: all, units }, raga: r };
+  $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(res.tala.name) + '</b>' + (res.kalai > 1 ? ' · kalai ' + res.kalai : '') + ' · ' + per + ' swaras a beat · ' + res.slots + ' pulses from the lab' + (res.lead ? ', starting ' + res.lead + ' pulses into the cycle' : '') + ', then the composition resumes on ' + esc(swara(r, tp, true)) + ' · seed ' + K.seed;
+  $('k-out').innerHTML = grid(slots, tl, per, { rowLabel: i => 'c' + (i + 1), partialLast: true }) + '<div class="row"><span class="cyc"></span><span class="s edp">→ eduppu: the composition resumes on ' + esc(swara(r, tp, false)) + '</span></div>';
+  const sw = ps => ps.map(p => swara(r, p, false)).join(' ');
+  const famTxt = res.families.map(f => 'Family ' + (f.id + 1) + ' (' + (f.role === 'statement' || f.role === 'uttaranga' ? 'the cadence' : f.role) + ', ' +
+    (f.kind === 'nested' ? 'a yati of ' + f.lens.slice(0, f.lens.length / (f.rounds || 1)).join(' → ') + (f.rounds > 1 ? ', ' + f.rounds + ' times' : '') : f.kind === 'repeat' ? f.lens.length + ' repetitions' : 'one phrase') + '): ' + f.how + '. ' + (f.rounds > 1 || f.kind === 'repeat' ? 'First as ' : '') + sw(f.line));
+  $('k-audit').innerHTML = res.checks.map(c => '<li' + (c.ok ? '' : ' class="bad"') + '>' + esc(c.text) + '</li>').join('') + famTxt.map(t => '<li>' + esc(t) + '</li>').join('') +
+    '<li>' + esc('Breath: ' + res.breath.swaras + ' swaras on ' + res.breath.syllables + ' syllables. ' + (res.breath.density === 'full' ? 'One swara on every syllable.' : 'A run of syllables is the rhythm, not one swara a pulse: each phrase starts on a swara, the beat’s strong pulses carry one, and weak pulses are often held from the swara before (a karvai), more often in a fast gati.')) + '</li>' +
+    (res.inspiration && res.inspiration.note ? '<li>' + esc('The assistant’s idea: ' + res.inspiration.note) + '</li>' : '') +
+    '<li>' + esc('Creativity ' + res.dial.T.toFixed(1) + ': a repeated rhythm is never simply a repeated melody. Low creativity keeps a phrase’s shape and starts it from another swara, as an alankara climbs the scale; higher creativity re-sings openings, turns contours over and writes fresh lines to the same rhythm.') + '</li>';
+  kalGamakaView();
+}
+/* the phrase plan as sung (v0.4): each phrase's focus, the swara it held, and its echoes */
+function kalPlanText(r, res){
+  const ph = res.phrases || [];
+  if (!ph.length) return 'Phrase plan: none (the round is too short to plan in phrases).';
+  const held = ph.filter(p => p.held != null), onF = held.filter(p => p.held === p.focal).length;
+  const echoes = res.units.filter(u => /rhyme|sequence|yati|echo/.test(u.base)).map(u => u.name);
+  return 'Phrase plan: ' + ph.length + ' phrases shaped by the tala, each ending on a held swara (' + ph.map(p => (p.focal != null ? 'focus ' + swara(r, p.focal, false) : '') + (p.held != null ? ', held ' + swara(r, p.held, false) : '')).join(' · ') + '); ' + onF + ' of ' + held.length + ' end on their focal note' + (echoes.length ? '. Repetition and designs: ' + echoes.join(', ') : '') + '.';
+}
+/* a whole svara kalpana (v0.4): E.kalpanaSession. Each round is drawn as its own block, on its own grid at
+   its own speed (v0.8: the doubled grid with rows of theme rests read as long held swaras), with the theme
+   between rounds shown as a divider. Playback strings the rounds together on one grid: each round placed
+   to end on a cycle boundary (it lands at the eduppu), a cycle of the theme (rests) after it. */
+function kalRenderSession(r, tl, per, sp, tp, T, moraStyle){
+  const S = E.kalpanaSession(r, { eduppuPitch: tp, startPitch: sp, angas: tl.angas.map(a => a.len), perAkshara: Math.min(per, 2), T, seed: K.seed, moraStyle });
+  const P = Math.max.apply(null, S.rounds.map(x => x.per).concat([per])), cyc = tl.total * P;
+  const slots = [], notes = [], all = [], units = [];
+  let at = 0;
+  const pad = n => {
+    for (let k = 0; k < n; k++) slots.push({ t: '·', cls: 'k', title: 'the theme (the composition) is sung here' });
+    if (n) { notes.push({ p: null, slots: n }); all.push({ p: null, dur: n }); units.push({ kind: 'theme', notes: [{ p: null, dur: n }] }); }
+    at += n;
+  };
+  S.rounds.forEach((x, k) => {
+    const sc = P / x.per, len = x.aksharas * x.per * sc;
+    pad((cyc - ((at + len) % cyc)) % cyc);                 // so the round ends on a cycle boundary
+    x.round.units.forEach(u => {
+      const cls = { nov: 'nov', mora: 'mora', korvai: 'mora', phrase: 'ph', 'phrase-fragment': 'frag', 'phrase-variant': 'var' }[u.kind] || '';
+      const un = { kind: u.kind, notes: [] };
+      u.notes.forEach((n, j) => {
+        const d = n.dur * sc;
+        slots.push({ t: swara(r, n.p, false), cls: cls + (j === 0 ? ' cs' : ''), title: (k + 1) + '. ' + x.part + ' · ' + u.name });
+        for (let q = 1; q < d; q++) slots.push({ t: ',', cls: 'k ' + cls });
+        notes.push({ p: n.p, slots: d }); all.push({ p: n.p, dur: d }); un.notes.push({ p: n.p, dur: d });
+      });
+      units.push(un); at += u.notes.reduce((s2, n) => s2 + n.dur * sc, 0);
+    });
+    if (k < S.rounds.length - 1) pad(cyc);                 // the theme line before the next round
+  });
+  K.cache = { slots, tl, per: P, notes, res: { notes: all, units }, raga: r, session: S };
+  $('k-info').innerHTML = ragaLine(r) + '<br><b>' + esc(tl.name) + '</b> · a whole svara kalpana: ' + S.rounds.length + ' rounds, each landing next to ' + esc(swara(r, tp, true)) + ' at the eduppu, the composition’s line sung between them (Play includes a cycle of it as rests) · seed ' + K.seed;
+  const AV = { 0.25: '¼', 0.5: '½' };
+  const KIND = { nov: 'nov', mora: 'mora', korvai: 'mora', phrase: 'ph', 'phrase-fragment': 'frag', 'phrase-variant': 'var' };
+  $('k-out').innerHTML = S.rounds.map((x, k) => {
+    const rs = [];
+    x.round.units.forEach(u => u.notes.forEach((n, j) => { rs.push({ t: swara(r, n.p, false), cls: (KIND[u.kind] || '') + (j === 0 ? ' cs' : ''), title: u.name }); for (let q = 1; q < n.dur; q++) rs.push({ t: ',', cls: 'k ' + (KIND[u.kind] || '') }); }));
+    let ln = rs.length - 1; while (ln > 0 && rs[ln].t === ',') ln--; rs[ln].cls += ' land';
+    const en = x.round.ending, endTxt = en.type === 'korvai' ? 'korvai' : en.type === 'mora' ? en.style + ' mora' : 'free ending';
+    const head = '<div class="srh"><span class="srn">' + (k + 1) + '</span><b>' + esc(x.part) + '</b><span>' + esc((AV[x.avartanas] || x.avartanas) + ' avartanam' + (x.avartanas > 1 ? 's' : '') + ' · ' + x.per + ' swara' + (x.per > 1 ? 's' : '') + ' a beat' + (x.focus != null ? ' · focus ' + swara(r, x.focus, false) : '') + ' · ' + endTxt) + '</span></div>';
+    const theme = k < S.rounds.length - 1 ? '<div class="theme">↳ the composition’s line from the eduppu (' + esc(swara(r, tp, false)) + '), then the next round</div>' : '<div class="theme">↳ the composition resumes on ' + esc(swara(r, tp, false)) + '</div>';
+    return '<div class="sround">' + head + '<div class="notation">' + grid(rs, tl, x.per, { rowLabel: i => 'c' + (i + 1), partialLast: true }) + '</div>' + theme + '</div>';
+  }).join('');
+  $('k-out').classList.add('session');
+  $('k-audit').innerHTML = S.rounds.map((x, k) => '<li>' + esc((k + 1) + '. ' + x.part + ', ' + (AV[x.avartanas] || x.avartanas) + ' avartanam' + (x.avartanas > 1 ? 's' : '') + ' at ' + x.per + ' swaras a beat' + (x.focus != null ? ', focus ' + swara(r, x.focus, false) : '') + ': ' + (x.round.ending.type === 'korvai' ? 'korvai' : x.round.ending.type === 'mora' ? x.round.ending.style + ' mora' : 'free ending') + (x.round.phrases && x.round.phrases.length ? ', ' + x.round.phrases.length + ' phrases' : '')) + '</li>').join('') +
+    S.failed.map(x => '<li class="bad">' + esc(x.part + ', ' + x.avartanas + ' avartanam: ' + x.error) + '</li>').join('');
   kalGamakaView();
 }
 function kalInit(){
@@ -570,7 +749,7 @@ function kalInit(){
   $('k-raga').addEventListener('input', () => { kalFillNotes(true); kalRender(); });
   $('k-fam').addEventListener('change', () => { fillJati($('k-jati'), $('k-fam').value); kalFillLen(); kalRender(); });
   $('k-jati').addEventListener('input', () => { kalFillLen(); kalRender(); });
-  ['k-len','k-pa','k-start','k-end','k-ending','k-mora'].forEach(id => $(id).addEventListener('input', kalRender));
+  ['k-len','k-pa','k-start','k-end','k-ending','k-mora','k-scope'].forEach(id => { if ($(id)) $(id).addEventListener('input', kalRender); });
   $('k-temp').addEventListener('input', () => { $('k-tv').textContent = (+$('k-temp').value).toFixed(1); });
   $('k-temp').addEventListener('change', kalRender);
   $('k-new').addEventListener('click', () => { K.seed++; kalRender(); });
@@ -588,7 +767,7 @@ function kalInit(){
 /* ---- tabs and shared sound controls ---- */
 let showTab = () => {};
 function tabs(){
-  const btns = Array.from(document.querySelectorAll('[role="tab"]'));
+  const btns = Array.from(document.querySelectorAll('#demo > .tabs [role="tab"]'));
   const show = b => { btns.forEach(x => { const on = x === b; x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; $(x.getAttribute('aria-controls')).hidden = !on; }); stopAll(); try { localStorage.setItem('vg-tab', b.id); } catch(e){} };
   showTab = id => { if ($(id)) show($(id)); };
   btns.forEach((b, i) => {
@@ -597,15 +776,47 @@ function tabs(){
   });
   let saved = null; try { saved = localStorage.getItem('vg-tab'); } catch(e){}
   const hash = (location.hash || '').slice(1);
-  const want = hash === 'jathi-demo' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : saved;
+  const want = hash === 'jathi-demo' || hash === 'korvai-lab' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : saved;
   if (want && $(want)) show($(want));
 }
 SA.forEach(([n], i) => $('snd-sa').appendChild(new Option('Sa = ' + n, i)));
 $('snd-sa').value = '0';
 $('snd-bpm').addEventListener('input', () => { $('snd-bv').textContent = $('snd-bpm').value; });
-try { const g = localStorage.getItem(GAMAKA_KEY); if (g != null && Array.from($('snd-gamaka').options).some(o => o.value === g)) $('snd-gamaka').value = g; } catch (e) {}
-$('snd-gamaka').addEventListener('change', () => { try { localStorage.setItem(GAMAKA_KEY, $('snd-gamaka').value); } catch (e) {} kalGamakaView(); });
+try {
+  let g = localStorage.getItem(GAMAKA_KEY);
+  if (g == null) { const old = localStorage.getItem(GAMAKA_OLD); if (old != null && isFinite(+old)) g = String(Math.round(+old * 100)); }
+  if (g != null && isFinite(+g) && +g >= 0 && +g <= 100) $('snd-gamaka').value = g;
+} catch (e) {}
+// the sollu voice: the mridangam by default; recorded syllables (alone or over the drum) once there are any
+(function(){
+  const sel = $('snd-sollu'), V = window.VGSolkattu, info = V && V.info();
+  // render the drum's strokes for the current Sa in the background, and again when Sa changes
+  const warm = () => { if (window.VGMridangam) window.VGMridangam.prepare(saHz()); };
+  setTimeout(warm, 300); $('snd-sa').addEventListener('change', warm);
+  if (!info) {
+    ['rec', 'both'].forEach(v => { const o = sel.querySelector('option[value="' + v + '"]'); o.disabled = true; o.textContent += ' (none recorded yet)'; });
+    sel.value = 'mrd'; sel.title = 'No syllables have been recorded yet: see docs/solkattu-recording.md';
+    return;
+  }
+  sel.title = info.syllables.length + ' recorded syllables, spoken by ' + info.speaker + ' (' + info.license + ')';
+  try { const v = localStorage.getItem(SOLLU_KEY); if (['mrd', 'rec', 'both'].includes(v)) sel.value = v; } catch (e) {}
+  sel.addEventListener('change', () => { try { localStorage.setItem(SOLLU_KEY, sel.value); } catch (e) {} });
+})();
+// the voice: sung on "aa" by default, the swara names, or the simple tone; remembered
+(function(){
+  const sel = $('snd-voice'); if (!sel) return;
+  try { const v = localStorage.getItem(VOICE_KEY); if (['aa', 'swaram', 'tone'].includes(v)) sel.value = v; } catch (e) {}
+  sel.addEventListener('change', () => { try { localStorage.setItem(VOICE_KEY, sel.value); } catch (e) {} kalGamakaView(); });
+})();
+const gamakaShow = () => { $('snd-gv').textContent = $('snd-gamaka').value + ' · ' + gamakaLabel(+$('snd-gamaka').value); };
+gamakaShow();
+$('snd-gamaka').addEventListener('input', () => { gamakaShow(); kalGamakaView(); });
+$('snd-gamaka').addEventListener('change', () => { try { localStorage.setItem(GAMAKA_KEY, $('snd-gamaka').value); } catch (e) {} gamakaShow(); kalGamakaView(); });
 $('snd-bpm').addEventListener('change', kalGamakaView);
+// the sound bar's one-line summary
+const soundSum = () => { if (!$('snd-sum')) return; const vo = $('snd-voice'); $('snd-sum').textContent = SA[+$('snd-sa').value][0] + ' · ' + $('snd-bpm').value + ' bpm · drone ' + ($('snd-drone').value === '1' ? 'on' : 'off') + ' · ' + vo.options[vo.selectedIndex].text.toLowerCase() + ' · gamaka ' + $('snd-gamaka').value; };
+['snd-sa', 'snd-bpm', 'snd-drone', 'snd-voice', 'snd-gamaka', 'snd-sollu'].forEach(id => $(id) && $(id).addEventListener('input', soundSum));
+soundSum();
 alaInit(); jathiInit(); kalInit(); tabs();
 if ($('pdf-table')) pdfTable();
 if ($('ex-adi')) $('ex-adi').textContent = E.JATHI_EXAMPLES.adi;
