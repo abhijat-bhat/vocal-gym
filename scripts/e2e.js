@@ -24,6 +24,8 @@ const server = createApp();
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = 'http://127.0.0.1:' + server.address().port;
 const profile = mkdtempSync(join(tmpdir(), 'vg-e2e-'));
+// v0.8.7: accounts go to a database of the test's own (opened on first use), never the real one
+process.env.VG_DB = join(profile, 'e2e.db');
 const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=0', '--autoplay-policy=no-user-gesture-required', '--user-data-dir=' + profile, '--window-size=1300,1000', 'about:blank']);
 const wsUrl = await new Promise((resolve, reject) => {
   let buf = '';
@@ -73,6 +75,14 @@ try {
     await until('!document.querySelector("#hd-play[data-playing]")', 'playback to stop');
   });
   await step('glossary pop-up opens from a term', async () => { await click('.term[data-term="raga"]'); await until('!document.getElementById("pop").hidden', 'the pop-up'); await js('document.body.click()'); });
+
+  await step('the Tools menu opens and leads to each of the five tools', async () => {
+    for (const r of ['alankara', 'kalpana', 'korvai', 'melakarta', 'judge']) {
+      await click('#navdrop'); await until('document.getElementById("navgroup").classList.contains("open")', 'the menu open');
+      await click('#toolsmenu a[data-route="' + r + '"]'); await until('location.hash === "#/' + r + '" && document.getElementById("navdrop").classList.contains("current") && !document.getElementById("navgroup").classList.contains("open")', r + ' through the menu');
+    }
+    await go('#/');
+  });
 
   console.log('alankara');
   await go('#/alankara'); await until('document.querySelector("#a-n .cell")', 'the alankara grid');
@@ -153,8 +163,20 @@ try {
     await until('document.querySelector("#g-res .ring") && document.getElementById("g-src").value.includes("Korvai lab")', 'the judge verdict');
   });
 
+  console.log('melakartas');
+  await step('the 72, a mela worked out, a deep link, the decoder and the builder', async () => {
+    await go('#/melakarta/65');
+    await until('document.querySelectorAll("#mx-app .mx-m").length === 72 && /65 · Mechakalyani/.test(document.querySelector("#mx-app .mx-detail").textContent)', 'mela 65 from the link');
+    await click('#mx-app .mx-m[data-n="57"]'); await until('/an exception/.test(document.querySelector("#mx-app .mx-detail").textContent) && /Sihmendramadhyamam/.test(document.querySelector("#mx-app .mx-detail").textContent)', 'Simhendramadhyamam explained');
+    await js('const q = document.getElementById("mx-q"); q.value = "Dhīraśaṅkarābharaṇam"; q.dispatchEvent(new Event("input"));');
+    await until('document.querySelector("#mx-app .mx-findout .mx-go[data-n=\\"29\\"]")', 'the decoder finds 29');
+    await click('#mx-app .mx-findout .mx-go[data-n="29"]'); await until('/29 · Dheerasankarabharanam/.test(document.querySelector("#mx-app .mx-detail").textContent)', 'mela 29');
+    await click('#mx-app .mx-play'); await until('document.querySelector("#mx-app .mx-play[data-playing]")', 'the scale plays', 6000); await click('#mx-app .mx-play');
+  });
+
   console.log('jathi judge');
   await step('every example is judged; the short one shows fixes', async () => {
+    await go('#/judge'); await until('document.querySelector("[data-ex=\\"adi\\"]")', 'the judge page');
     for (const ex of ['adi', 'short', 'chapu', 'speed']) {
       await click('[data-ex="' + ex + '"]'); await sleep(250); await until('document.querySelector("#g-res .ring")', 'example ' + ex);
       if (ex === 'short') await until('document.querySelector("#g-res .fixes li")', 'the fixes');
@@ -163,6 +185,35 @@ try {
   await step('typing an error marks the line', async () => {
     await js('const t = document.getElementById("g-src"); t.value = "tala: adi\\n{tha-dhi"; t.dispatchEvent(new Event("input"));');
     await until('document.querySelector("#g-res .errlist li") && document.querySelector("#g-gut .err")', 'the error list');
+  });
+
+  console.log('practice and accounts');
+  await step('create an account, run a routine across two tools, log it, see the streak', async () => {
+    await go('#/account'); await until('document.getElementById("ac-new")', 'the account page');
+    await js('const f = (id, v) => { document.getElementById(id).value = v; }; f("ac-nu", "e2e_singer"); f("ac-nn", "E2E Singer"); f("ac-np", "pa da ni sa 123"); f("ac-np2", "pa da ni sa 123"); document.getElementById("ac-new").requestSubmit();');
+    await until('location.hash === "#/practice" && document.querySelector("[data-start=\\"starter-quick\\"]")', 'the practice page with the starter routines');
+    await until('document.getElementById("acctbtn").textContent === "E2E Singer"', 'the account button names the singer');
+    await click('[data-start="starter-quick"]');
+    await until('location.hash === "#/alankara" && !document.getElementById("sessionbar").hidden && /1 of 2/.test(document.getElementById("sessionbar").textContent)', 'the first tool, with the session bar');
+    await sleep(1200);
+    await until('/0:0[1-9]/.test(document.querySelector("#sessionbar .sb-time b").textContent)', 'the timer runs');
+    await click('#sessionbar [data-sb="next"]'); await until('location.hash === "#/kalpana" && /2 of 2/.test(document.getElementById("sessionbar").textContent)', 'the second tool');
+    await click('#sessionbar [data-sb="finish"]'); await until('location.hash === "#/practice/finish" && document.getElementById("pr-keep") && document.getElementById("sessionbar").hidden', 'the finish page');
+    await click('[data-r="4"]'); await js('document.getElementById("pr-notes").value = "steady gamakas";'); await click('#pr-keep');
+    await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the session in the log');
+    await until('document.querySelector(".pr-stat .pr-big") && document.querySelector(".pr-stat .pr-big").textContent.trim() === "1"', 'a one-day streak');
+  });
+  await step('log out, log back in, and the log is still there', async () => {
+    await go('#/account'); await until('document.getElementById("ac-out")', 'the account page, logged in');
+    await click('#ac-out'); await until('document.getElementById("acctbtn").textContent === "Log in"', 'logged out');
+    await go('#/account'); await until('document.getElementById("ac-login")', 'the login form');
+    await js('document.getElementById("ac-lu").value = "e2e_singer"; document.getElementById("ac-lp").value = "pa da ni sa 123"; document.getElementById("ac-login").requestSubmit();');
+    await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the log after logging back in');
+  });
+  await step('the app is installable: a manifest with icons and a service worker', async () => {
+    let ok = false;
+    for (let k = 0; k < 40 && !ok; k++) { ok = await js('const r = await navigator.serviceWorker.getRegistration(); const m = await (await fetch("/manifest.webmanifest")).json(); const i = await fetch(m.icons[0].src); return !!(r && r.active) && m.display === "standalone" && m.icons.length >= 3 && i.ok;'); if (!ok) await sleep(150); }
+    if (!ok) throw new Error('no active service worker, manifest or icon');
   });
 
   console.log('learn');

@@ -1,7 +1,7 @@
 /* Plain-English definitions of every Carnatic term the app uses.
    Shown in pop-ups wherever a term appears, and in full on the Learn page. */
 export const GROUPS = [
-  { id: 'melody', title: 'Melody', terms: ['swara', 'octave', 'raga', 'arohana', 'avarohana', 'melakarta', 'janya'] },
+  { id: 'melody', title: 'Melody', terms: ['swara', 'octave', 'raga', 'arohana', 'avarohana', 'melakarta', 'chakra', 'katapayadi', 'janya'] },
   { id: 'rhythm', title: 'Rhythm', terms: ['tala', 'akshara', 'avartanam', 'sam', 'anga', 'laghu', 'dhrutam', 'anudhrutam', 'jati', 'chapu', 'kriya', 'speed'] },
   { id: 'improv', title: 'Exercises and improvisation', terms: ['alankara', 'kalpana', 'device', 'mora', 'karvai', 'creativity'] },
   { id: 'dance', title: 'Korvais, tihais and jathis', terms: ['korvai', 'tihai', 'purvanga', 'uttaranga', 'trikaala', 'jathi', 'sollu', 'nadai', 'matra', 'eduppu', 'atita', 'anagata', 'yati', 'teermanam', 'jathiscript', 'gate'] }
@@ -14,6 +14,8 @@ export const TERMS = {
   arohana: { name: 'Arohana', text: 'The ascending scale of a raga. When the melody goes up, it may only use these swaras.' },
   avarohana: { name: 'Avarohana', text: 'The descending scale of a raga. When the melody comes down, it may only use these swaras. It can differ from the arohana.' },
   melakarta: { name: 'Melakarta', text: 'One of the 72 parent ragas. Each uses all seven swaras going up and down, and is identified by a number from 1 to 72.' },
+  chakra: { name: 'Chakra', text: 'A group of six melakartas that share R, G and M and differ only in D and N. There are twelve; each name stands for its number: Indu (the one moon) is 1, Netra (two eyes) 2, up to Aditya (twelve) 12.' },
+  katapayadi: { name: 'Katapayadi', text: 'An old way of writing numbers with letters: each consonant stands for a digit (ka 1, ṭa 1, pa 1, ya 1 …). The first two syllables of a melakarta’s name, read in reverse, give its number: Dhī-ra is 9, 2, so Dhīraśaṅkarābharaṇam is 29.' },
   janya: { name: 'Janya', text: 'A raga derived from a melakarta. It may skip swaras (Mohanam uses five) or move in a zig-zag. Vocal Gym knows 14 common janyas.' },
   tala: { name: 'Tala', text: 'The rhythmic cycle, kept with the hand. It is a fixed number of beats split into sections. Adi tala is 8 beats: 4 + 2 + 2.' },
   akshara: { name: 'Akshara', text: 'One beat of the tala. Adi tala has 8 aksharas.' },

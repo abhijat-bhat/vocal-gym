@@ -6,3 +6,6 @@ listening-kit/
 
 # copyrighted papers kept locally for reading (see docs/research/)
 research/*.pdf
+
+# v0.8.7: the accounts database (server/db.js)
+var/

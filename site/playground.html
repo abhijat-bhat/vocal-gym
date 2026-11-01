@@ -517,6 +517,61 @@ table.ref td:first-child{white-space:nowrap}
   .kl-rl{display:none}
 }
 
+/* Vocal Gym · the melakarta and katapayadi explorer (web/shared/mela-explorer.js); uses the host page's
+   theme variables (--surface, --raise, --line-2, --fg, --fg-2, --muted, --teal, --violet, --saffron) */
+.mx{display:flex;flex-direction:column;gap:18px}
+.mx h3{margin:0;font-size:1.25rem}
+.mx h4{margin:18px 0 6px;font-size:.95rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mx-sub,.mx-note{color:var(--fg-2);font-size:.88rem;margin:6px 0;line-height:1.5}
+.mx-note.bad{color:var(--saffron)}
+.mx-find label{display:block;font-weight:600;font-size:.9rem;margin-bottom:6px}
+.mx-find input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg);font:inherit}
+.mx-findout{margin-top:8px}
+.mx-cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:980px){.mx-cols{grid-template-columns:1fr}}
+.mx-grid{display:flex;flex-direction:column;gap:14px;overflow-x:auto}
+.mx-half{border-collapse:separate;border-spacing:3px;width:100%;min-width:560px;table-layout:fixed;font-size:.78rem}
+.mx-half col.mx-ch{width:74px}
+.mx-half caption{text-align:left;font-weight:600;font-size:.86rem;padding:0 0 4px 3px;color:var(--fg-2)}
+.mx-half thead th{font-weight:500;color:var(--muted);font-size:.74rem;text-align:center}
+.mx-half tbody th{text-align:left;font-weight:500;white-space:nowrap;padding-right:6px}
+.mx-half tbody th b{display:block;font-size:.8rem}
+.mx-half tbody th span{color:var(--muted);font-size:.72rem}
+.mx-m{width:100%;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:5px 6px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg);font:inherit;cursor:pointer;text-align:left}
+.mx-m b{font-size:.78rem}
+.mx-m span{font-size:.7rem;color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.mx-m:hover{border-color:var(--teal)}
+.mx-m.on{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+.mx-m.on span{color:inherit}
+.mx-detail{border:1px solid var(--line-2);border-radius:12px;padding:16px;background:var(--surface)}
+.mx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.mx-iast{margin:2px 0 0;color:var(--fg-2);font-style:italic}
+.mx-scale{font-family:var(--font-mono, monospace);font-size:1.05rem;margin:10px 0 6px}
+.mx-keys{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;margin:6px 0 4px}
+.mx-keys span{text-align:center;font-size:.68rem;padding:7px 0;border-radius:5px;background:var(--raise);color:var(--muted)}
+.mx-keys span.in{background:var(--violet);color:var(--bg);font-weight:600;font-size:.76rem}
+.mx-kp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0}
+.mx-chip{display:inline-flex;flex-direction:column;align-items:center;padding:5px 9px;border-radius:8px;background:var(--raise);border:1px solid var(--line-2)}
+.mx-chip b{font-size:.92rem}
+.mx-chip span{font-size:.72rem;color:var(--fg-2)}
+.mx-arrow{color:var(--muted);font-size:.8rem}
+.mx-num{font-size:1.2rem;font-weight:700;padding:2px 10px;border-radius:8px;background:var(--raise)}
+.mx-num.ok{background:var(--teal);color:var(--bg)}
+.mx-num.bad{background:var(--saffron);color:var(--bg)}
+.mx-badge{font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--raise);color:var(--fg-2)}
+.mx-badge.rule{background:var(--teal);color:var(--bg)}
+.mx-badge.phala{background:var(--violet);color:var(--bg)}
+.mx-badge.exception{background:var(--saffron);color:var(--bg)}
+.mx-steps{margin:4px 0;padding-left:20px;color:var(--fg-2);font-size:.88rem;line-height:1.55}
+.mx-links{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.mx-go{padding:4px 9px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg);font:inherit;font-size:.8rem;cursor:pointer}
+.mx-go:hover{border-color:var(--teal)}
+.mx-go.on{border-color:var(--teal);color:var(--teal)}
+.mx-build{border:1px solid var(--line-2);border-radius:12px;padding:16px}
+.mx-sel{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.mx-sel label{display:flex;align-items:center;gap:6px;font-weight:600}
+.mx-sel select{background:var(--surface);color:var(--fg);border:1px solid var(--line-2);border-radius:8px;padding:5px 8px;font:inherit}
+
 /* playground page */
 .page{max-width:1080px;margin:0 auto}
 .page section{border-bottom:0;padding-top:24px}
@@ -540,6 +595,7 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
       <button role="tab" id="tab-ala" aria-controls="p-ala" aria-selected="true"><b>Alankaras</b><span>warm-up patterns</span></button>
       <button role="tab" id="tab-kal" aria-controls="p-kal" aria-selected="false"><b>Kalpana swaras</b><span>improvised rounds</span></button>
       <button role="tab" id="tab-jathi" aria-controls="p-jathi" aria-selected="false"><b>Korvai &amp; tihai lab</b><span>learn the rhythm maths</span></button>
+      <button role="tab" id="tab-mela" aria-controls="p-mela" aria-selected="false"><b>Melakartas</b><span>the 72 and katapayadi</span></button>
     </div>
 
     <details class="soundbar" id="soundbar">
@@ -624,6 +680,11 @@ footer.foot{font-size:.84rem;color:var(--muted);padding:28px 0 0;border-top:1px 
       <details class="checks"><summary>How this round was built</summary><ul class="audit" id="k-audit"></ul></details>
     </div>
 
+    <div class="panel" role="tabpanel" id="p-mela" aria-labelledby="tab-mela" hidden>
+      <p class="lede-s">The 72 melakartas as a system: each number gives its swaras, and by the katapayadi rule the first two syllables of each name give the number. Pick one to see both worked out, decode any name, or build a scale and find its mela.</p>
+      <div id="mx-root"></div>
+    </div>
+
     <div class="panel" role="tabpanel" id="p-jathi" aria-labelledby="tab-jathi" hidden>
       <p class="lede-s">How a mora, tihai or korvai is counted so that it lands on sam, in any of the 35 talas: learn it step by step, build your own, then check it in the judge.</p>
       <div id="kl-root"></div>
@@ -668,7 +729,7 @@ $A $A tha , dhi , | tha-ki-ta (tha-ka)x2 ...   # one word = one matra; , and ; a
 </main>
 
 <script>
-/* Vocal Gym engine 0.8.6: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.8.8: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -696,6 +757,7 @@ var VGEngine = (() => {
     CELLS: () => CELLS,
     CELL_DEFS: () => CELL_DEFS,
     CHAKRA: () => CHAKRA,
+    CHAKRA_MEANING: () => CHAKRA_MEANING,
     CHAPU: () => CHAPU,
     DEFJ: () => DEFJ,
     FAM: () => FAM,
@@ -709,8 +771,10 @@ var VGEngine = (() => {
     JATI: () => JATI,
     JATI_NAME: () => JATI_NAME,
     JATI_WORDS: () => JATI_WORDS,
+    KATAPAYADI: () => KATAPAYADI,
     KNOWN: () => KNOWN,
     LIB: () => LIB,
+    MELA_IAST: () => MELA_IAST,
     MELA_NAMES: () => MELA_NAMES,
     PDF_ALANKARA: () => PDF_ALANKARA,
     PDF_FAM: () => PDF_FAM,
@@ -746,12 +810,17 @@ var VGEngine = (() => {
     kalpanaRhythm: () => kalpanaRhythm,
     kalpanaRound: () => kalpanaRound,
     kalpanaSession: () => kalpanaSession,
+    katapayadi: () => katapayadi,
+    katapayadiLetters: () => katapayadiLetters,
     korvai: () => korvai_exports,
     korvaiFrame: () => korvaiFrame,
     korvaiPlans: () => korvaiPlans,
     makeProjector: () => makeProjector,
+    melaFromSwaras: () => melaFromSwaras,
     melaLabels: () => melaLabels,
+    melaName: () => melaName,
     melakarta: () => melakarta,
+    melakartaInfo: () => melakartaInfo,
     mod12: () => mod12,
     moraSolutions: () => moraSolutions,
     motifFamiliarity: () => motifFamiliarity,
@@ -896,6 +965,310 @@ var VGEngine = (() => {
     const m = [];
     for (let n = 1; n <= 72; n++) m.push(melakarta(n));
     return { melakartas: m, janyas: JANYA };
+  }
+
+  // src/engine/melakarta.js
+  var KATAPAYADI = {
+    k: 1,
+    kh: 2,
+    g: 3,
+    gh: 4,
+    "\u1E45": 5,
+    c: 6,
+    ch: 7,
+    j: 8,
+    jh: 9,
+    "\xF1": 0,
+    "\u1E6D": 1,
+    "\u1E6Dh": 2,
+    "\u1E0D": 3,
+    "\u1E0Dh": 4,
+    "\u1E47": 5,
+    t: 6,
+    th: 7,
+    d: 8,
+    dh: 9,
+    n: 0,
+    p: 1,
+    ph: 2,
+    b: 3,
+    bh: 4,
+    m: 5,
+    y: 1,
+    r: 2,
+    l: 3,
+    v: 4,
+    "\u015B": 5,
+    "\u1E63": 6,
+    s: 7,
+    h: 8
+  };
+  var CHAKRA_MEANING = [
+    "the moon, of which there is one",
+    "the eyes, of which there are two",
+    "the three sacred fires",
+    "the four Vedas",
+    "the five arrows of Manmatha",
+    "the six seasons",
+    "the seven sages",
+    "the eight Vasus",
+    "Brahma, of which there are nine",
+    "the ten directions",
+    "the eleven Rudras",
+    "the twelve Adityas"
+  ];
+  var MELA_IAST = [
+    "Kanak\u0101\u1E45g\u012B",
+    "Ratn\u0101\u1E45g\u012B",
+    "G\u0101nam\u016Brti",
+    "Vanaspati",
+    "M\u0101navat\u012B",
+    "T\u0101nar\u016Bp\u012B",
+    "Sen\u0101vat\u012B",
+    "Hanumato\u1E0D\u012B",
+    "Dhenuk\u0101",
+    "N\u0101\u1E6Dakapriy\u0101",
+    "Kokilapriy\u0101",
+    "R\u016Bpavat\u012B",
+    "G\u0101yakapriy\u0101",
+    "Vaku\u1E37\u0101bhara\u1E47am",
+    "M\u0101y\u0101m\u0101\u1E37avagau\u1E37a",
+    "Cakrav\u0101kam",
+    "S\u016Bryak\u0101ntam",
+    "H\u0101\u1E6Dak\u0101mbar\u012B",
+    "Jha\u1E45k\u0101radhvani",
+    "Na\u1E6Dabhairav\u012B",
+    "K\u012Brav\u0101\u1E47\u012B",
+    "Kharaharapriy\u0101",
+    "Gaur\u012Bmanohar\u012B",
+    "Varu\u1E47apriy\u0101",
+    "M\u0101rara\xF1jan\u012B",
+    "C\u0101ruke\u015B\u012B",
+    "Saras\u0101\u1E45g\u012B",
+    "Harik\u0101mbhoj\u012B",
+    "Dh\u012Bra\u015Ba\u1E45kar\u0101bhara\u1E47am",
+    "N\u0101ganandin\u012B",
+    "Y\u0101gapriy\u0101",
+    "R\u0101gavardhan\u012B",
+    "G\u0101\u1E45geyabh\u016B\u1E63a\u1E47\u012B",
+    "V\u0101gadh\u012B\u015Bvar\u012B",
+    "\u015A\u016Blin\u012B",
+    "Calan\u0101\u1E6Da",
+    "S\u0101lagam",
+    "Jal\u0101r\u1E47avam",
+    "Jh\u0101lavar\u0101\u1E37\u012B",
+    "Navan\u012Btam",
+    "P\u0101van\u012B",
+    "Raghupriy\u0101",
+    "Gav\u0101mbhodh\u012B",
+    "Bhavapriy\u0101",
+    "\u015Aubhapantuvar\u0101\u1E37\u012B",
+    "\u1E62a\u1E0Dvidham\u0101rgi\u1E47\u012B",
+    "Suvar\u1E47\u0101\u1E45g\u012B",
+    "Divyama\u1E47i",
+    "Dhava\u1E37\u0101mbar\u012B",
+    "N\u0101man\u0101r\u0101ya\u1E47\u012B",
+    "K\u0101mavardhan\u012B",
+    "R\u0101mapriy\u0101",
+    "Gaman\u0101\u015Bram\u0101",
+    "Vi\u015Bvambhar\u012B",
+    "\u015A\u0101mal\u0101\u1E45g\u012B",
+    "\u1E62a\u1E47mukhapriy\u0101",
+    "Si\u1E43hendramadhyamam",
+    "Hemavat\u012B",
+    "Dharmavat\u012B",
+    "N\u012Btimat\u012B",
+    "K\u0101nt\u0101ma\u1E47i",
+    "Ri\u1E63abhapriy\u0101",
+    "Lat\u0101\u1E45g\u012B",
+    "V\u0101caspati",
+    "Mecakaly\u0101\u1E47\u012B",
+    "Citr\u0101mbar\u012B",
+    "Sucaritr\u0101",
+    "Jyotisvar\u016Bpi\u1E47\u012B",
+    "Dh\u0101tuvardhan\u012B",
+    "N\u0101sik\u0101bh\u016B\u1E63a\u1E47\u012B",
+    "Kosalam",
+    "Rasikapriy\u0101"
+  ];
+  var NOTED = { 57: { spelling: "Sihmendramadhyamam", text: "The Katapayadi source notes that the name as written gives 87, and that it is believed the name should be written Sihmendramadhyamam (as Brahmana is in Sanskrit): si 7, hma counts m 5, so 57." } };
+  var VOWELS = ["ai", "au", "\u0101", "\u012B", "\u016B", "\u1E5B", "\u1E5D", "a", "i", "u", "e", "o"];
+  var CONS_IAST = ["kh", "gh", "ch", "jh", "\u1E6Dh", "\u1E0Dh", "th", "dh", "ph", "bh", "k", "g", "\u1E45", "c", "j", "\xF1", "\u1E6D", "\u1E0D", "\u1E47", "t", "d", "n", "p", "b", "m", "y", "r", "l", "\u1E37", "v", "w", "\u015B", "\u1E63", "s", "h"];
+  var MARKS = ["\u1E43", "\u1E41", "\u1E25"];
+  var ASCII_MAP = [["chh", "ch"], ["ch", "c"], ["sh", "\u015B"], ["ee", "\u012B"], ["oo", "\u016B"], ["aa", "\u0101"], ["ou", "au"], ["ow", "au"], ["w", "v"]];
+  var ASCII_ALT = { t: "\u1E6D", th: "\u1E6Dh", d: "\u1E0D", dh: "\u1E0Dh", n: "\u1E47", "\u015B": "\u1E63", l: "\u1E37" };
+  var isPlain = (s) => /^[\x00-\x7f]*$/.test(s);
+  function tokens(text, plain2) {
+    let s = String(text).normalize("NFC").toLowerCase();
+    if (plain2) {
+      let out = "";
+      for (let i = 0; i < s.length; ) {
+        const m = ASCII_MAP.find(([a]) => s.startsWith(a, i));
+        if (m) {
+          out += m[1];
+          i += m[0].length;
+        } else {
+          out += s[i];
+          i++;
+        }
+      }
+      s = out;
+    }
+    const t = [];
+    for (let i = 0; i < s.length; ) {
+      const v = VOWELS.find((x) => s.startsWith(x, i));
+      if (v) {
+        t.push({ k: "V", s: v });
+        i += v.length;
+        continue;
+      }
+      const c = CONS_IAST.find((x) => s.startsWith(x, i));
+      if (c) {
+        t.push({ k: "C", s: c === "w" ? "v" : c });
+        i += c.length;
+        continue;
+      }
+      if (MARKS.includes(s[i])) {
+        t.push({ k: "M", s: s[i] });
+        i++;
+        continue;
+      }
+      if (/[a-zA-ZÀ-ỿ]/.test(s[i])) t.push({ k: "X", s: s[i] });
+      else t.push({ k: "B" });
+      i++;
+    }
+    return t;
+  }
+  function syllablesOf(text, plain2) {
+    const out = [];
+    let cl = [], unknown = [];
+    tokens(text, plain2).forEach((tk) => {
+      if (tk.k === "C") cl.push(tk.s);
+      else if (tk.k === "V") {
+        out.push({ cluster: cl, vowel: tk.s, text: cl.join("") + tk.s });
+        cl = [];
+      } else if (tk.k === "X") unknown.push(tk.s);
+      else if (tk.k === "B") cl = [];
+    });
+    return { syl: out, unknown };
+  }
+  function counted(cluster, reading) {
+    let c = cluster.slice();
+    if (reading === "phala") {
+      if (c.length > 1 && c[0] === "r") c = c.slice(1);
+      while (c.length > 1 && ["y", "r", "v"].includes(c[c.length - 1])) c = c.slice(0, -1);
+    }
+    return c.length ? c[c.length - 1] : null;
+  }
+  var digitOf = (c) => c == null ? 0 : KATAPAYADI[c] == null ? null : KATAPAYADI[c];
+  var numberOf = (ds) => ds.length < 2 || ds[0] == null || ds[1] == null ? null : ds[1] * 10 + ds[0];
+  function katapayadi(text, opts = {}) {
+    const input = String(text == null ? "" : text).trim().slice(0, 200);
+    if (!input) return { error: "Give a word to decode." };
+    const plain2 = opts.plain != null ? !!opts.plain : isPlain(input);
+    const { syl, unknown } = syllablesOf(input, plain2);
+    if (!syl.length) return { error: 'No syllables found in "' + input + '".' };
+    const read = (reading) => syl.map((s) => {
+      const letter = counted(s.cluster, reading), digit = digitOf(letter);
+      const o = { text: s.text, letter: letter || "(vowel)", digit };
+      if (plain2 && letter && ASCII_ALT[letter] !== void 0) {
+        const a = ASCII_ALT[letter];
+        o.alt = { letter: a, digit: KATAPAYADI[a] == null ? null : KATAPAYADI[a] };
+      }
+      return o;
+    });
+    const syllables = read("strict"), digits = syllables.map((s) => s.digit), number = numberOf(digits);
+    const ph = read("phala"), phNumber = numberOf(ph.map((s) => s.digit));
+    const res = { input, plain: plain2, syllables, digits, number, reversed: digits.slice(0, 2).reverse(), unknown };
+    if (phNumber !== number) res.phala = { number: phNumber, syllables: ph.slice(0, 2) };
+    if (plain2) {
+      const opts2 = syllables.slice(0, 2).map((s) => [s.digit].concat(s.alt && s.alt.digit != null ? [s.alt.digit] : []));
+      const alts = /* @__PURE__ */ new Set();
+      if (opts2.length === 2) opts2[0].forEach((a) => opts2[1].forEach((b) => {
+        if (a != null && b != null) alts.add(b * 10 + a);
+      }));
+      alts.delete(number);
+      res.alternatives = Array.from(alts).sort((a, b) => a - b);
+    }
+    if (syllables.slice(0, 2).some((s) => s.digit == null)) res.note = "A letter in the first two syllables has no digit in the scheme (\u1E37a is used in katapayadi works, but the source gives it no digit).";
+    return res;
+  }
+  function melaName(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const iast = MELA_IAST[n - 1], k = katapayadi(iast, { plain: false });
+    const out = { n, name: MELA_NAMES[n - 1], iast, number: k.number, digits: k.digits.slice(0, 2), syllables: k.syllables.slice(0, 2) };
+    if (k.number === n) return Object.assign(out, { reading: "rule", note: "The first two syllables give " + k.digits[0] + " and " + k.digits[1] + "; reversed, " + n + "." });
+    if (k.phala && k.phala.number === n) {
+      const s = k.phala.syllables, w = k.syllables.findIndex((x2, i) => x2.letter !== s[i].letter), x = k.syllables[w];
+      return Object.assign(out, {
+        reading: "phala",
+        phalaNumber: n,
+        syllables: s,
+        digits: s.map((y) => y.digit),
+        note: 'The stated rule counts the last consonant of "' + x.text + '" (' + x.letter + ", " + x.digit + ") and gives " + k.number + ". The name gives " + n + " only if the " + x.letter + " written beneath " + s[w].letter + " is passed over and the main consonant " + s[w].letter + " counts (" + s[w].digit + "): a convention this name needs that the Katapayadi source does not state."
+      });
+    }
+    const noted = NOTED[n];
+    if (noted) {
+      const alt = katapayadi(noted.spelling, { plain: false });
+      return Object.assign(out, { reading: "exception", spelling: noted.spelling, spellingNumber: alt.number, note: noted.text });
+    }
+    return Object.assign(out, { reading: "exception", note: "Its first two syllables give " + k.digits[0] + " and " + k.digits[1] + ", so " + k.number + ", not " + n + ": " + n + " needs " + n % 10 + " then " + Math.floor(n / 10) + ', and no reading of "' + k.syllables[0].text + '" and "' + k.syllables[1].text + '" gives them. The sources read do not explain this name.' });
+  }
+  var RG_OF = [["R1", "G1"], ["R1", "G2"], ["R1", "G3"], ["R2", "G2"], ["R2", "G3"], ["R3", "G3"]];
+  var DN_OF = [["D1", "N1"], ["D1", "N2"], ["D1", "N3"], ["D2", "N2"], ["D2", "N3"], ["D3", "N3"]];
+  var SEMI2 = { R1: 1, R2: 2, R3: 3, G1: 2, G2: 3, G3: 4, D1: 8, D2: 9, D3: 10, N1: 9, N2: 10, N3: 11 };
+  function melakartaInfo(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const r = melakarta(n), prati = n > 36, k = (prati ? n - 36 : n) - 1, q = Math.floor(k / 6), rem = k % 6, ci = Math.floor((n - 1) / 6);
+    const labels = melaLabels(n), M = prati ? "M2" : "M1";
+    const steps = [
+      "Mela " + n + " is in the " + (prati ? "second half (37\u201372), so its madhyama is the prati madhyama, M2" : "first half (1\u201336), so its madhyama is the shuddha madhyama, M1") + ".",
+      (prati ? n + " \u2212 36 = " + (n - 36) + "; " : "") + (prati ? n - 36 : n) + " \u2212 1 = " + k + "; " + k + " \xF7 6 = " + q + ", remainder " + rem + ".",
+      "The quotient " + q + " gives " + RG_OF[q].join(" ") + ": every mela of chakra " + (ci + 1) + " (" + CHAKRA[ci] + ") has them.",
+      "The remainder " + rem + " gives " + DN_OF[rem].join(" ") + ": the " + ["first", "second", "third", "fourth", "fifth", "sixth"][rem] + " of the six D and N pairs, as the mela is the " + ["first", "second", "third", "fourth", "fifth", "sixth"][rem] + " of its chakra.",
+      "So " + r.name + " is S " + RG_OF[q].join(" ") + " " + M + " P " + DN_OF[rem].join(" ") + " S'."
+    ];
+    const twin = prati ? n - 36 : n + 36;
+    return {
+      n,
+      id: r.id,
+      name: r.name,
+      iast: MELA_IAST[n - 1],
+      labels,
+      pitches: r.aro.slice(0, 7),
+      aro: r.aro,
+      avaro: r.avaro,
+      madhyama: M,
+      half: prati ? "prati" : "shuddha",
+      quotient: q,
+      remainder: rem,
+      rg: RG_OF[q],
+      dn: DN_OF[rem],
+      chakra: { index: ci + 1, name: CHAKRA[ci], meaning: CHAKRA_MEANING[ci], stands: ci + 1, members: Array.from({ length: 6 }, (_, j) => ci * 6 + j + 1) },
+      twin: { n: twin, name: MELA_NAMES[twin - 1] },
+      katapayadi: melaName(n),
+      janyas: JANYA.filter((j) => j.parent === n).map((j) => ({ id: j.id, name: j.name, aro: j.aro, avaro: j.avaro, labels: j.labels })),
+      steps
+    };
+  }
+  function melaFromSwaras(sel = {}) {
+    const want = { R: ["R1", "R2", "R3"], G: ["G1", "G2", "G3"], M: ["M1", "M2"], D: ["D1", "D2", "D3"], N: ["N1", "N2", "N3"] };
+    for (const k of Object.keys(want)) if (!want[k].includes(sel[k])) return { error: "Choose " + k + " as one of " + want[k].join(", ") + "." };
+    const q = RG_OF.findIndex((x) => x[0] === sel.R && x[1] === sel.G), rem = DN_OF.findIndex((x) => x[0] === sel.D && x[1] === sel.N);
+    const why = (a, b) => SEMI2[a] === SEMI2[b] ? a + " and " + b + " are the same pitch (" + SEMI2[a] + " semitones above Sa), so the scale would have six swaras, not seven" : a + " (" + SEMI2[a] + ") is above " + b + " (" + SEMI2[b] + "), and a melakarta keeps its swaras in order";
+    if (q < 0) return { error: "No melakarta has " + sel.R + " with " + sel.G + ": " + why(sel.R, sel.G) + "." };
+    if (rem < 0) return { error: "No melakarta has " + sel.D + " with " + sel.N + ": " + why(sel.D, sel.N) + "." };
+    const n = (sel.M === "M2" ? 36 : 0) + q * 6 + rem + 1;
+    return { n, name: MELA_NAMES[n - 1] };
+  }
+  function katapayadiLetters(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const of = (d) => Object.keys(KATAPAYADI).filter((c) => KATAPAYADI[c] === d).concat(d === 0 ? ["(a vowel)"] : []);
+    return { n, first: { digit: n % 10, letters: of(n % 10) }, second: { digit: Math.floor(n / 10), letters: of(Math.floor(n / 10)) } };
   }
 
   // src/engine/talas.js
@@ -3699,8 +4072,8 @@ var VGEngine = (() => {
       return a.g === b.g && a.g != null && !!a.phrase;
     };
     let unl = 0, dbl = 0, unres = 0;
-    const counted = countAfter && after.length ? [T0, E] : [T0];
-    for (const k of counted) {
+    const counted2 = countAfter && after.length ? [T0, E] : [T0];
+    for (const k of counted2) {
       if (k < 1 || k >= len || Math.abs(mv(k)) < 2) continue;
       const a = at(k - 1), b = at(k), tag = a.g === b.g ? { phrase: !!b.phrase, arp: !!b.arp } : null;
       if (!licence(LX, a.p, b.p, tag)) unl++;
@@ -8954,7 +9327,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   }
 
   // src/engine/index.js
-  var VERSION = "0.8.6";
+  var VERSION = "0.8.8";
   return __toCommonJS(engine_exports);
 })();
 </script>
@@ -9309,7 +9682,10 @@ globalThis.VG_SOLKATTU_BANK = null;
                                     and plays them from t0; returns the end
    line   { groups: [{ t0, t1, points: [{ t, p }] or [[t, p]], gain?: [{ t, g }] or [[t, g]] }],
             notes: [{ t0, t1, p, onset, consonant, vowel, accent }] }   p in semitones from Sa
-   opts   { sa = 261.63, sr = 44100, timbre = 'aa' | 'swaram', level = 0.3, seed = 1 }
+   opts   { sa = 261.63, sr = 44100, timbre = 'aa' | 'swaram', level = 0.3, seed = 1, octave = -1 }
+          octave: where the voice sings relative to sa, the drone's Sa. By default an octave below it (v0.8.7:
+          at sa itself, C4 and up, the voice sat in a thin, high register that was tiring to hear); 0 sings at
+          sa as before. Below sa the vowel formants are a lower voice's.
           'aa' sings the line on the vowel a (akaram), re-articulating each swara softly; 'swaram' sings
           the swara names (sa ri ga ma pa dha ni) with their consonants and vowels.
    The voice is a source-filter model computed per harmonic (alias-free additive synthesis):
@@ -9317,7 +9693,10 @@ globalThis.VG_SOLKATTU_BANK = null;
      filter    four vowel formants as a cascade of resonators, formant 1 raised to stay above the pitch
                (formant tuning, as sopranos and high voices do), so the timbre changes with the pitch the
                way a voice's does and not the way a stretched waveform's would
-     noise     breath (aspiration) pulsed with the glottal cycle, stronger at phrase onsets and in soft passages
+     noise     breath (aspiration) pulsed with the glottal cycle, a little stronger at phrase onsets; kept below
+               the voice's own spectrum (centred near 1.5 kHz, low-passed at 3.2 kHz) and about 50 dB under it,
+               so it reads as breathiness and not as hiss (v0.8.6: it was a broadband band at 2.7 kHz only
+               20 dB under the voice above 4 kHz, where the voice has little energy and above 5.4 kHz none)
      micro     jitter (a few cents of slow random pitch wander) and shimmer (2% amplitude wander)
      onsets    in 'swaram', each swara's consonant: s a fricative, p a voiceless stop with a burst and
                aspiration, g d dh voiced stops (dh aspirated), m n nasal murmurs, r a tap; placed before the
@@ -9336,17 +9715,21 @@ globalThis.VG_SOLKATTU_BANK = null;
   const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
   const ss = x => { const u = clamp(x, 0, 1); return u * u * (3 - 2 * u); };
 
-  // vowel formants [F, B] in Hz for an adult voice in the Sa = C4 register (Peterson & Barney 1952 means
-  // for women's /ɑ/ and /i/, a fourth formant added)
+  // vowel formants [F, B] in Hz (Peterson & Barney 1952 means for /ɑ/ and /i/, a fourth formant added): a
+  // high voice's (women's means) for the Sa = C4 register, a low voice's (men's means) an octave below
   const VOWEL = {
     a: [[850, 90], [1220, 100], [2810, 150], [3800, 220]],
     i: [[310, 70], [2790, 120], [3310, 160], [4100, 240]]
+  };
+  const VOWEL_LOW = {
+    a: [[730, 80], [1090, 90], [2440, 130], [3400, 200]],
+    i: [[270, 60], [2290, 110], [3010, 150], [3700, 220]]
   };
   // consonant onsets, relative to the beat (s): the voice's dip [start, down, up, end] and depth, the
   // spectral closure (voiced stops, the tap) or nasal murmur, and noise: a fricative band, a burst, an
   // aspiration
   const CONS = {
-    s: { dip: [-0.085, -0.06, -0.014, 0.01], depth: 0.03, fric: [-0.09, -0.07, -0.016, 0.006], fricAmp: 0.16, fricHz: 6200 },
+    s: { dip: [-0.085, -0.06, -0.014, 0.01], depth: 0.03, fric: [-0.09, -0.07, -0.016, 0.006], fricAmp: 0.07, fricHz: 5200 },
     p: { dip: [-0.065, -0.05, 0.0, 0.014], depth: 0.0, burst: 0.0, burstAmp: 0.3, burstHz: 1200, asp: [0, 0.004, 0.012, 0.038], aspAmp: 0.09 },
     g: { dip: [-0.06, -0.045, -0.004, 0.01], depth: 0.28, close: 1, burst: -0.003, burstAmp: 0.14, burstHz: 1900 },
     d: { dip: [-0.06, -0.045, -0.004, 0.01], depth: 0.28, close: 1, burst: -0.003, burstAmp: 0.14, burstHz: 3900 },
@@ -9366,6 +9749,8 @@ globalThis.VG_SOLKATTU_BANK = null;
     let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
     return x => { const yv = b0 * x + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x; y2 = y1; y1 = yv; return yv; };
   }
+  // a one-pole low-pass, as a stateful function (two in series keep the breath under the voice's top)
+  function lowpass(hz, sr) { const a = Math.exp(-2 * Math.PI * hz / sr); let yv = 0; return x => (yv = (1 - a) * x + a * yv); }
   // the window of a consonant gesture: 0 before a, rising to 1 by b, 1 until c, falling to 0 by d
   const win = (t, w) => t <= w[0] || t >= w[3] ? 0 : t < w[1] ? ss((t - w[0]) / (w[1] - w[0])) : t <= w[2] ? 1 : 1 - ss((t - w[2]) / (w[3] - w[2]));
   // the cascade formant filter's magnitude at f
@@ -9387,20 +9772,21 @@ globalThis.VG_SOLKATTU_BANK = null;
   }
 
   function render(line, opts) {
-    const o = opts || {}, sr = o.sr || 44100, sa = o.sa || 261.63, level = o.level == null ? 0.3 : o.level, sw = o.timbre === 'swaram';
+    const o = opts || {}, sr = o.sr || 44100, octave = o.octave == null ? -1 : o.octave, sa = (o.sa || 261.63) * Math.pow(2, octave);
+    const level = o.level == null ? 0.3 : o.level, sw = o.timbre === 'swaram', vowels = octave < 0 ? VOWEL_LOW : VOWEL;
     const groups = (line.groups || []).filter(gr => gr.points && gr.points.length > 0);
     if (!groups.length) return new Float32Array(Math.ceil(sr * 0.1));
     const end = Math.max.apply(null, groups.map(gr => gr.t1)) + REL + 0.05, n = Math.ceil((end + PRE) * sr), y = new Float32Array(n);
     const rand = lcg(o.seed || 1);
     const notes = (line.notes || []).slice().sort((a, b) => a.t0 - b.t0);
-    groups.forEach(gr => sing(gr, notes.filter(x => x.t0 >= gr.t0 - 1e-6 && x.t0 < gr.t1 - 1e-6), y, { sr, sa, level, sw, rand }));
+    groups.forEach(gr => sing(gr, notes.filter(x => x.t0 >= gr.t0 - 1e-6 && x.t0 < gr.t1 - 1e-6), y, { sr, sa, level, sw, rand, vowels }));
     // a soft knee keeps any peak under full scale without touching the normal range
     for (let i = 0; i < n; i++) { const v = y[i], a = Math.abs(v); if (a > 0.8) y[i] = Math.sign(v) * (0.8 + 0.2 * Math.tanh((a - 0.8) / 0.2)); }
     return y;
   }
 
   function sing(gr, notes, y, E) {
-    const { sr, sa, level, sw, rand } = E;
+    const { sr, sa, level, sw, rand, vowels } = E;
     const P = gr.points.map(tp), G = gr.gain ? gr.gain.map(tp) : null;
     let kp = 0, kg = 0;
     const pitchAt = t => {
@@ -9425,10 +9811,11 @@ globalThis.VG_SOLKATTU_BANK = null;
       const c = sw ? CONS[x.consonant] : (k > 0 && x.onset !== 'phrase' ? REARTICULATE : null);
       return c ? { t: x.t0, c, phrase: x.onset === 'phrase' || k === 0 } : null;
     }).filter(Boolean);
-    const vowelOf = x => VOWEL[sw && x && x.vowel === 'i' ? 'i' : 'a'];
+    const vowelOf = x => vowels[sw && x && x.vowel === 'i' ? 'i' : 'a'];
     const t0 = gr.t0 - (sw ? 0.095 : 0.01), t1 = gr.t1 + REL;
     const s0 = Math.max(0, Math.floor((t0 + PRE) * sr)), s1 = Math.min(y.length, Math.ceil((t1 + PRE) * sr));
-    const fric = bandpass(6200, 1.4, sr), breath = bandpass(2700, 0.8, sr), burstLo = bandpass(1900, 1.1, sr), burstHi = bandpass(3800, 1.1, sr);
+    const fric = bandpass(CONS.s.fricHz, 2, sr), breath = bandpass(1500, 0.7, sr), burstLo = bandpass(1900, 1.1, sr), burstHi = bandpass(3800, 1.1, sr);
+    const soft1 = lowpass(3200, sr), soft2 = lowpass(3200, sr);
     let phase = 0, jit = 0, jitT = 0, shim = 0, shimT = 0, prevAmp = 0, ni = 0, ei = 0;
     const H = [];
     for (let s = s0; s < s1; s += BLOCK) {
@@ -9475,9 +9862,9 @@ globalThis.VG_SOLKATTU_BANK = null;
       }
       const norm = sum > 0 ? 1 / Math.sqrt(sum) : 0;
       const amp = level * gain * att * rel * dip * (1 + shim) * norm;
-      // breath: a little always, more at a phrase's first swara and in soft passages
-      const onsetBreath = cur && (cur.onset === 'phrase' || ni === 0) && t >= cur.t0 - 0.01 ? 0.05 * Math.exp(-(t - cur.t0) / 0.06) : 0;
-      const breathA = level * att * rel * (0.022 + onsetBreath + 0.03 * Math.max(0, 0.9 - gain));
+      // breath: a trace always, following the voice's loudness, a little more at a phrase's first swara
+      const onsetBreath = cur && (cur.onset === 'phrase' || ni === 0) && t >= cur.t0 - 0.01 ? 0.02 * Math.exp(-(t - cur.t0) / 0.05) : 0;
+      const breathA = level * att * rel * Math.min(1, gain) * (0.006 + onsetBreath);
       const nAmp = level * 1.0;
       for (let i = s; i < tEnd; i++) {
         const k = (i - s) / BLOCK, fi = f0 + (f0b - f0) * k, a = prevAmp + (amp - prevAmp) * k;
@@ -9485,11 +9872,12 @@ globalThis.VG_SOLKATTU_BANK = null;
         const ph = phase - Math.floor(phase);
         let v = 0;
         for (let h = 1; h <= nh; h++) v += H[h] * sinT(h * ph);
-        const wn = rand() * 2 - 1, pulse = 0.55 + 0.45 * Math.max(0, Math.cos(2 * Math.PI * ph));
-        let out = a * v + breathA * pulse * breath(wn) * 2.2;
+        // the breath pulses with the glottal cycle (its opening phase), so it fuses with the voice
+        const wn = rand() * 2 - 1, cs = Math.max(0, Math.cos(2 * Math.PI * ph)), pulse = 0.1 + 0.9 * cs * cs;
+        const bn = breath(wn);
+        let out = a * v + soft2(soft1(breathA * pulse * bn * 2.2 + (aspA > 0 ? nAmp * aspA * bn * 2.2 : 0)));
         if (fricA > 0) out += nAmp * fricA * fric(wn) * 2.5;
         if (burstA > 0) out += nAmp * burstA * (burstHz > 2500 ? burstHi(wn) : burstLo(wn)) * 2;
-        if (aspA > 0) out += nAmp * aspA * breath(wn) * 2.2;
         y[i] += out;
       }
       prevAmp = amp;
@@ -9509,7 +9897,7 @@ globalThis.VG_SOLKATTU_BANK = null;
     return t0 + yv.length / o.sr - PRE;
   }
 
-  g.VGVoice = { PRE, VOWEL, CONS, lineOf, render, play };
+  g.VGVoice = { PRE, VOWEL, VOWEL_LOW, CONS, lineOf, render, play };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* Vocal Gym · the Korvai & Tihai lab (docs/research/korvai-tihai.md)
@@ -10276,6 +10664,127 @@ globalThis.VG_SOLKATTU_BANK = null;
   }
   function validTala(fam, L) { return FAMS.includes(fam) && (fam === 'chapu' ? [3, 5, 7] : [3, 4, 5, 7, 9]).includes(L); }
   g.VGKorvaiLab = { mount };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+/* Vocal Gym · the melakarta and katapayadi explorer (docs/research/melakarta-katapayadi.md)
+   A classic script shared by the playground pages (inlined by scripts/build.js) and the app (served at
+   /shared/). It sets globalThis.VGMelaExplorer = { mount(root, host) }, which returns { unmount, select }:
+     host.M      the engine's melakarta module: melakartaInfo, melaName, katapayadi, melaFromSwaras,
+                 katapayadiLetters, MELA_NAMES, MELA_IAST, CHAKRA, CHAKRA_MEANING
+                 (VGEngine in the playground, /engine/melakarta.js and /engine/ragas.js in the app)
+     host.audio  optional { play(btn, notes, info), stop() }: notes are pitches (semitones from Sa), the
+                 arohana then the avarohana; info is melakartaInfo's answer. play toggles.
+     host.store  optional localStorage key for the chosen mela
+   The 72 melas in their 12 chakras; for the chosen one, its swaras worked out from the number, how its name
+   gives the number by the katapayadi rule (or why it does not), its chakra, its twin across the madhyamas
+   and its janyas; a decoder for any word; and a builder that names the mela of a choice of swaras. All the
+   arithmetic is the engine's; the page only draws it. */
+(function (g) {
+  'use strict';
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const DN = ['D1 N1', 'D1 N2', 'D1 N3', 'D2 N2', 'D2 N3', 'D3 N3'], RG = ['R1 G1', 'R1 G2', 'R1 G3', 'R2 G2', 'R2 G3', 'R3 G3'];
+  // the twelve semitones of the octave, with the swara names each can take
+  const KEYS = [['S'], ['R1'], ['R2', 'G1'], ['R3', 'G2'], ['G3'], ['M1'], ['M2'], ['P'], ['D1'], ['D2', 'N1'], ['D3', 'N2'], ['N3']];
+  const READING = { rule: 'by the rule', phala: 'by a convention', exception: 'an exception' };
+  const plainKey = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const sub = l => esc(l).replace(/([RGMDN])([123])/g, '$1<sub>$2</sub>');
+
+  function mount(root, host) {
+    const M = host.M, audio = host.audio || null;
+    let n = 29;
+    try { const v = host.store && localStorage.getItem(host.store); if (v && +v >= 1 && +v <= 72) n = +v; } catch (e) { /* not stored */ }
+    root.innerHTML =
+      '<div class="mx">' +
+      '<div class="mx-find"><label for="mx-q">Find a melakarta by name or number, or decode any word by katapayadi</label>' +
+      '<input id="mx-q" type="search" autocomplete="off" spellcheck="false" placeholder="Kalyani, 15, Mechakalyani, Dhīraśaṅkarābharaṇam…">' +
+      '<div class="mx-findout" aria-live="polite"></div></div>' +
+      '<div class="mx-cols"><div class="mx-grid" role="group" aria-label="The 72 melakartas"></div><div class="mx-detail" aria-live="polite"></div></div>' +
+      '<div class="mx-build"><h3>Build a scale</h3><p class="mx-sub">Choose one of each swara: the engine names the melakarta, or says why the choice is not one.</p><div class="mx-sel"></div><div class="mx-buildout" aria-live="polite"></div></div>' +
+      '</div>';
+    const $ = s => root.querySelector(s);
+
+    /* the 72, chakra by chakra: two halves (the madhyamas), each six chakras of six melas */
+    $('.mx-grid').innerHTML = [0, 1].map(h => '<table class="mx-half"><caption>' + (h ? 'Prati madhyama (M<sub>2</sub>), 37–72' : 'Shuddha madhyama (M<sub>1</sub>), 1–36') + '</caption><colgroup><col class="mx-ch">' + '<col>'.repeat(6) + '</colgroup>' +
+      '<thead><tr><th scope="col">Chakra</th>' + DN.map(d => '<th scope="col">' + sub(d) + '</th>').join('') + '</tr></thead><tbody>' +
+      [0, 1, 2, 3, 4, 5].map(r => { const ci = h * 6 + r; return '<tr><th scope="row"><b>' + (ci + 1) + ' ' + esc(M.CHAKRA[ci]) + '</b><span>' + sub(RG[r]) + '</span></th>' +
+        [0, 1, 2, 3, 4, 5].map(c => { const m = ci * 6 + c + 1; return '<td><button type="button" class="mx-m" data-n="' + m + '" title="' + esc(m + ' ' + M.MELA_NAMES[m - 1]) + '"><b>' + m + '</b><span>' + esc(M.MELA_NAMES[m - 1]) + '</span></button></td>'; }).join('') + '</tr>'; }).join('') +
+      '</tbody></table>').join('');
+
+    function chips(sy) { return sy.map(s => '<span class="mx-chip"><b>' + esc(s.text) + '</b><span>' + esc(s.letter) + ' = ' + (s.digit == null ? '?' : s.digit) + '</span></span>').join(''); }
+    function draw() {
+      const I = M.melakartaInfo(n), K = I.katapayadi, read = K.reading === 'phala' ? K.phalaNumber : K.number;
+      root.querySelectorAll('.mx-m').forEach(b => { const on = +b.dataset.n === n; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+      const inScale = new Set(I.pitches);
+      $('.mx-detail').innerHTML =
+        '<div class="mx-head"><div><h3>' + I.n + ' · ' + esc(I.name) + '</h3><p class="mx-iast">' + esc(I.iast) + '</p></div>' +
+        (audio ? '<button type="button" class="btn mx-play">Play arohana and avarohana</button>' : '') + '</div>' +
+        '<p class="mx-scale">' + I.labels.map(sub).join(' ') + ' Ṡ</p>' +
+        '<div class="mx-keys" aria-label="The scale on the twelve semitones">' + KEYS.map((k, p) => '<span class="' + (inScale.has(p) ? 'in' : '') + '">' + (inScale.has(p) ? sub(I.labels[I.pitches.indexOf(p)]) : k.map(sub).join('/')) + '</span>').join('') + '</div>' +
+        '<h4>The name gives the number <span class="mx-badge ' + K.reading + '">' + READING[K.reading] + '</span></h4>' +
+        '<div class="mx-kp">' + chips(K.syllables) + '<span class="mx-arrow">digits ' + K.digits.join(' ') + ', reversed</span><span class="mx-num ' + (read === n ? 'ok' : 'bad') + '">' + (read == null ? '?' : read) + '</span></div>' +
+        '<p class="mx-note">' + esc(K.note) + '</p>' +
+        '<h4>The number gives the swaras</h4><ol class="mx-steps">' + I.steps.map(s => '<li>' + esc(s) + '</li>').join('') + '</ol>' +
+        '<h4>Chakra ' + I.chakra.index + ', ' + esc(I.chakra.name) + '</h4><p class="mx-note">' + esc(I.chakra.name) + ' stands for ' + I.chakra.stands + ': ' + esc(I.chakra.meaning) + '. Its six melas share ' + sub(I.rg.join(' ')) + ' and ' + sub(I.madhyama) + ', and differ only in D and N.</p>' +
+        '<div class="mx-links">' + I.chakra.members.map(m => '<button type="button" class="mx-go' + (m === n ? ' on' : '') + '" data-n="' + m + '">' + m + ' ' + esc(M.MELA_NAMES[m - 1]) + '</button>').join('') + '</div>' +
+        '<p class="mx-note">The same scale with ' + sub(I.madhyama === 'M1' ? 'M2' : 'M1') + ': <button type="button" class="mx-go" data-n="' + I.twin.n + '">' + I.twin.n + ' ' + esc(I.twin.name) + '</button></p>' +
+        (I.janyas.length ? '<p class="mx-note">Janyas of it in Vocal Gym: ' + I.janyas.map(j => esc(j.name)).join(', ') + '.</p>' : '') +
+        lettersText(n);
+      const pb = $('.mx-play');
+      if (pb) pb.onclick = () => audio.play(pb, I.aro.concat(I.avaro.slice(1)), I);
+      root.querySelectorAll('.mx-detail .mx-go').forEach(b => { b.onclick = () => select(+b.dataset.n); });
+    }
+    function lettersText(m) {
+      const L = M.katapayadiLetters(m);
+      return '<p class="mx-note">Any name for ' + m + ' must begin with a syllable worth ' + L.first.digit + ' (' + esc(L.first.letters.join(', ')) + ') and go on with one worth ' + L.second.digit + ' (' + esc(L.second.letters.join(', ')) + '), as the digits are read in reverse.</p>';
+    }
+    function select(m) {
+      if (!(m >= 1 && m <= 72)) return;
+      n = m; draw();
+      try { if (host.store) localStorage.setItem(host.store, String(n)); } catch (e) { /* not stored */ }
+    }
+
+    /* find: names and numbers, and the katapayadi reading of whatever is typed */
+    const keys = M.MELA_NAMES.map((nm, i) => [plainKey(nm), plainKey(M.MELA_IAST[i])]);
+    $('#mx-q').addEventListener('input', () => {
+      const q = $('#mx-q').value.trim(), out = $('.mx-findout');
+      if (!q) { out.innerHTML = ''; return; }
+      if (/^\d+$/.test(q)) { const m = +q; out.innerHTML = m >= 1 && m <= 72 ? '<button type="button" class="mx-go" data-n="' + m + '">' + m + ' ' + esc(M.MELA_NAMES[m - 1]) + '</button>' : '<p class="mx-note">Melakartas run from 1 to 72.</p>'; bindFind(); return; }
+      const pk = plainKey(q), hits = [];
+      keys.forEach((k, i) => { if (pk.length >= 2 && (k[0].startsWith(pk) || k[1].startsWith(pk) || (pk.length >= 4 && k[0].includes(pk)))) hits.push(i + 1); });
+      const k = M.katapayadi(q);
+      let h = hits.length ? '<div class="mx-links">' + hits.slice(0, 8).map(m => '<button type="button" class="mx-go" data-n="' + m + '">' + m + ' ' + esc(M.MELA_NAMES[m - 1]) + '</button>').join('') + '</div>' : '';
+      if (!k.error) {
+        const num = k.number, mel = num >= 1 && num <= 72;
+        h += '<div class="mx-kp">' + chips(k.syllables.slice(0, 6)) + (k.syllables.length > 6 ? '<span class="mx-arrow">…</span>' : '') +
+          '<span class="mx-arrow">first two digits ' + k.digits.slice(0, 2).join(' ') + ', reversed</span><span class="mx-num">' + (num == null ? '?' : num) + '</span>' +
+          (mel ? '<button type="button" class="mx-go" data-n="' + num + '">mela ' + num + ' ' + esc(M.MELA_NAMES[num - 1]) + '</button>' : '') + '</div>';
+        if (k.phala) h += '<p class="mx-note">Passing over a ya, ra or va written beneath a consonant, as some names need: ' + k.phala.number + '.</p>';
+        if (k.alternatives && k.alternatives.length) h += '<p class="mx-note">In plain letters t may be ṭ, d ḍ, n ṇ and sh ś or ṣ, so it could also read ' + k.alternatives.map(a => a >= 1 && a <= 72 ? '<button type="button" class="mx-go" data-n="' + a + '">' + a + ' ' + esc(M.MELA_NAMES[a - 1]) + '</button>' : String(a)).join(' ') + '. Type it with diacritics (ṭ, ṇ, ś, ṣ, ā) to be exact.</p>';
+        if (k.note) h += '<p class="mx-note">' + esc(k.note) + '</p>';
+      }
+      out.innerHTML = h; bindFind();
+    });
+    function bindFind() { root.querySelectorAll('.mx-findout .mx-go').forEach(b => { b.onclick = () => select(+b.dataset.n); }); }
+    $('#mx-q').addEventListener('keydown', e => { if (e.key === 'Enter') { const b = root.querySelector('.mx-findout .mx-go'); if (b) b.click(); } });
+
+    /* build a scale */
+    const SEL = { R: ['R1', 'R2', 'R3'], G: ['G1', 'G2', 'G3'], M: ['M1', 'M2'], D: ['D1', 'D2', 'D3'], N: ['N1', 'N2', 'N3'] };
+    $('.mx-sel').innerHTML = Object.keys(SEL).map(k => '<label>' + k + ' <select data-k="' + k + '">' + SEL[k].map(v => '<option>' + v + '</option>').join('') + '</select></label>').join('') + '<button type="button" class="btn ghost mx-open" disabled>Open it</button>';
+    const sels = Array.from(root.querySelectorAll('.mx-sel select'));
+    function build() {
+      const sel = {}; sels.forEach(s => { sel[s.dataset.k] = s.value; });
+      const r = M.melaFromSwaras(sel), ob = $('.mx-open');
+      $('.mx-buildout').innerHTML = r.error ? '<p class="mx-note bad">' + esc(r.error) + '</p>' : '<p class="mx-note">S ' + ['R', 'G', 'M'].map(k => sub(sel[k])).join(' ') + ' P ' + ['D', 'N'].map(k => sub(sel[k])).join(' ') + ' Ṡ is mela <b>' + r.n + ', ' + esc(r.name) + '</b>.</p>';
+      ob.disabled = !!r.error; ob.onclick = r.error ? null : () => select(r.n);
+    }
+    function syncBuild() { const L = M.melakartaInfo(n).labels; const by = { R: L[1], G: L[2], M: L[3], D: L[5], N: L[6] }; sels.forEach(s => { s.value = by[s.dataset.k]; }); build(); }
+    sels.forEach(s => s.addEventListener('change', build));
+    root.querySelectorAll('.mx-grid .mx-m').forEach(b => { b.onclick = () => { select(+b.dataset.n); syncBuild(); }; });
+
+    draw(); syncBuild();
+    return { unmount() { if (audio && audio.stop) audio.stop(); root.innerHTML = ''; }, select: m => { select(m); syncBuild(); } };
+  }
+  g.VGMelaExplorer = { mount };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 </script>
@@ -11046,6 +11555,16 @@ function kalInit(){
   kalRender();
 }
 
+/* ---- the melakarta and katapayadi explorer (v0.8.7, web/shared/mela-explorer.js) ---- */
+function melaInit(){
+  if (!window.VGMelaExplorer || !$('mx-root')) return;
+  window.VGMelaExplorer.mount($('mx-root'), {
+    M: E, store: 'vg-mela',
+    // the arohana and avarohana as tones, one a beat, over the drone and the clicks of a four-beat cycle
+    audio: { play: (btn, notes) => playPitched(btn, notes.map(p => ({ p, slots: 1 })), E.tala('eka', 4), 1), stop: stopAll }
+  });
+}
+
 /* ---- tabs and shared sound controls ---- */
 let showTab = () => {};
 function tabs(){
@@ -11058,7 +11577,7 @@ function tabs(){
   });
   let saved = null; try { saved = localStorage.getItem('vg-tab'); } catch(e){}
   const hash = (location.hash || '').slice(1);
-  const want = hash === 'jathi-demo' || hash === 'korvai-lab' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : saved;
+  const want = hash === 'jathi-demo' || hash === 'korvai-lab' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : hash === 'melakarta' ? 'tab-mela' : saved;
   if (want && $(want)) show($(want));
 }
 SA.forEach(([n], i) => $('snd-sa').appendChild(new Option('Sa = ' + n, i)));
@@ -11099,7 +11618,7 @@ $('snd-bpm').addEventListener('change', kalGamakaView);
 const soundSum = () => { if (!$('snd-sum')) return; const vo = $('snd-voice'); $('snd-sum').textContent = SA[+$('snd-sa').value][0] + ' · ' + $('snd-bpm').value + ' bpm · drone ' + ($('snd-drone').value === '1' ? 'on' : 'off') + ' · ' + vo.options[vo.selectedIndex].text.toLowerCase() + ' · gamaka ' + $('snd-gamaka').value; };
 ['snd-sa', 'snd-bpm', 'snd-drone', 'snd-voice', 'snd-gamaka', 'snd-sollu'].forEach(id => $(id) && $(id).addEventListener('input', soundSum));
 soundSum();
-alaInit(); jathiInit(); kalInit(); tabs();
+alaInit(); jathiInit(); kalInit(); melaInit(); tabs();
 if ($('pdf-table')) pdfTable();
 if ($('ex-adi')) $('ex-adi').textContent = E.JATHI_EXAMPLES.adi;
 })();

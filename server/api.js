@@ -287,6 +287,25 @@ export async function kalpanaInspire(body) {
   return Object.assign(out, { answer, model: llm.MODEL });
 }
 
+/* ---------- v0.8.7: melakartas and katapayadi ---------- */
+/* body { n } or { raga } (a janya gives its parent mela) */
+export function mela(body) {
+  let n = body.n;
+  if (n == null && body.raga != null) { const r = getRaga(body.raga); n = r.kind === 'melakarta' ? r.mela : r.parent; }
+  n = Number(n);
+  if (!(Number.isInteger(n) && n >= 1 && n <= 72)) bad('Give n, a melakarta number from 1 to 72, or a raga.');
+  const M = E.melakartaInfo(n);
+  return Object.assign(M, { scale: M.aro.map(p => swara(E.melakarta(n), p, false)).join(' '), letters: E.katapayadiLetters(n) });
+}
+/* body { text } or { swaras: { R, G, M, D, N } } */
+export function katapayadi(body) {
+  if (body.swaras != null) { const r = E.melaFromSwaras(body.swaras); if (r.error) bad(r.error); return r; }
+  if (typeof body.text !== 'string' || !body.text.trim()) bad('Give text, a word to decode.');
+  const k = E.katapayadi(body.text);
+  if (k.error) bad(k.error);
+  return Object.assign(k, { mela: k.number >= 1 && k.number <= 72 ? { n: k.number, name: E.MELA_NAMES[k.number - 1] } : null });
+}
+
 /* ---------- jathis ---------- */
 function role(r) { return r === 'teermanam' ? 'teer' : r; }
 export function jathiGenerate(body) {

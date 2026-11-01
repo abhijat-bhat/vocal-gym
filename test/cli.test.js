@@ -102,3 +102,16 @@ test('cli: korvai forms from the Unit 3 notes: statements, progressive, chakkard
   r = run('korvai', '--tala', 'adi', '--form', 'mora', '--series', 'buildup', '--cycles', '3');
   assert.equal(r.status, 0); assert.match(r.stdout, /One, two, three statements/);
 });
+
+test('command line: v0.8.7 melakartas and katapayadi', () => {
+  let r = run('mela', '16');
+  assert.equal(r.status, 0); assert.match(r.stdout, /16 · Chakravakam \(Cakravākam\)/); assert.match(r.stdout, /15 ÷ 6 = 2, remainder 3/); assert.match(r.stdout, /by a convention/); assert.match(r.stdout, /With M2 instead: 52 Ramapriya/);
+  r = run('mela', 'mohanam');
+  assert.equal(r.status, 0); assert.match(r.stdout, /janya of mela 28/); assert.match(r.stdout, /Janyas here: .*Mohanam/);
+  r = run('katapayadi', 'Natakapriya');
+  assert.equal(r.status, 0); assert.match(r.stdout, /reversed: 60/); assert.match(r.stdout, /could also read .*10/);
+  r = run('katapayadi', 'Dhīraśaṅkarābharaṇam');
+  assert.equal(r.status, 0); assert.match(r.stdout, /reversed: 29 \(mela 29, Dheerasankarabharanam\)/);
+  r = run('katapayadi');
+  assert.notEqual(r.status, 0);
+});

@@ -27,15 +27,17 @@ test('voice: deterministic, finite, below full scale, and in tune', () => {
   assert.ok(y1.every((v, i) => v === y2[i]), 'the same line gives the same samples');
   const s = stats(y1);
   assert.ok(s.fin && s.pk < 1 && s.pk > 0.1 && s.rms > 0.02, 'finite, audible, not clipped: ' + JSON.stringify(s));
-  // the middle of each held swara is in tune (within 15 cents: the voice wanders a few cents, as voices do)
-  [[0, 261.63], [7, 392.0], [12, 523.25]].forEach(([p, hz], k) => {
+  // the middle of each held swara is in tune (within 15 cents: the voice wanders a few cents, as voices do),
+  // an octave below the drone's Sa by default (v0.8.7), at it with octave 0
+  const y0 = V.render(line, { sr: SR, sa: 261.63, octave: 0 });
+  [[y1, 0.5], [y0, 1]].forEach(([y, k8]) => [[0, 261.63], [7, 392.0], [12, 523.25]].forEach(([p, hz], k) => {
     const mid = 1.2 * k + 0.6, a = Math.round((mid - 0.1 + V.PRE) * SR), b = Math.round((mid + 0.1 + V.PRE) * SR);
-    const f = pitch(y1, a, b, SR), cents = 1200 * Math.log2(f / hz);
-    assert.ok(Math.abs(cents) < 15, 'swara ' + p + ' sung at ' + f.toFixed(1) + ' Hz (' + cents.toFixed(1) + ' c)');
-  });
+    const f = pitch(y, a, b, SR), cents = 1200 * Math.log2(f / (hz * k8));
+    assert.ok(Math.abs(cents) < 15, 'swara ' + p + ' sung at ' + f.toFixed(1) + ' Hz (' + cents.toFixed(1) + ' c from ' + (hz * k8).toFixed(2) + ')');
+  }));
   // Sa decides the pitch
   const yd = V.render(line, { sr: SR, sa: 293.66 }), a = Math.round((0.5 + V.PRE) * SR), b = Math.round((0.7 + V.PRE) * SR);
-  assert.ok(Math.abs(1200 * Math.log2(pitch(yd, a, b, SR) / 293.66)) < 15, 'Sa = D sings Sa at 293.66 Hz');
+  assert.ok(Math.abs(1200 * Math.log2(pitch(yd, a, b, SR) / 146.83)) < 15, 'Sa = D sings Sa an octave down, at 146.83 Hz');
 });
 
 test('voice: the swara names differ from aa, consonants come before the beat, the loudness curve is followed', () => {
@@ -70,4 +72,21 @@ test('voice: the CLI contour JSON sings the same as the engine output', () => {
   assert.equal(a.length, b.length);
   let d = 0; for (let i = 0; i < a.length; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
   assert.ok(d < 1e-6, 'identical samples (max difference ' + d + ')');
+});
+
+test('voice: no hiss: above its harmonics (8–10 kHz) the voice is near silent', () => {
+  // v0.8.6: the breath was broadband noise centred at 2.7 kHz, only ~20 dB under the voice above 4 kHz,
+  // where the voice has little energy and above 5.4 kHz none, so it was heard as white noise. Now it sits
+  // under the voice's own spectrum (1.5 kHz, low-passed at 3.2 kHz), pulsed with the glottal cycle.
+  const r = byId('mela65'), sr = 44100;
+  const res = E.kalpana(r, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: 1, seed: 4 });
+  const c = E.renderGamaka(res.notes, { raga: r, slotSec: 0.3, intensity: 0.55, voice: true, units: res.units, seed: 4, per: 2, cycleBeats: 8, angaStarts: [0, 4, 6] });
+  const bp = hz => { const w = 2 * Math.PI * hz / sr, al = Math.sin(w) / 8, a0 = 1 + al, b0 = al / a0, b2 = -al / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - al) / a0; let x1 = 0, x2 = 0, y1 = 0, y2 = 0; return x => { const v = b0 * x + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x; y2 = y1; y1 = v; return v; }; };
+  // [timbre, the most the 9 kHz band may hold, in dB under the whole] (before the fix: −52 and −40)
+  [['aa', -65], ['swaram', -47]].forEach(([timbre, max]) => {
+    const y = V.render(V.lineOf(c), { sr, timbre }), f1 = bp(9000), f2 = bp(9000), f3 = bp(9000);
+    let hi = 0, all = 0; for (const v of y) { const z = f3(f2(f1(v))); hi += z * z; all += v * v; }
+    const db = 10 * Math.log10(hi / all);
+    assert.ok(db < max, timbre + ': the 9 kHz band is ' + db.toFixed(1) + ' dB under the voice (at most ' + max + ')');
+  });
 });

@@ -4,9 +4,11 @@
    score from conventional to unconventional choices and widens sampling, but it only ever
    chooses among moves that can still finish legally. */
 
-export const VERSION = '0.8.6';
+export const VERSION = '0.8.8';
 export { rng, pick, soft, dial } from './random.js';
 export { SEMI, CHAKRA, MELA_NAMES, melaLabels, defineRaga, melakarta, JANYA, allRagas } from './ragas.js';
+// v0.8.7: the melakarta and katapayadi explorer
+export { KATAPAYADI, CHAKRA_MEANING, MELA_IAST, katapayadi, melaName, melakartaInfo, melaFromSwaras, katapayadiLetters } from './melakarta.js';
 export { FAM, DEFJ, JATI, CHAPU, tala, customTala, angaStarts } from './talas.js';
 export { mod12, makeProjector } from './projection.js';
 export { PDF_ALANKARA, PDF_JATI, PDF_FAM, parseSwaraLine, pdfEntry, pdfMotif, canonicalMotif } from './alankara/sheet.js';

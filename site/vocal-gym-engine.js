@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.8.6: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.8.8: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -26,6 +26,7 @@ var VGEngine = (() => {
     CELLS: () => CELLS,
     CELL_DEFS: () => CELL_DEFS,
     CHAKRA: () => CHAKRA,
+    CHAKRA_MEANING: () => CHAKRA_MEANING,
     CHAPU: () => CHAPU,
     DEFJ: () => DEFJ,
     FAM: () => FAM,
@@ -39,8 +40,10 @@ var VGEngine = (() => {
     JATI: () => JATI,
     JATI_NAME: () => JATI_NAME,
     JATI_WORDS: () => JATI_WORDS,
+    KATAPAYADI: () => KATAPAYADI,
     KNOWN: () => KNOWN,
     LIB: () => LIB,
+    MELA_IAST: () => MELA_IAST,
     MELA_NAMES: () => MELA_NAMES,
     PDF_ALANKARA: () => PDF_ALANKARA,
     PDF_FAM: () => PDF_FAM,
@@ -76,12 +79,17 @@ var VGEngine = (() => {
     kalpanaRhythm: () => kalpanaRhythm,
     kalpanaRound: () => kalpanaRound,
     kalpanaSession: () => kalpanaSession,
+    katapayadi: () => katapayadi,
+    katapayadiLetters: () => katapayadiLetters,
     korvai: () => korvai_exports,
     korvaiFrame: () => korvaiFrame,
     korvaiPlans: () => korvaiPlans,
     makeProjector: () => makeProjector,
+    melaFromSwaras: () => melaFromSwaras,
     melaLabels: () => melaLabels,
+    melaName: () => melaName,
     melakarta: () => melakarta,
+    melakartaInfo: () => melakartaInfo,
     mod12: () => mod12,
     moraSolutions: () => moraSolutions,
     motifFamiliarity: () => motifFamiliarity,
@@ -226,6 +234,310 @@ var VGEngine = (() => {
     const m = [];
     for (let n = 1; n <= 72; n++) m.push(melakarta(n));
     return { melakartas: m, janyas: JANYA };
+  }
+
+  // src/engine/melakarta.js
+  var KATAPAYADI = {
+    k: 1,
+    kh: 2,
+    g: 3,
+    gh: 4,
+    "\u1E45": 5,
+    c: 6,
+    ch: 7,
+    j: 8,
+    jh: 9,
+    "\xF1": 0,
+    "\u1E6D": 1,
+    "\u1E6Dh": 2,
+    "\u1E0D": 3,
+    "\u1E0Dh": 4,
+    "\u1E47": 5,
+    t: 6,
+    th: 7,
+    d: 8,
+    dh: 9,
+    n: 0,
+    p: 1,
+    ph: 2,
+    b: 3,
+    bh: 4,
+    m: 5,
+    y: 1,
+    r: 2,
+    l: 3,
+    v: 4,
+    "\u015B": 5,
+    "\u1E63": 6,
+    s: 7,
+    h: 8
+  };
+  var CHAKRA_MEANING = [
+    "the moon, of which there is one",
+    "the eyes, of which there are two",
+    "the three sacred fires",
+    "the four Vedas",
+    "the five arrows of Manmatha",
+    "the six seasons",
+    "the seven sages",
+    "the eight Vasus",
+    "Brahma, of which there are nine",
+    "the ten directions",
+    "the eleven Rudras",
+    "the twelve Adityas"
+  ];
+  var MELA_IAST = [
+    "Kanak\u0101\u1E45g\u012B",
+    "Ratn\u0101\u1E45g\u012B",
+    "G\u0101nam\u016Brti",
+    "Vanaspati",
+    "M\u0101navat\u012B",
+    "T\u0101nar\u016Bp\u012B",
+    "Sen\u0101vat\u012B",
+    "Hanumato\u1E0D\u012B",
+    "Dhenuk\u0101",
+    "N\u0101\u1E6Dakapriy\u0101",
+    "Kokilapriy\u0101",
+    "R\u016Bpavat\u012B",
+    "G\u0101yakapriy\u0101",
+    "Vaku\u1E37\u0101bhara\u1E47am",
+    "M\u0101y\u0101m\u0101\u1E37avagau\u1E37a",
+    "Cakrav\u0101kam",
+    "S\u016Bryak\u0101ntam",
+    "H\u0101\u1E6Dak\u0101mbar\u012B",
+    "Jha\u1E45k\u0101radhvani",
+    "Na\u1E6Dabhairav\u012B",
+    "K\u012Brav\u0101\u1E47\u012B",
+    "Kharaharapriy\u0101",
+    "Gaur\u012Bmanohar\u012B",
+    "Varu\u1E47apriy\u0101",
+    "M\u0101rara\xF1jan\u012B",
+    "C\u0101ruke\u015B\u012B",
+    "Saras\u0101\u1E45g\u012B",
+    "Harik\u0101mbhoj\u012B",
+    "Dh\u012Bra\u015Ba\u1E45kar\u0101bhara\u1E47am",
+    "N\u0101ganandin\u012B",
+    "Y\u0101gapriy\u0101",
+    "R\u0101gavardhan\u012B",
+    "G\u0101\u1E45geyabh\u016B\u1E63a\u1E47\u012B",
+    "V\u0101gadh\u012B\u015Bvar\u012B",
+    "\u015A\u016Blin\u012B",
+    "Calan\u0101\u1E6Da",
+    "S\u0101lagam",
+    "Jal\u0101r\u1E47avam",
+    "Jh\u0101lavar\u0101\u1E37\u012B",
+    "Navan\u012Btam",
+    "P\u0101van\u012B",
+    "Raghupriy\u0101",
+    "Gav\u0101mbhodh\u012B",
+    "Bhavapriy\u0101",
+    "\u015Aubhapantuvar\u0101\u1E37\u012B",
+    "\u1E62a\u1E0Dvidham\u0101rgi\u1E47\u012B",
+    "Suvar\u1E47\u0101\u1E45g\u012B",
+    "Divyama\u1E47i",
+    "Dhava\u1E37\u0101mbar\u012B",
+    "N\u0101man\u0101r\u0101ya\u1E47\u012B",
+    "K\u0101mavardhan\u012B",
+    "R\u0101mapriy\u0101",
+    "Gaman\u0101\u015Bram\u0101",
+    "Vi\u015Bvambhar\u012B",
+    "\u015A\u0101mal\u0101\u1E45g\u012B",
+    "\u1E62a\u1E47mukhapriy\u0101",
+    "Si\u1E43hendramadhyamam",
+    "Hemavat\u012B",
+    "Dharmavat\u012B",
+    "N\u012Btimat\u012B",
+    "K\u0101nt\u0101ma\u1E47i",
+    "Ri\u1E63abhapriy\u0101",
+    "Lat\u0101\u1E45g\u012B",
+    "V\u0101caspati",
+    "Mecakaly\u0101\u1E47\u012B",
+    "Citr\u0101mbar\u012B",
+    "Sucaritr\u0101",
+    "Jyotisvar\u016Bpi\u1E47\u012B",
+    "Dh\u0101tuvardhan\u012B",
+    "N\u0101sik\u0101bh\u016B\u1E63a\u1E47\u012B",
+    "Kosalam",
+    "Rasikapriy\u0101"
+  ];
+  var NOTED = { 57: { spelling: "Sihmendramadhyamam", text: "The Katapayadi source notes that the name as written gives 87, and that it is believed the name should be written Sihmendramadhyamam (as Brahmana is in Sanskrit): si 7, hma counts m 5, so 57." } };
+  var VOWELS = ["ai", "au", "\u0101", "\u012B", "\u016B", "\u1E5B", "\u1E5D", "a", "i", "u", "e", "o"];
+  var CONS_IAST = ["kh", "gh", "ch", "jh", "\u1E6Dh", "\u1E0Dh", "th", "dh", "ph", "bh", "k", "g", "\u1E45", "c", "j", "\xF1", "\u1E6D", "\u1E0D", "\u1E47", "t", "d", "n", "p", "b", "m", "y", "r", "l", "\u1E37", "v", "w", "\u015B", "\u1E63", "s", "h"];
+  var MARKS = ["\u1E43", "\u1E41", "\u1E25"];
+  var ASCII_MAP = [["chh", "ch"], ["ch", "c"], ["sh", "\u015B"], ["ee", "\u012B"], ["oo", "\u016B"], ["aa", "\u0101"], ["ou", "au"], ["ow", "au"], ["w", "v"]];
+  var ASCII_ALT = { t: "\u1E6D", th: "\u1E6Dh", d: "\u1E0D", dh: "\u1E0Dh", n: "\u1E47", "\u015B": "\u1E63", l: "\u1E37" };
+  var isPlain = (s) => /^[\x00-\x7f]*$/.test(s);
+  function tokens(text, plain2) {
+    let s = String(text).normalize("NFC").toLowerCase();
+    if (plain2) {
+      let out = "";
+      for (let i = 0; i < s.length; ) {
+        const m = ASCII_MAP.find(([a]) => s.startsWith(a, i));
+        if (m) {
+          out += m[1];
+          i += m[0].length;
+        } else {
+          out += s[i];
+          i++;
+        }
+      }
+      s = out;
+    }
+    const t = [];
+    for (let i = 0; i < s.length; ) {
+      const v = VOWELS.find((x) => s.startsWith(x, i));
+      if (v) {
+        t.push({ k: "V", s: v });
+        i += v.length;
+        continue;
+      }
+      const c = CONS_IAST.find((x) => s.startsWith(x, i));
+      if (c) {
+        t.push({ k: "C", s: c === "w" ? "v" : c });
+        i += c.length;
+        continue;
+      }
+      if (MARKS.includes(s[i])) {
+        t.push({ k: "M", s: s[i] });
+        i++;
+        continue;
+      }
+      if (/[a-zA-ZÀ-ỿ]/.test(s[i])) t.push({ k: "X", s: s[i] });
+      else t.push({ k: "B" });
+      i++;
+    }
+    return t;
+  }
+  function syllablesOf(text, plain2) {
+    const out = [];
+    let cl = [], unknown = [];
+    tokens(text, plain2).forEach((tk) => {
+      if (tk.k === "C") cl.push(tk.s);
+      else if (tk.k === "V") {
+        out.push({ cluster: cl, vowel: tk.s, text: cl.join("") + tk.s });
+        cl = [];
+      } else if (tk.k === "X") unknown.push(tk.s);
+      else if (tk.k === "B") cl = [];
+    });
+    return { syl: out, unknown };
+  }
+  function counted(cluster, reading) {
+    let c = cluster.slice();
+    if (reading === "phala") {
+      if (c.length > 1 && c[0] === "r") c = c.slice(1);
+      while (c.length > 1 && ["y", "r", "v"].includes(c[c.length - 1])) c = c.slice(0, -1);
+    }
+    return c.length ? c[c.length - 1] : null;
+  }
+  var digitOf = (c) => c == null ? 0 : KATAPAYADI[c] == null ? null : KATAPAYADI[c];
+  var numberOf = (ds) => ds.length < 2 || ds[0] == null || ds[1] == null ? null : ds[1] * 10 + ds[0];
+  function katapayadi(text, opts = {}) {
+    const input = String(text == null ? "" : text).trim().slice(0, 200);
+    if (!input) return { error: "Give a word to decode." };
+    const plain2 = opts.plain != null ? !!opts.plain : isPlain(input);
+    const { syl, unknown } = syllablesOf(input, plain2);
+    if (!syl.length) return { error: 'No syllables found in "' + input + '".' };
+    const read = (reading) => syl.map((s) => {
+      const letter = counted(s.cluster, reading), digit = digitOf(letter);
+      const o = { text: s.text, letter: letter || "(vowel)", digit };
+      if (plain2 && letter && ASCII_ALT[letter] !== void 0) {
+        const a = ASCII_ALT[letter];
+        o.alt = { letter: a, digit: KATAPAYADI[a] == null ? null : KATAPAYADI[a] };
+      }
+      return o;
+    });
+    const syllables = read("strict"), digits = syllables.map((s) => s.digit), number = numberOf(digits);
+    const ph = read("phala"), phNumber = numberOf(ph.map((s) => s.digit));
+    const res = { input, plain: plain2, syllables, digits, number, reversed: digits.slice(0, 2).reverse(), unknown };
+    if (phNumber !== number) res.phala = { number: phNumber, syllables: ph.slice(0, 2) };
+    if (plain2) {
+      const opts2 = syllables.slice(0, 2).map((s) => [s.digit].concat(s.alt && s.alt.digit != null ? [s.alt.digit] : []));
+      const alts = /* @__PURE__ */ new Set();
+      if (opts2.length === 2) opts2[0].forEach((a) => opts2[1].forEach((b) => {
+        if (a != null && b != null) alts.add(b * 10 + a);
+      }));
+      alts.delete(number);
+      res.alternatives = Array.from(alts).sort((a, b) => a - b);
+    }
+    if (syllables.slice(0, 2).some((s) => s.digit == null)) res.note = "A letter in the first two syllables has no digit in the scheme (\u1E37a is used in katapayadi works, but the source gives it no digit).";
+    return res;
+  }
+  function melaName(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const iast = MELA_IAST[n - 1], k = katapayadi(iast, { plain: false });
+    const out = { n, name: MELA_NAMES[n - 1], iast, number: k.number, digits: k.digits.slice(0, 2), syllables: k.syllables.slice(0, 2) };
+    if (k.number === n) return Object.assign(out, { reading: "rule", note: "The first two syllables give " + k.digits[0] + " and " + k.digits[1] + "; reversed, " + n + "." });
+    if (k.phala && k.phala.number === n) {
+      const s = k.phala.syllables, w = k.syllables.findIndex((x2, i) => x2.letter !== s[i].letter), x = k.syllables[w];
+      return Object.assign(out, {
+        reading: "phala",
+        phalaNumber: n,
+        syllables: s,
+        digits: s.map((y) => y.digit),
+        note: 'The stated rule counts the last consonant of "' + x.text + '" (' + x.letter + ", " + x.digit + ") and gives " + k.number + ". The name gives " + n + " only if the " + x.letter + " written beneath " + s[w].letter + " is passed over and the main consonant " + s[w].letter + " counts (" + s[w].digit + "): a convention this name needs that the Katapayadi source does not state."
+      });
+    }
+    const noted = NOTED[n];
+    if (noted) {
+      const alt = katapayadi(noted.spelling, { plain: false });
+      return Object.assign(out, { reading: "exception", spelling: noted.spelling, spellingNumber: alt.number, note: noted.text });
+    }
+    return Object.assign(out, { reading: "exception", note: "Its first two syllables give " + k.digits[0] + " and " + k.digits[1] + ", so " + k.number + ", not " + n + ": " + n + " needs " + n % 10 + " then " + Math.floor(n / 10) + ', and no reading of "' + k.syllables[0].text + '" and "' + k.syllables[1].text + '" gives them. The sources read do not explain this name.' });
+  }
+  var RG_OF = [["R1", "G1"], ["R1", "G2"], ["R1", "G3"], ["R2", "G2"], ["R2", "G3"], ["R3", "G3"]];
+  var DN_OF = [["D1", "N1"], ["D1", "N2"], ["D1", "N3"], ["D2", "N2"], ["D2", "N3"], ["D3", "N3"]];
+  var SEMI2 = { R1: 1, R2: 2, R3: 3, G1: 2, G2: 3, G3: 4, D1: 8, D2: 9, D3: 10, N1: 9, N2: 10, N3: 11 };
+  function melakartaInfo(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const r = melakarta(n), prati = n > 36, k = (prati ? n - 36 : n) - 1, q = Math.floor(k / 6), rem = k % 6, ci = Math.floor((n - 1) / 6);
+    const labels = melaLabels(n), M = prati ? "M2" : "M1";
+    const steps = [
+      "Mela " + n + " is in the " + (prati ? "second half (37\u201372), so its madhyama is the prati madhyama, M2" : "first half (1\u201336), so its madhyama is the shuddha madhyama, M1") + ".",
+      (prati ? n + " \u2212 36 = " + (n - 36) + "; " : "") + (prati ? n - 36 : n) + " \u2212 1 = " + k + "; " + k + " \xF7 6 = " + q + ", remainder " + rem + ".",
+      "The quotient " + q + " gives " + RG_OF[q].join(" ") + ": every mela of chakra " + (ci + 1) + " (" + CHAKRA[ci] + ") has them.",
+      "The remainder " + rem + " gives " + DN_OF[rem].join(" ") + ": the " + ["first", "second", "third", "fourth", "fifth", "sixth"][rem] + " of the six D and N pairs, as the mela is the " + ["first", "second", "third", "fourth", "fifth", "sixth"][rem] + " of its chakra.",
+      "So " + r.name + " is S " + RG_OF[q].join(" ") + " " + M + " P " + DN_OF[rem].join(" ") + " S'."
+    ];
+    const twin = prati ? n - 36 : n + 36;
+    return {
+      n,
+      id: r.id,
+      name: r.name,
+      iast: MELA_IAST[n - 1],
+      labels,
+      pitches: r.aro.slice(0, 7),
+      aro: r.aro,
+      avaro: r.avaro,
+      madhyama: M,
+      half: prati ? "prati" : "shuddha",
+      quotient: q,
+      remainder: rem,
+      rg: RG_OF[q],
+      dn: DN_OF[rem],
+      chakra: { index: ci + 1, name: CHAKRA[ci], meaning: CHAKRA_MEANING[ci], stands: ci + 1, members: Array.from({ length: 6 }, (_, j) => ci * 6 + j + 1) },
+      twin: { n: twin, name: MELA_NAMES[twin - 1] },
+      katapayadi: melaName(n),
+      janyas: JANYA.filter((j) => j.parent === n).map((j) => ({ id: j.id, name: j.name, aro: j.aro, avaro: j.avaro, labels: j.labels })),
+      steps
+    };
+  }
+  function melaFromSwaras(sel = {}) {
+    const want = { R: ["R1", "R2", "R3"], G: ["G1", "G2", "G3"], M: ["M1", "M2"], D: ["D1", "D2", "D3"], N: ["N1", "N2", "N3"] };
+    for (const k of Object.keys(want)) if (!want[k].includes(sel[k])) return { error: "Choose " + k + " as one of " + want[k].join(", ") + "." };
+    const q = RG_OF.findIndex((x) => x[0] === sel.R && x[1] === sel.G), rem = DN_OF.findIndex((x) => x[0] === sel.D && x[1] === sel.N);
+    const why = (a, b) => SEMI2[a] === SEMI2[b] ? a + " and " + b + " are the same pitch (" + SEMI2[a] + " semitones above Sa), so the scale would have six swaras, not seven" : a + " (" + SEMI2[a] + ") is above " + b + " (" + SEMI2[b] + "), and a melakarta keeps its swaras in order";
+    if (q < 0) return { error: "No melakarta has " + sel.R + " with " + sel.G + ": " + why(sel.R, sel.G) + "." };
+    if (rem < 0) return { error: "No melakarta has " + sel.D + " with " + sel.N + ": " + why(sel.D, sel.N) + "." };
+    const n = (sel.M === "M2" ? 36 : 0) + q * 6 + rem + 1;
+    return { n, name: MELA_NAMES[n - 1] };
+  }
+  function katapayadiLetters(n) {
+    n = Number(n);
+    if (!(Number.isInteger(n) && n >= 1 && n <= 72)) return { error: "A melakarta number is 1 to 72." };
+    const of = (d) => Object.keys(KATAPAYADI).filter((c) => KATAPAYADI[c] === d).concat(d === 0 ? ["(a vowel)"] : []);
+    return { n, first: { digit: n % 10, letters: of(n % 10) }, second: { digit: Math.floor(n / 10), letters: of(Math.floor(n / 10)) } };
   }
 
   // src/engine/talas.js
@@ -3029,8 +3341,8 @@ var VGEngine = (() => {
       return a.g === b.g && a.g != null && !!a.phrase;
     };
     let unl = 0, dbl = 0, unres = 0;
-    const counted = countAfter && after.length ? [T0, E] : [T0];
-    for (const k of counted) {
+    const counted2 = countAfter && after.length ? [T0, E] : [T0];
+    for (const k of counted2) {
       if (k < 1 || k >= len || Math.abs(mv(k)) < 2) continue;
       const a = at(k - 1), b = at(k), tag = a.g === b.g ? { phrase: !!b.phrase, arp: !!b.arp } : null;
       if (!licence(LX, a.p, b.p, tag)) unl++;
@@ -8284,6 +8596,6 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   }
 
   // src/engine/index.js
-  var VERSION = "0.8.6";
+  var VERSION = "0.8.8";
   return __toCommonJS(engine_exports);
 })();

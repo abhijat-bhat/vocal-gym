@@ -224,3 +224,18 @@ test('v0.8.5: the inspiration prompt, and Claude’s lines sung as inspiration (
   assert.equal(full.body.breath.swaras, full.body.breath.syllables);
   assert.equal((await post('/api/kalpana', { raga: 'mela65', rhythm, land: 6, inspiration: [1, 2] })).status, 400);
 });
+
+test('v0.8.7: melakartas and katapayadi', async () => {
+  let { status, body } = await json(await post('/api/mela', { n: 29 }));
+  assert.equal(status, 200); assert.equal(body.name, 'Dheerasankarabharanam'); assert.equal(body.katapayadi.number, 29); assert.equal(body.chakra.name, 'Bana'); assert.ok(body.scale && body.letters.first.digit === 9);
+  ({ status, body } = await json(await post('/api/mela', { raga: 'saveri' })));
+  assert.equal(status, 200); assert.equal(body.n, 15);
+  assert.equal((await post('/api/mela', { n: 99 })).status, 400);
+  ({ status, body } = await json(await post('/api/katapayadi', { text: 'Mecakalyāṇī' })));
+  assert.equal(status, 200); assert.equal(body.number, 65); assert.equal(body.mela.name, 'Mechakalyani');
+  ({ status, body } = await json(await post('/api/katapayadi', { swaras: { R: 'R2', G: 'G3', M: 'M1', D: 'D2', N: 'N3' } })));
+  assert.equal(body.n, 29);
+  const bad = await json(await post('/api/katapayadi', { swaras: { R: 'R3', G: 'G1', M: 'M1', D: 'D1', N: 'N1' } }));
+  assert.equal(bad.status, 400); assert.match(bad.body.error, /above/);
+  assert.equal((await post('/api/katapayadi', {})).status, 400);
+});

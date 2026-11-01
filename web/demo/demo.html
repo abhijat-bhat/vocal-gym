@@ -3,6 +3,7 @@
       <button role="tab" id="tab-ala" aria-controls="p-ala" aria-selected="true"><b>Alankaras</b><span>warm-up patterns</span></button>
       <button role="tab" id="tab-kal" aria-controls="p-kal" aria-selected="false"><b>Kalpana swaras</b><span>improvised rounds</span></button>
       <button role="tab" id="tab-jathi" aria-controls="p-jathi" aria-selected="false"><b>Korvai &amp; tihai lab</b><span>learn the rhythm maths</span></button>
+      <button role="tab" id="tab-mela" aria-controls="p-mela" aria-selected="false"><b>Melakartas</b><span>the 72 and katapayadi</span></button>
     </div>
 
     <details class="soundbar" id="soundbar">
@@ -85,6 +86,11 @@
       <p class="info" id="k-gamaka"></p>
       <div class="pitch" id="k-pitch"></div>
       <details class="checks"><summary>How this round was built</summary><ul class="audit" id="k-audit"></ul></details>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p-mela" aria-labelledby="tab-mela" hidden>
+      <p class="lede-s">The 72 melakartas as a system: each number gives its swaras, and by the katapayadi rule the first two syllables of each name give the number. Pick one to see both worked out, decode any name, or build a scale and find its mela.</p>
+      <div id="mx-root"></div>
     </div>
 
     <div class="panel" role="tabpanel" id="p-jathi" aria-labelledby="tab-jathi" hidden>

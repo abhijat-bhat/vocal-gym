@@ -265,6 +265,24 @@ async function driveDemos(file) {
   $('k-scope').value = 'session'; fire($('k-scope'), 'input');
   check($('k-out').querySelectorAll('.sround').length >= 4 && $('k-out').querySelectorAll('.theme').length >= 4, 'session rounds drawn as blocks (' + $('k-out').querySelectorAll('.sround').length + ')');
   $('k-scope').value = 'round'; fire($('k-scope'), 'input');
+  // v0.8.7: the melakarta and katapayadi explorer
+  click($('tab-mela')); check(!$('p-mela').hidden, 'the melakarta tab opens');
+  { const R = $('mx-root'), mq = s => R.querySelector(s);
+    check(R.querySelectorAll('.mx-m').length === 72 && R.querySelectorAll('.mx-half').length === 2, 'the 72 melakartas in two halves of six chakras');
+    click(mq('.mx-m[data-n="65"]'));
+    const det = () => mq('.mx-detail').textContent.replace(/\s+/g, ' ');
+    check(/65 · Mechakalyani/.test(det()) && /Mecakalyāṇī/.test(det()) && /reversed65/.test(det().replace(/\s/g, '')) && /Rudra/.test(det()) && /29 − 1 = 28/.test(det()), 'a mela shows its katapayadi reading, its steps and its chakra');
+    click(mq('.mx-m[data-n="20"]')); check(/an exception/.test(det()) && /do not explain/.test(det()), 'Natabhairavi is shown as an unexplained exception');
+    click(mq('.mx-m[data-n="16"]')); check(/by a convention/.test(det()), 'Chakravakam needs the convention');
+    const q = mq('#mx-q'); q.value = 'Natakapriya'; fire(q, 'input');
+    check(/could also read/.test(mq('.mx-findout').textContent) && mq('.mx-findout .mx-go[data-n="10"]'), 'decoding plain letters shows the other readings');
+    click(mq('.mx-findout .mx-go[data-n="10"]')); check(/10 · Natakapriya/.test(det()), 'a found mela opens');
+    const sel = k => mq('.mx-sel select[data-k="' + k + '"]');
+    sel('R').value = 'R2'; sel('G').value = 'G1'; fire(sel('G'), 'change'); check(/same pitch/.test(mq('.mx-buildout').textContent) && mq('.mx-open').disabled, 'an impossible scale is refused with its reason');
+    sel('G').value = 'G3'; sel('M').value = 'M1'; sel('D').value = 'D2'; sel('N').value = 'N3'; fire(sel('N'), 'change');
+    check(/mela 29, Dheerasankarabharanam/.test(mq('.mx-buildout').textContent), 'the builder names the mela');
+    click(mq('.mx-open')); check(/29 · Dheerasankarabharanam/.test(det()), 'and opens it');
+    const o0 = w.__audio.oscillators; click(mq('.mx-play')); check(w.__audio.oscillators > o0, 'the scale plays'); click(mq('.mx-play')); }
   // tabs
   click($('tab-jathi')); check(!$('p-jathi').hidden && $('p-ala').hidden, 'tabs switch');
   check(errors.length === 0, 'no script errors: ' + errors.join(' | '));

@@ -764,6 +764,16 @@ function kalInit(){
   kalRender();
 }
 
+/* ---- the melakarta and katapayadi explorer (v0.8.7, web/shared/mela-explorer.js) ---- */
+function melaInit(){
+  if (!window.VGMelaExplorer || !$('mx-root')) return;
+  window.VGMelaExplorer.mount($('mx-root'), {
+    M: E, store: 'vg-mela',
+    // the arohana and avarohana as tones, one a beat, over the drone and the clicks of a four-beat cycle
+    audio: { play: (btn, notes) => playPitched(btn, notes.map(p => ({ p, slots: 1 })), E.tala('eka', 4), 1), stop: stopAll }
+  });
+}
+
 /* ---- tabs and shared sound controls ---- */
 let showTab = () => {};
 function tabs(){
@@ -776,7 +786,7 @@ function tabs(){
   });
   let saved = null; try { saved = localStorage.getItem('vg-tab'); } catch(e){}
   const hash = (location.hash || '').slice(1);
-  const want = hash === 'jathi-demo' || hash === 'korvai-lab' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : saved;
+  const want = hash === 'jathi-demo' || hash === 'korvai-lab' ? 'tab-jathi' : hash === 'kalpana-demo' ? 'tab-kal' : hash === 'melakarta' ? 'tab-mela' : saved;
   if (want && $(want)) show($(want));
 }
 SA.forEach(([n], i) => $('snd-sa').appendChild(new Option('Sa = ' + n, i)));
@@ -817,7 +827,7 @@ $('snd-bpm').addEventListener('change', kalGamakaView);
 const soundSum = () => { if (!$('snd-sum')) return; const vo = $('snd-voice'); $('snd-sum').textContent = SA[+$('snd-sa').value][0] + ' · ' + $('snd-bpm').value + ' bpm · drone ' + ($('snd-drone').value === '1' ? 'on' : 'off') + ' · ' + vo.options[vo.selectedIndex].text.toLowerCase() + ' · gamaka ' + $('snd-gamaka').value; };
 ['snd-sa', 'snd-bpm', 'snd-drone', 'snd-voice', 'snd-gamaka', 'snd-sollu'].forEach(id => $(id) && $(id).addEventListener('input', soundSum));
 soundSum();
-alaInit(); jathiInit(); kalInit(); tabs();
+alaInit(); jathiInit(); kalInit(); melaInit(); tabs();
 if ($('pdf-table')) pdfTable();
 if ($('ex-adi')) $('ex-adi').textContent = E.JATHI_EXAMPLES.adi;
 })();

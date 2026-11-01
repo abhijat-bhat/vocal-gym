@@ -55,8 +55,11 @@ export function download(name, text) {
 /* ---------- page header ---------- */
 export function pageHead({ eyebrow, title, lead, steps, presets }) {
   let h = '<div class="phead"><span class="eyebrow"><span class="dot"></span>' + esc(eyebrow) + '</span><h1>' + esc(title) + '</h1><p class="lead">' + lead + '</p>';
-  if (steps) h += '<details class="howto"><summary>How to use this page</summary><div class="howto-body">' + steps.map((s, i) => '<div class="howto-step"><span class="n">' + (i + 1) + '</span><div><b>' + esc(s[0]) + '</b><span>' + s[1] + '</span></div></div>').join('') + '</div></details>';
-  if (presets) h += '<div class="presets"><div class="presets-lab">Quick start: try one of these</div><div class="chips">' + presets.map((p, i) => '<button type="button" class="chip" data-preset="' + i + '"><b>' + esc(p.title) + '</b> <span class="tag">' + esc(p.tag) + '</span></button>').join('') + '</div></div>';
+  // v0.8.8: the quick starts in one strip and the how-to as a help popover beside them, so the tool starts higher
+  if (steps || presets) h += '<div class="phead-tools">';
+  if (presets) h += '<div class="presets"><div class="presets-lab">Quick start</div><div class="chips">' + presets.map((p, i) => '<button type="button" class="chip" data-preset="' + i + '"><b>' + esc(p.title) + '</b> <span class="tag">' + esc(p.tag) + '</span></button>').join('') + '</div></div>';
+  if (steps) h += '<details class="howto phelp"><summary>How to use this page</summary><div class="howto-body">' + steps.map((s, i) => '<div class="howto-step"><span class="n">' + (i + 1) + '</span><div><b>' + esc(s[0]) + '</b><span>' + s[1] + '</span></div></div>').join('') + '</div></details>';
+  if (steps || presets) h += '</div>';
   return h + '</div>';
 }
 export const stepHead = (n, title, termId) => '<div class="step-h"><span class="n">' + n + '</span><h3>' + esc(title) + '</h3>' + (termId ? q(termId) : '') + '</div>';

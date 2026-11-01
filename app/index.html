@@ -6,11 +6,15 @@
 <title>Vocal Gym</title>
 <meta name="description" content="Carnatic practice exercises that never break the rules of raga or tala: alankaras, kalpana swaras, and a lab for the arithmetic of korvais and tihais.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0E1022">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css">
 <link rel="stylesheet" href="/shared/korvai-lab.css">
+<link rel="stylesheet" href="/shared/mela-explorer.css">
 <script>try{var t=localStorage.getItem('vg-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
 <body>
@@ -23,18 +27,27 @@
     </a>
     <button class="navtoggle" id="navtoggle" aria-expanded="false" aria-controls="nav">Menu</button>
     <nav id="nav" class="nav" aria-label="Main">
-      <a href="#/alankara" data-route="alankara">Alankaras</a>
-      <a href="#/kalpana" data-route="kalpana">Kalpana swaras</a>
-      <a href="#/korvai" data-route="korvai">Korvai lab</a>
-      <a href="#/judge" data-route="judge">Judge</a>
+      <a href="#/practice" data-route="practice">Practice</a>
+      <div class="navgroup" id="navgroup">
+        <button type="button" class="navdrop" id="navdrop" aria-expanded="false" aria-controls="toolsmenu">Tools<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="toolsmenu" id="toolsmenu">
+          <a href="#/alankara" data-route="alankara" style="--c:var(--teal)"><b>Alankaras</b><span>Warm-up patterns in any raga and tala</span></a>
+          <a href="#/kalpana" data-route="kalpana" style="--c:var(--violet)"><b>Kalpana swaras</b><span>Improvised rounds that land on time</span></a>
+          <a href="#/korvai" data-route="korvai" style="--c:var(--saffron)"><b>Korvai lab</b><span>The arithmetic of moras, tihais and korvais</span></a>
+          <a href="#/melakarta" data-route="melakarta" style="--c:var(--rose)"><b>Melakartas</b><span>The 72 scales, and katapayadi</span></a>
+          <a href="#/judge" data-route="judge" style="--c:var(--good)"><b>Jathi judge</b><span>Check a jathi; score its craft</span></a>
+        </div>
+      </div>
       <a href="#/learn" data-route="learn">Learn</a>
     </nav>
+    <a class="acctbtn" id="acctbtn" href="#/account" data-route="account">Log in</a>
     <button class="iconbtn" id="themebtn" aria-label="Switch light or dark theme" title="Light or dark theme">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
     </button>
   </div>
 </header>
 <main id="main" tabindex="-1"><div class="loading">Loading Vocal Gym…</div></main>
+<div id="sessionbar" class="sessionbar" role="region" aria-label="Practice session in progress" hidden></div>
 <footer class="foot">
   <div class="foot-in">
     <span>Vocal Gym <span id="ver"></span> · raga–tala constraint engine</span>

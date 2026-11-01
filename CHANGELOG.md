@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.8.8
+
+- **A cleaner, calmer layout** (`docs/design.md`; the "v0.8.8 layout" block in `app/css/app.css`). It follows the Nielsen Norman Group's usability heuristics and visual-hierarchy guidance and the Laws of UX, cited in the note. Every tool, control and route is still there; they are rearranged, not removed.
+  - **Navigation.** Practice · Tools · Learn. The five tools sit in a menu, each with a one-line description and its colour. It opens on click or hover; Escape or a click outside closes it. Tools is lit while you are on one of them. On a phone, the drawer lists everything, and the brand no longer wraps.
+  - **Page heads.** The quick starts are one scrolling line, and "How to use this page" is a small button that opens a popover (Escape or a click outside closes it). Each tool starts about 120 px higher.
+  - **Tools.** The settings panel is glass like the cards, with faint rules between its steps, and stays beside the result on a desktop. On a phone or a narrow window the result comes first, and a Settings button jumps to the controls (the judge keeps its editor first).
+  - **Rhythm.** One spacing scale (4–64 px), three heading sizes, and one gold primary action per region.
+  - **Tests.** The end-to-end test reaches each of the five tools through the Tools menu.
+- **A new look for the app: depth, glass and motion** (`app/css/app.css`, the design layer at its end; `app/js/fx.js`). Everything is hand-written; there is no library and nothing extra to download.
+  - **A live 3D hero.** The home page stands on a "sound field": a mesh of travelling waves seen in perspective, in the saffron, violet and teal of the palette, with threads running into the distance like tanpura strings. It swells under the pointer, pauses when off screen or in a hidden tab, and follows the light and dark themes.
+  - **3D cards.** Tool cards, practice cards and the floating sample panel lean toward the pointer, with a glare that follows it and their contents standing off the surface. The equalizer art moves while a card is held.
+  - **Surfaces and type.** Glass panels with a lit top edge and deep, soft shadows, under a slowly drifting aurora and a fine film grain. Primary buttons are gold gradients with a passing sheen. Headlines and figures use gold-gradient type, the top bar has a hairline of light, and the home hero has figures (86 ragas, 38 talas, 72 melakartas decoded).
+  - **Motion.** Content rises into place as it scrolls into view, one item after another, and each page enters with a short rise. On the practice page the streak is gold, the goal bar shimmers and the week's bars grow.
+  - **Restraint.** With the system setting "reduce motion", all movement stops and the field draws one still frame. Tilt is skipped on touch screens. Both themes were checked.
+  - The service worker caches the new script (cache vg-shell-0.8.8).
+
+## 0.8.7
+
+- **Accounts, practice sessions, logs and streaks; the app installs (PWA).** This builds the Phase 1 item "session flow, timers, logs, streaks (PWA)" from the research plan.
+  - **The database.** A single SQLite file on this machine, `var/vocal-gym.db` (git-ignored; set `VG_DB` to move it). It uses Node's built-in `node:sqlite`, which needs Node 22.13 or later and no new package. On older Node, every other page works, and accounts answer 503 with the reason. Node prints a one-time "SQLite is experimental" warning (`server/db.js`).
+  - **Accounts** (`server/auth.js`):
+    - creating an account, logging in and out, changing the name, the daily goal and the password, and deleting the account with all its data;
+    - passwords hashed with scrypt and a random salt;
+    - logins kept as a random token in an HttpOnly, SameSite=Lax cookie (Secure over HTTPS), with only the token's SHA-256 stored, lasting 30 days;
+    - five failed logins for a name, or twenty from one address, block further tries for 15 minutes;
+    - these routes accept only JSON, which, with the SameSite cookie, stops cross-site request forgery.
+  - **Practice** (`server/practice.js`, `app/js/pages/practice.js`, `app/js/session.js`):
+    - **Routines:** three starter routines and the singer's own, as lists of timed items, each one of the tools or free practice. Routines can be written, reordered, copied and deleted.
+    - **The session flow:** Start opens the first item's tool. A bar at the foot of every page shows the item, a timer (with a soft chime when its time is up), and Open, Pause, Next and Finish. It survives moving between pages, reloads and closed tabs. Finishing shows planned against spent time, a 1–5 rating and notes, saved to the log.
+    - **The dashboard:** the streak and the best streak, today's minutes against the daily goal, the last seven days, and the history with older sessions on demand and deletion.
+    - **Days and streaks** are counted on the singer's own calendar (the page sends its local date). A streak is still alive until the end of a day with no practice.
+    - **Offline:** a session saved without a connection waits in the browser and is sent when the connection returns. The server stores it once, by its client id.
+  - **Installable** (`app/manifest.webmanifest`, `app/sw.js`, `app/icons/`, drawn by `scripts/make-icons.js` from the logo). The service worker fetches every page file from the network first, so a running server always serves the newest code, and the cached shell opens offline. The API is never cached, except the raga and tala lists the shell needs.
+    - Browsers install a PWA only from HTTPS or localhost. On a phone on your network the app works in the browser, but installing it needs the server behind HTTPS.
+  - **API:** `/api/auth/register`, `login`, `logout`, `me`; `/api/account/update`, `password`, `delete`; `/api/practice/routines`, `routines/save`, `routines/delete`, `log`, `logs`, `logs/delete`, `summary`.
+  - **The app:** Practice is first in the navigation, and an account button in the header shows who is logged in. The home page lists these as working now, not as coming next.
+  - **Tests.** `test/accounts.test.js` runs on a fresh database file. It covers accounts (validation, case-insensitive names, the throttle, password change, refusing non-JSON posts), privacy between users, routines, logs stored once, the summary and streaks (across a year and a leap day, and a missed day), and deletion. The end-to-end test, with a database of its own, creates an account, runs a routine across two tools with the bar, logs it, sees a one-day streak, logs out and back in, and checks that the app is installable.
+- **A melakarta and katapayadi explorer** (`src/engine/melakarta.js`, `web/shared/mela-explorer.js`, `docs/research/melakarta-katapayadi.md`). This builds the Phase 1 item "melakarta and katapayadi explorer" from the research plan. All the facts come from two sources, Wikipedia's "Katapayadi system" and "Melakarta" (read 2026-11-02), cited in the module and the note.
+  - **The 72 in their 12 chakras.** For any mela it shows:
+    - its swaras, worked out step by step from the number (the madhyama from the half; (n − 1) ÷ 6 gives R and G from the quotient, D and N from the remainder);
+    - its chakra, and the number the chakra's name stands for (Indu, the one moon, is 1);
+    - its six chakra siblings, its twin with the other madhyama, and the engine's janyas of it;
+    - the scale on the twelve semitones, which can be played.
+  - **The name gives the number.** The first two syllables of the IAST name are read by the stated rule: the last consonant of a conjunct counts, a vowel alone is 0, and the digits are reversed.
+    - 65 names give their number by the rule.
+    - Five (Cakravākam, Divyamaṇi, Viśvambharī, Citrāmbarī, Jyotisvarūpiṇī) need the ya, ra or va written beneath a consonant to be passed over. This convention is not in the sources, and the explorer labels it as such.
+    - Two are exceptions: Siṃhendramadhyamam (the source notes it reads 87, and the spelling Sihmendra- gives 57) and Naṭabhairavī (it reads 10; the sources do not explain it).
+  - **A decoder for any word,** in IAST or plain letters. Plain letters are ambiguous ("Natakapriya" reads 60 unless its t is ṭ), so the decoder lists the other readings they allow.
+  - **A builder.** Choose R, G, M, D and N to find the mela. The 90 choices that are not melakartas are refused with the reason (two swaras on one pitch, or out of order).
+  - **Engine:** `katapayadi`, `melaName`, `melakartaInfo`, `melaFromSwaras`, `katapayadiLetters`, `KATAPAYADI`, `CHAKRA_MEANING`, `MELA_IAST`.
+  - **Command line:** `vocal-gym mela <n | raga>` and `vocal-gym katapayadi <word>`.
+  - **API:** `POST /api/mela` and `POST /api/katapayadi`.
+  - **Pages.** The app has a Melakartas page in the navigation, on the home page and in the glossary (chakra, katapayadi); `#/melakarta/29` opens mela 29. The playground and research-plan pages have a Melakartas tab.
+  - **Tests.** `test/melakarta.test.js` covers the table and rules, every name's reading, every number's swaras, and all 162 builder choices. The server, CLI, smoke and end-to-end tests cover the new routes, commands and pages. The end-to-end judge step now opens its own page.
+- **The voice sings an octave lower** (`web/shared/voice.js`). At the drone's Sa (C4 and up) the voice sat in a thin, high register that was unpleasant to hear. It now sings an octave below Sa (madhya Sa at C3 when Sa is C4) in the app, the playground and WAV export. Its vowel formants are a lower voice's (Peterson & Barney's men's means), so it sounds like a lower voice, not a high one transposed. `render(line, { octave: 0 })` keeps the old register. The drone, tones and percussion are unchanged, and the voice stays in tune with them (an octave apart). The voice test checks both registers.
+- **No more hiss in the singing voice** (`web/shared/voice.js`, `docs/research/expressive-voice.md` §3.3). The voice's breath was broadband white noise centred at 2.7 kHz, a constant 2.2% of the voice and more in soft passages. Above 4 kHz the voice has little energy, and above 5.4 kHz none, so the noise was only about 20 dB down there and was heard as hiss throughout.
+  - **Breath.** It now sits under the voice's own spectrum (band-passed at 1.5 kHz, low-passed twice at 3.2 kHz) at 0.6% of the voice, follows the voice's loudness, and pulses with the opening phase of each glottal cycle so it fuses with the voice. Breathy phrase onsets remain, gentler.
+  - **The "s" of sa** (swara names): a narrower band at 5.2 kHz at 7% (it was 16% at 6.2 kHz).
+  - **Measured.** Over a kalpana round, all the noise together is now 58 dB under the voice on "aa" (it was 37). In the band above the voice's harmonics (9 kHz) it is 77 dB under (it was 52); on the swara names, whose consonants are noise by nature, 53 dB (it was 40).
+  - **Tests.** A new voice test holds the 9 kHz band at least 65 dB under the voice on "aa" and 47 dB on the swara names.
+  - The drone (a filtered sawtooth) has no noise; the percussion's short noise click is unchanged.
+
 ## 0.8.6
 
 - **Ragas whose arohana and avarohana differ now sing lab rhythms** (Saveri, Malahari, Arabhi, Kedaragowla, Abheri). Before, most rhythms in these ragas failed as "unsingable": Saveri on 22 of 32 tries and Malahari on 15 of 28; the committed 0.8.5 failed less often, but still failed. There were two causes.

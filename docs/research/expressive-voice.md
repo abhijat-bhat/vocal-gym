@@ -56,7 +56,9 @@ A_h = h^(−s) · Π_k  F_k² / sqrt((F_k² − f²)² + (B_k·f)²)   · top fa
 
 That is a source slope `s` times a cascade of four second-order resonators, the formants. The amplitudes are normalised to unit power and scaled by the loudness. The samples are `Σ_h A_h · sin(2π·h·φ)`, where `φ` is the fundamental's running phase, read from a 4096-point sine table.
 
-**Formants** are the means for adult women's /ɑ/ and /i/ in Peterson & Barney (1952), with a fourth formant added. They suit a voice in the Sa = C4 register the pages default to.
+**Register (v0.8.7).** The voice sings an octave below the drone's Sa: with Sa = C4 its madhya Sa is C3 (130.8 Hz). At Sa itself it sat in a thin, high register that listeners found tiring; `octave: 0` restores it. The drone, the tones and the percussion keep their pitch.
+
+**Formants** are the means for /ɑ/ and /i/ in Peterson & Barney (1952), with a fourth formant added: the men's means (/ɑ/ 730, 1090, 2440 Hz; /i/ 270, 2290, 3010 Hz) for the default lower register, the women's means for `octave: 0`, so the timbre matches the register rather than being a high voice transposed down.
 
 | Vowel | F1 (B1) | F2 (B2) | F3 (B3) | F4 (B4) |
 | --- | --- | --- | --- | --- |
@@ -87,7 +89,8 @@ A legato group starts with a 55 ms attack and ends with a 45 ms exponential rele
 
 ### 3.3 Breath, jitter and shimmer
 
-- **Breath.** Seeded white noise, band-passed at 2.7 kHz (Q 0.8) and pulsed with the glottal cycle (`0.55 + 0.45·max(0, cos 2πφ)`). Its level is 2.2% of the voice, plus a burst of up to 5% at each phrase's first swara (a breathy onset), plus up to 3% more in soft passages.
+- **Breath.** Seeded white noise, band-passed at 1.5 kHz (Q 0.7), low-passed twice at 3.2 kHz and pulsed with the glottal cycle (`0.1 + 0.9·max(0, cos 2πφ)²`, so it sounds in the opening phase and fuses with the voice). Its level is 0.6% of the voice, scaled with the voice's loudness, plus up to 2% at each phrase's first swara (a breathy onset).
+- **Why so little (v0.8.7).** Until v0.8.6 the breath was broadband noise centred at 2.7 kHz at 2.2% (more in soft passages), and the "s" of sa a band at 6.2 kHz at 16%. Measured against the voice, the noise was only about 20 dB down above 4 kHz, where the voice has little energy, and above 5.4 kHz the voice has no harmonics at all, so it was heard as white noise. Now the band above the harmonics (9 kHz) is 77 dB under the voice on "aa" (it was 52) and 53 dB on the swara names (it was 40), and `test/voice.test.js` holds it there.
 - **Jitter.** A slow random wander of the fundamental, about ±0.35% (±6 cents), smoothed over about 50 ms. The engine's contour has its own drift and flutter (S200), so the total stays within a natural singer's precision (S194).
 - **Shimmer.** A slow wander of about ±2.5% in level.
 
@@ -103,7 +106,7 @@ All noise comes from a seeded generator, never `Math.random`, so the same line, 
 
 | Consonant | Gesture | Voice | Noise |
 | --- | --- | --- | --- |
-| s (sa) | fricative, −85 to +10 ms | down to 3% | band at 6.2 kHz, up to 16% |
+| s (sa) | fricative, −85 to +10 ms | down to 3% | band at 5.2 kHz (Q 2), up to 7% (16% at 6.2 kHz before v0.8.7) |
 | p (pa) | voiceless stop: closure −65 to 0 ms | silent | burst at the release (8 ms), aspiration to +38 ms |
 | g (ga) | voiced stop: closure −60 to −4 ms | 28%, low-passed at 450 Hz (the voice bar) | burst at 1.9 kHz |
 | d, dh (dha) | voiced dental stop; dh aspirated | as g | burst at 3.8 kHz; dh adds aspiration to +55 ms |

@@ -64,9 +64,10 @@ npm start            # the web app at http://localhost:3000
 | Jathi generator (35 + 3 talas, any nadai, atita and anagata eduppu, seven yati settings); kept in the API and CLI, no longer in the pages | Done, tested | `src/engine/jathi/generator.js` |
 | JathiScript parser | Done, tested | `src/engine/jathi/script.js` |
 | Jathi judge: correctness gate, six craft aspects, computed fixes | Done, tested; weights not yet calibrated with teachers | `src/engine/jathi/judge.js` |
+| Melakarta and katapayadi explorer: the 72 in their chakras, swaras from the number, the number from the name (65 by the rule, 5 by a stated convention, 2 exceptions), a decoder and a scale builder (§15, v0.8.7) | Done, tested; sourced (docs/research/melakarta-katapayadi.md) | `src/engine/melakarta.js`, `web/shared/mela-explorer.js` |
 | Command line tool | Done, tested | `bin/vocal-gym.js`, `src/cli/` |
 | Playground, research plan and pitch pages | Done, smoke-tested | `web/` → `site/` |
-| Practice session shell (timers, logs, streaks), tanpura and tala playback for practice | Planned (Phase 1) | — |
+| Practice: accounts, routines, a session flow with timers across the tools, a log, a daily goal and streaks, in a SQLite database on this machine; installable as a PWA, working offline (v0.8.7). Tanpura and tala playback come with every tool | Done, tested | `server/auth.js`, `server/practice.js`, `server/db.js`, `app/js/session.js`, `app/js/pages/practice.js`, `app/sw.js` |
 | Voice Check probe and personal strain model | Designed; planned (Phases 1–3) | research plan |
 | Pitch tracking, swara transcription, raga conformance coach | Designed; planned (Phase 2) | research plan |
 | Kalpana swara tutor that listens to the singer | Designed; planned (Phases 2–3) | research plan |
@@ -157,6 +158,7 @@ vocal-gym/
 │   │   │   ├── inspire.js       rhythmPrompt: the prompt and JSON schema for a language model (v0.8.5)
 │   │   │   ├── sargam.js        reading suggested swara lines (v0.8.5)
 │   │   │   └── mora.js          graded and timed moras, the korvai
+│   │   ├── melakarta.js         the melakarta and katapayadi explorer: names, numbers, chakras, swaras (v0.8.7)
 │   │   ├── korvai/index.js      the korvai and tihai arithmetic: frames, moras, series, korvais, chakradars, trikaala (v0.8)
 │   │   ├── sollu.js             sollukattu vocabulary, aliases, idiom test
 │   │   └── jathi/
@@ -175,7 +177,7 @@ vocal-gym/
 │   ├── research/kalpana-structure.md   what a kalpana round is, from the literature, and why v0.6 rounds lacked it
 │   └── plans/kalpana-v0.3.md, kalpana-v0.4.md, gamaka-audio.md   the plans
 ├── examples/*.jathi             the worked JathiScript examples as files
-├── test/                        node:test suite: helpers.js and 15 *.test.js files (100 tests)
+├── test/                        node:test suite: helpers.js and 20 *.test.js files (109 tests)
 ├── web/                         page sources
 │   ├── shared/theme.css         colour tokens (dark first, light variant) and base type
 │   ├── shared/components.css    layout and component styles
@@ -192,6 +194,13 @@ vocal-gym/
 ├── scripts/render-wav.js        a kalpana round with gamaka to a 16-bit WAV (Node, the sung voice or the tone)
 ├── scripts/listening-kit.js     blind WAV clips, form and key for the gamaka listening test (npm run listening-kit)
 ├── scripts/smoke.js             jsdom smoke test of every page in site/
+├── scripts/make-icons.js        draws the install icons (app/icons/) from the logo, with node:zlib
+├── app/                         the web app (no build step): index.html, manifest.webmanifest, sw.js (offline), icons/
+│   ├── css/app.css              tokens, components, the v0.8.8 design and layout layers (docs/design.md)
+│   ├── js/main.js, api.js, ui.js, audio.js, session.js, fx.js   routing, the API client, UI helpers, playback, the practice session, motion
+│   └── js/pages/                one module per page: home, practice, account, alankara, kalpana, korvai, melakarta, judge, learn
+├── server/db.js, auth.js, practice.js   the accounts database (SQLite), logins and practice (v0.8.7)
+├── var/vocal-gym.db             the accounts database (created on first use; not in git)
 ├── site/                        built pages (generated; committed so they open without a build)
 └── dist/                        the engine bundle (generated; ignored by git)
 ```
@@ -1140,6 +1149,7 @@ Everything is exported from `src/engine/index.js`. In the browser, the same API 
 | --- | --- |
 | `allRagas() → { melakartas: Raga[72], janyas: Raga[14] }` | Every encoded raga |
 | `melakarta(n) → Raga` | Melakarta n, with `mela`, `chakra`, `kind: 'melakarta'` |
+| `melakartaInfo(n)`, `melaName(n)`, `katapayadi(text)`, `melaFromSwaras({ R, G, M, D, N })`, `katapayadiLetters(n)` | v0.8.7: mela n worked out from its number (steps, chakra and its meaning, twin, janyas); how its name gives the number (rule, convention or exception); any word decoded by katapayadi (with the readings plain letters allow); the mela of a choice of swaras, or why it is none |
 | `melaLabels(n) → string[]` | Swarasthana labels, e.g. `['S','R1','G3','M1','P','D1','N3']` |
 | `defineRaga(id, name, aroLabels, avLabels, meta) → Raga` | Build your own, e.g. `defineRaga('hamsanadam', 'Hamsanadam', ['S','R2','M2','P','N3',"S'"], ["S'",'N3','P','M2','R2','S'], { kind: 'janya', parent: 60 })` |
 | `SEMI`, `MELA_NAMES`, `CHAKRA`, `JANYA` | Constants |
@@ -1363,7 +1373,7 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 
 ### The web app (`server/` and `app/`)
 
-`npm start` runs a small Node server at http://localhost:3000. Its one runtime dependency, the Claude SDK (`@anthropic-ai/sdk`), is loaded only when a page asks Claude for kalpana lines; set `ANTHROPIC_API_KEY` to enable that. `PORT` and `HOST` change where it listens. It serves a guided site with one page per feature:
+`npm start` runs a small Node server at http://localhost:3000. Accounts and practice logs (v0.8.7) are stored in `var/vocal-gym.db`, a SQLite file on this machine, through Node's built-in `node:sqlite` (Node 22.13 or later; set `VG_DB` to move the file). The app installs as a PWA from localhost or HTTPS (the browser's Install button), and its shell opens offline. The navigation is Practice · Tools (a menu of the five tools) · Learn. Each tool page has a compact head (one line of quick starts and a help popover) and shows its result first on a phone. Since v0.8.8 the app has a design layer of depth, glass and motion: a live 3D sound field behind the home hero, cards that tilt toward the pointer, and content that rises into place, all hand-written in `app/js/fx.js` and the end of `app/css/app.css`, and all switched off by the system setting "reduce motion". The principles, their sources and where each piece lives are in `docs/design.md`. Its one runtime dependency, the Claude SDK (`@anthropic-ai/sdk`), is loaded only when a page asks Claude for kalpana lines; set `ANTHROPIC_API_KEY` to enable that. `PORT` and `HOST` change where it listens. It serves a guided site with one page per feature:
 
 | Page | What the user does |
 | --- | --- |
@@ -1371,7 +1381,10 @@ The build refuses unresolved includes and a bundle containing `</script`. **Edit
 | Alankaras | Picks a raga and tala, plays the sheet pattern, and steps through new patterns |
 | Kalpana swaras | Chooses length, start and landing swaras, ending and creativity, and sees which devices were used |
 | Korvai lab | Chooses a tala (any of the 35) once, then learns the counting in nine lessons or builds any mora, korvai, tihai of tihais or trikaala, and sends it to the judge (`#/jathi` now opens it) |
+| Melakartas | Picks any of the 72 (or follows #/melakarta/29) to see its swaras worked out from the number, its chakra and how its name gives the number by katapayadi; decodes any name; builds a scale and finds its mela |
 | Jathi judge | Edits JathiScript and gets the gate, exact fixes, craft scores and a playable grid as they type |
+| Practice | Creates an account (or logs in), picks or writes a routine, and practises with a timer in a bar that follows them across the tools; finishes with a rating and notes; sees the streak, today against the daily goal, the last seven days and the history |
+| Account | Logs in or creates an account; changes the name, daily goal and password; logs out; deletes the account and its data |
 | Learn | A primer and glossary; every dotted term in the app opens its definition |
 
 The korvai lab computes in the page: the server also serves `src/engine/` as ES modules at `/engine/` (and `web/shared/` at `/shared/`). The rest of the engine runs on the server, behind a JSON API that `server/api.js` validates and annotates with plain-English explanations:
@@ -1383,8 +1396,14 @@ The korvai lab computes in the page: the server also serves `src/engine/` as ES 
 | `POST /api/kalpana` | `{ raga, fam, L, aksharas, per, start, land, ending, T, seed }`, or `{ raga, rhythm, land, T, seed, density, inspiration }` for a lab rhythm |
 | `POST /api/kalpana/prompt` | `{ raga, rhythm, land, T }`: the prompt and JSON schema for inspired lines (v0.8.5) |
 | `POST /api/kalpana/inspire` | `{ raga, rhythm, land, T, seed, density }`: asks Claude (`claude-opus-5-5`) for lines and sings them as inspiration; 503 when no API key is set |
+| `POST /api/mela` | `{ n }` or `{ raga }` (a janya gives its parent): the mela worked out, with its katapayadi reading (v0.8.7) |
+| `POST /api/katapayadi` | `{ text }` to decode, or `{ swaras: { R, G, M, D, N } }` to find the mela (v0.8.7) |
 | `POST /api/jathi/generate` | `{ fam, L, nadai, avartanams, eduppu, yati, land, T, seed }` |
 | `POST /api/jathi/judge` | `{ script }` |
+| `POST /api/auth/register` · `login` · `logout` · `me` | v0.8.7: `{ username, password, displayName }` and `{ username, password }`; sets or clears the login cookie; `me` answers `{ user }` or `{ user: null }` |
+| `POST /api/account/update` · `password` · `delete` | `{ displayName, dailyGoalMin }`, `{ current, password }`, `{ password }` (deletes the account and all its data) |
+| `POST /api/practice/routines` · `routines/save` · `routines/delete` | the starters and the user's routines; `{ id?, name, items: [{ kind, title, minutes }] }`; `{ id }` |
+| `POST /api/practice/log` · `logs` · `logs/delete` · `summary` | a finished session `{ clientId, localDate, startedAt, endedAt, seconds, items, rating, notes }` (stored once per client id); `{ limit, before }`; `{ id }`; `{ today }` → the streak, today against the goal, seven days, totals |
 | `POST /api/render` | `{ raga, notes: [{ p, dur }], bpm, per, intensity, seed, cycleBeats, angaStarts, units }`: the contour and expression layer the voice sings |
 
 The browser plays the results with Web Audio and lights each cell as it sounds. Swaras are sung (the transport's Voice and Gamaka controls): the page asks `/api/render` for the contour and `web/shared/voice.js` sings it. `app/` is plain ES modules with no build step. `test/server.test.js` covers the API, and `npm run e2e` drives every page in headless Chrome or Edge.
@@ -1395,6 +1414,7 @@ The browser plays the results with Web Audio and lights each cell as it sounds. 
 
 | File | What it proves | Checks |
 | --- | --- | --- |
+| `melakarta.test.js` | v0.8.7: the katapayadi table and rules and the sources’ examples; plain-letter ambiguity; all 72 names read (65 by the rule, the five that need the convention, the two exceptions, each explained); every number’s swaras, chakra and twin; the builder over all 162 choices (72 melas, 90 refused with a reason) | — |
 | `ragas-talas.test.js` | Melakarta formula (12 spot values, ordering, 72 distinct scales, names); the class and parent of every janya, and that each uses only its parent's swaras; tala totals for all 35; chapu; invalid tala arguments; tala-spec parsing and round trips | 647 |
 | `alankara.test.js` | **All 35 sheet first lines, ascending and descending, note for note** in Mayamalavagowla; bars on anga lines; row counts equal the sheet's for every tala; all ten lines of 1.1; variation 0 is the sheet. Direction rule on every step of 23,992 lines (217,320 notes) in 86 ragas × 35 talas. 1,248 new patterns: legal, never a repeat, direction-valid in every line, conventionality falling with temperature, the sheet's span by default, every Tisra Eka alternative found, `null` only when all are shown | 310,676 |
 | `kalpana.test.js` | The v0.2 sweep (every other melakarta and every janya, 4 lengths, 2 speeds, 3 temperatures, 3 endings): exact length, start, landing, range, direction, three different mora statements with equal gaps, novelty rising with temperature. Eduppu neighbours (the table in 12.5) and 2,022 rounds landing next to every eduppu. Structured errors and backward compatibility. Leap acceptance over 86 ragas × 10 seeds × 3 temperatures; the relaxation over 2,696 short spans. Graded mora acceptance over 1,032 moras and the Mayamalavagowla golden mora | 185,467 |
@@ -1408,12 +1428,13 @@ The browser plays the results with Web Audio and lights each cell as it sounds. 
 | `korvai-unit3.test.js` | The Unit 3 notes: the pattern sums and closed forms, polite runs over 1–600 (odd divisors − 1, none for powers of 2), the six yatis and their classifier, every pattern found for 3–240, the notes' korvais (Ex. 7.9–7.15, Q14, Q17), progressive korvais, the Samam algorithm on the slides' korvais, Edapu over every n and k, Methods A and B, tihai solution sets with half gaps, chakkardars, drift; 4,831 constructions over the 35 talas | 13,000+ |
 | `jathi.test.js` | 12,417 generated jathis over 38 talas, nadai 3–5, 1–2 avartanams, eduppu −2, 0 and +2, seven yati settings and three temperatures: exact sums, slot formula, yati shapes, threefold teermanam. 2,452 exported to JathiScript all pass the gate (scores 71–100, median 88). 1,947 combinations are refused with a message because no teermanam fits the span with the chosen yati | 50,570 |
 | `jathiscript.test.js` | Worked examples (100 for the guide example; the short example fails with a fix at line 11); syntax errors with line and column; compound and vocabulary warnings; land `end` and `+n`; inferred avartanams; kalai; atita and anagata eduppu and their aliases; speed changes; bar errors; missing teermanam; opening karvai; written-out teermanams; trailing karvai; generator–parser round trips | 90 |
-| `voice.test.js` | The sung voice: the same line gives the same samples; finite, audible and unclipped; Sa, Pa and tara Sa in tune within 15 cents (autocorrelation), and Sa follows the playback Sa; the swara names differ from aa, pa is closed before its beat, the last swara fades; the CLI's JSON sings the same samples | — |
+| `voice.test.js` | The sung voice (and, from 0.8.7, an octave below Sa by default, and no hiss: the band above its harmonics at least 65 dB under it): the same line gives the same samples; finite, audible and unclipped; Sa, Pa and tara Sa in tune within 15 cents (autocorrelation), and Sa follows the playback Sa; the swara names differ from aa, pa is closed before its beat, the last swara fades; the CLI's JSON sings the same samples | — |
+| `accounts.test.js` | v0.8.7, on a fresh database: accounts (validation, case-insensitive names, the login throttle, password change, non-JSON posts refused), privacy between users, routines, logs stored once, the summary and streaks (across a year, a leap day and a missed day), deleting an account | — |
 | `server.test.js` | Every API route including the inspiration routes (Claude mocked, and the 503 without credentials) and `/api/render` (deterministic, spans the round, gamaka at 55, none at 0, loudness in range, unchanged notes), validation errors, static files and no path traversal | — |
 | `solkattu.test.js`, `mridangam.test.js` | The recorded-syllable bank (µ-law, slicing, playback fallbacks) and the synthesized mridangam (realization, determinism, Sa tracking, decays) | — |
 | `cli.test.js` | Every command, exit codes, JSON output, piping a generated jathi into the judge; `--eduppu-swara`, `--land`, `--mora-style`, `--allow-exceptions`, `--gamaka`, `--contour json` (with Todi's off-scale `R₂*` turns) and a WAV from `scripts/render-wav.js` | — |
 
-Total: about 3 million checked properties in 100 tests, in about 30 seconds on a laptop CPU (test files run in parallel).
+Total: about 3 million checked properties in 109 tests, in about 30 seconds on a laptop CPU (test files run in parallel).
 
 `npm run smoke` loads `site/playground.html` and `site/research-plan.html` in jsdom and drives every preset and control. It runs out of new patterns on Tisra Eka, steps back through history, loads a sheet cell, tries atita chapu, opens the editor, judges every example and a syntax error, checks that kalpana presets land next to their eduppu and that the audit names phrase sources, leaps and every mora style, and switches tabs. It also checks the gamaka select, the pitch view, the gamaka badges and, with Web Audio stubbed, one finite pitch curve per legato group (and none when gamaka is off). It times 100 Kalyani rounds (best of three; the limit is 1 s at full CPU speed, scaled up by a calibration loop on a throttled machine). It fails on any script error or missing output. `site/pitch.html` and `site/index.html` must load cleanly.
 

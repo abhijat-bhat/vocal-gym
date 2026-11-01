@@ -13,6 +13,8 @@ Usage
   vocal-gym kalpana --raga <raga> --tala <tala> [--aksharas K] [--per 1|2] [--start S] [--eduppu-swara P] [--ending auto|mora|free|korvai] [--mora-style auto|shift|gopuccha|srotovaha|expand|contract|identical] [--session] [--phrases off] [--allow-exceptions] [--gamaka off|light|performative|full|0-100] [--bpm 72] [--contour json [--voice]] [--temp T] [--seed S]
   vocal-gym jathi --tala <tala> [--nadai 4] [--avartanams 2] [--eduppu 0] [--yati auto] [--land sam|end] [--temp T] [--seed S] [--script]
   vocal-gym korvai --tala <tala> [--form mora|korvai|statements|progressive|chakradar|chakkardar|trikaala] [--gati 4] [--kalai 1] [--cycles 2] [--start 0] [--land 0] [--counting end|on] [--series 3|6|9|buildup] [--shape sama|srotovaha|gopuccha] [--kind ap|gp|fib|squares|polite|kuraippu|yati] [--terms 3,4,5] [--halves] [--n 5] [--variant full|gap|lead] [--pick N] [--script]
+  vocal-gym mela <raga | number>                    a melakarta: its swaras worked out from the number, its chakra, how its name gives the number
+  vocal-gym katapayadi <word>                       decode a word by the katapayadi rule (IAST or plain letters)
   vocal-gym judge <file.jathi | -> [--json]
   vocal-gym example <adi|short|chapu|speed>
 
@@ -34,6 +36,8 @@ Examples
   vocal-gym kalpana --raga kalyani --tala adi --aksharas 8 --eduppu-swara P --temp 0
   vocal-gym jathi --tala "misra chapu" --eduppu -2 --yati gopuccha --script > my.jathi
   vocal-gym korvai --tala "khanda triputa" --form korvai --cycles 2
+  vocal-gym mela 29
+  vocal-gym katapayadi Dhīraśaṅkarābharaṇam
   vocal-gym judge examples/short.jathi`;
 
 function args(argv) {
@@ -83,6 +87,33 @@ function cmdRagas(out) {
   R.melakartas.forEach(r => out('  ' + String(r.mela).padStart(2) + '  ' + r.id.padEnd(7) + ' ' + r.name.padEnd(22) + scale(r, r.aro.slice(0, 7))));
   out('\nJanyas');
   R.janyas.forEach(r => out('  ' + r.id.padEnd(14) + r.name.padEnd(16) + r.cls.padEnd(22) + scale(r, r.aro) + '  /  ' + scale(r, r.avaro)));
+}
+/* v0.8.7: the melakarta and katapayadi explorer (src/engine/melakarta.js) */
+function cmdMela(o, out) {
+  const q = o._.slice(1).join(' ') || o.raga;
+  const r = findRaga(q), n = r.kind === 'melakarta' ? r.mela : r.parent;
+  if (r.kind !== 'melakarta') out(r.name + ' is a janya of mela ' + n + '.\n');
+  const M = E.melakartaInfo(n), k = M.katapayadi;
+  out(M.n + ' · ' + M.name + ' (' + M.iast + ')');
+  out('  ' + scale(r.kind === 'melakarta' ? r : R.melakartas[n - 1], M.aro) + '   chakra ' + M.chakra.index + ', ' + M.chakra.name + ' (' + M.chakra.meaning + ')');
+  out('\nFrom the number');
+  M.steps.forEach(s => out('  ' + s));
+  out('\nFrom the name (katapayadi)');
+  out('  ' + k.syllables.map(s => s.text + ' → ' + s.letter + ' = ' + s.digit).join(';  ') + ';  reversed: ' + (k.reading === 'phala' ? k.phalaNumber : k.number) + (k.reading === 'rule' ? '' : k.reading === 'phala' ? ' (by a convention)' : ' (an exception)'));
+  out('  ' + k.note);
+  out('\nIn chakra ' + M.chakra.name + ': ' + M.chakra.members.map(m => m + ' ' + E.MELA_NAMES[m - 1]).join(', '));
+  out('With ' + (M.madhyama === 'M1' ? 'M2' : 'M1') + ' instead: ' + M.twin.n + ' ' + M.twin.name);
+  if (M.janyas.length) out('Janyas here: ' + M.janyas.map(j => j.name).join(', '));
+}
+function cmdKatapayadi(o, out) {
+  const w = o._.slice(1).join(' ');
+  const k = E.katapayadi(w);
+  if (k.error) fail(k.error);
+  out(k.syllables.map(s => s.text + ' → ' + s.letter + ' = ' + s.digit + (s.alt ? ' (or ' + s.alt.letter + ' = ' + (s.alt.digit == null ? 'none' : s.alt.digit) + ')' : '')).join('\n'));
+  out('\nThe first two digits, ' + k.digits.slice(0, 2).join(' ') + ', reversed: ' + (k.number == null ? 'none' : k.number) + (k.number >= 1 && k.number <= 72 ? ' (mela ' + k.number + ', ' + E.MELA_NAMES[k.number - 1] + ')' : ''));
+  if (k.phala) out('Passing over a ya, ra or va written beneath a consonant (a convention some names need): ' + k.phala.number);
+  if (k.alternatives && k.alternatives.length) out('Plain letters are ambiguous (t may be ṭ, n may be ṇ, sh may be ṣ): it could also read ' + k.alternatives.join(', '));
+  if (k.note) out(k.note);
 }
 function cmdTalas(out) {
   out('Suladi talas: 7 families x 5 jatis (laghu |L, dhrutam O = 2, anudhrutam U = 1)');
@@ -322,6 +353,8 @@ export function main(argv, out = s => process.stdout.write(s + '\n')) {
       case 'jathi': cmdJathi(o, out); return 0;
       case 'judge': return cmdJudge(o, out);
       case 'korvai': cmdKorvai(o, out); return 0;
+      case 'mela': cmdMela(o, out); return 0;
+      case 'katapayadi': cmdKatapayadi(o, out); return 0;
       case 'example': { const k = o._[1]; if (!E.JATHI_EXAMPLES[k]) fail('Examples: ' + Object.keys(E.JATHI_EXAMPLES).join(', ')); process.stdout.write(E.JATHI_EXAMPLES[k]); return 0; }
       case undefined: case 'help': case '--help': out(HELP); return 0;
       default: if (o.help) { out(HELP); return 0; } fail('Unknown command "' + cmd + '". Run vocal-gym help.');
