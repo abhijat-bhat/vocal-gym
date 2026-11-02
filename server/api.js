@@ -403,8 +403,18 @@ export function jathiJudge(body) {
           cycleBeats?, angaStarts?, units? }. Returns the pitch contour with the raga's gamaka at that
    intensity (straight notes sung legato at 0), its legato groups and the expression layer (phrases,
    stress, loudness), in the form web/shared/voice.js sings. Rendering only: the notes are not changed. */
+/* v0.9: a raga by its printed scale, for the repertoire's ragas the engine does not list:
+   scale { name, aro: ['S', 'R2', …, "S'"], avaro } */
+function scaleRaga(sc) {
+  const tok = /^[SRGMPDN][1-3]?('{1,2}|\.{1,2})?$/;
+  const list = v => Array.isArray(v) && v.length >= 2 && v.length <= 24 && v.every(t => typeof t === 'string' && tok.test(t));
+  if (!sc || typeof sc !== 'object' || !list(sc.aro) || !list(sc.avaro)) bad('Give a raga id, or a scale { name, aro, avaro } of swaras such as S R2 G3 … S\'.');
+  const r = E.ragaOf({ name: String(sc.name || 'Raga').slice(0, 60), aro: sc.aro, avaro: sc.avaro });
+  if (!r) bad('That scale has no swaras the engine can read.');
+  return r;
+}
 export function render(body) {
-  const r = getRaga(body.raga);
+  const r = body.raga != null && body.raga !== '' ? getRaga(body.raga) : scaleRaga(body.scale);
   if (!Array.isArray(body.notes) || !body.notes.length || body.notes.length > 4000) bad('notes must be a list of 1 to 4000 swaras.');
   const notes = body.notes.map(n => {
     const p = n && n.p === null ? null : Number(n && n.p), dur = Number(n && n.dur);
@@ -423,7 +433,7 @@ export function render(body) {
   const c = E.renderGamaka(notes, { raga: r, slotSec: 60 / bpm / per, intensity, voice: true, seed, per, cycleBeats, angaStarts, units });
   const q = (x, k) => Math.round(x * k) / k;
   return {
-    raga: r.id, bpm, per, intensity, slotSec: 60 / bpm / per,
+    raga: r.twin || r.id, bpm, per, intensity, slotSec: 60 / bpm / per,
     groups: c.groups.map(g => ({ t0: q(g.t0, 1e5), t1: q(g.t1, 1e5), points: g.points.map(pt => [q(pt.t, 1e5), q(pt.p, 1e4)]) })),
     notes: c.notes.map(n => ({ i: n.i, t0: q(n.t0, 1e5), t1: q(n.t1, 1e5), p: n.p, shape: n.shape || null, rule: n.rule || null })),
     expression: { phrases: c.expression.phrases, notes: c.expression.notes, gain: c.expression.gain.map(g => g.map(x => [x.t, x.g])) },

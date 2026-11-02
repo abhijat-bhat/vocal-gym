@@ -9,7 +9,7 @@ import { esc, toast } from './ui.js';
 export const KIND = {
   alankara: { label: 'Alankaras', route: '#/alankara' }, kalpana: { label: 'Kalpana swaras', route: '#/kalpana' },
   korvai: { label: 'Korvai lab', route: '#/korvai' }, melakarta: { label: 'Melakartas', route: '#/melakarta' },
-  judge: { label: 'Jathi judge', route: '#/judge' }, free: { label: 'Free practice', route: null }
+  judge: { label: 'Jathi judge', route: '#/judge' }, repertoire: { label: 'Repertoire', route: '#/repertoire' }, free: { label: 'Free practice', route: null }
 };
 const RUN = 'vg-run', QUEUE = 'vg-pending-logs';
 const pad = n => String(n).padStart(2, '0');
@@ -38,12 +38,14 @@ const save = r => { write(RUN, r); renderBar(); };
 export function elapsed(r, i) { return (r.spent[i] || 0) + (i === r.index && !r.paused && !r.finished ? (Date.now() - r.since) / 1000 : 0); }
 const settle = r => { if (!r.paused && !r.finished) { r.spent[r.index] = elapsed(r, r.index); r.since = Date.now(); } return r; };
 export function startRun(routine) {
-  const items = routine.items.map(it => ({ kind: it.kind, title: it.title, minutes: it.minutes }));
+  const items = routine.items.map(it => Object.assign({ kind: it.kind, title: it.title, minutes: it.minutes }, it.ref ? { ref: it.ref } : {}));
   const r = { id: uid(), routineId: typeof routine.id === 'number' ? routine.id : null, routineName: routine.name, items, index: 0,
     startedAt: new Date().toISOString(), localDate: localDate(), spent: items.map(() => 0), done: items.map(() => false), chimed: items.map(() => false), since: Date.now(), paused: false, finished: false };
   save(r); open(r);
 }
-function open(r) { const k = KIND[r.items[r.index].kind]; if (k && k.route) location.hash = k.route; }
+// the item's page: its tool, or (v0.9) the composition a repertoire item names
+export const routeOf = it => { const k = KIND[it.kind]; return k && k.route ? k.route + (it.ref ? '/' + it.ref : '') : null; };
+function open(r) { const to = routeOf(r.items[r.index]); if (to) location.hash = to; }
 export function togglePause() { const r = getRun(); if (!r || r.finished) return; if (r.paused) { r.paused = false; r.since = Date.now(); } else { settle(r); r.paused = true; } save(r); }
 export function next() {
   const r = getRun(); if (!r || r.finished) return;
@@ -60,7 +62,7 @@ export function discard() { write(RUN, null); renderBar(); }
 export function logOf(r, rating, notes) {
   const seconds = Math.max(1, Math.round(r.spent.reduce((a, b) => a + b, 0)));
   return { clientId: r.id, routineId: r.routineId, routineName: r.routineName, localDate: r.localDate, startedAt: r.startedAt, endedAt: r.endedAt || new Date().toISOString(), seconds,
-    items: r.items.map((it, k) => ({ kind: it.kind, title: it.title, plannedSec: it.minutes * 60, spentSec: Math.round(r.spent[k]), done: !!r.done[k] })), rating: rating || null, notes: notes || '' };
+    items: r.items.map((it, k) => Object.assign({ kind: it.kind, title: it.title, plannedSec: it.minutes * 60, spentSec: Math.round(r.spent[k]), done: !!r.done[k] }, it.ref ? { ref: it.ref } : {})), rating: rating || null, notes: notes || '' };
 }
 /* saves the finished session; offline, it waits and is sent later. → { saved } or { queued } */
 export async function saveFinished(rating, notes) {
@@ -92,14 +94,14 @@ export function renderBar() {
   const bar = document.getElementById('sessionbar'); if (!bar) return;
   const r = getRun();
   if (!r || r.finished) { bar.hidden = true; bar.innerHTML = ''; document.body.classList.remove('has-sessionbar'); clearInterval(tick); tick = 0; return; }
-  const it = r.items[r.index], k = KIND[it.kind] || KIND.free, t = elapsed(r, r.index), goal = it.minutes * 60, over = t >= goal;
+  const it = r.items[r.index], k = KIND[it.kind] || KIND.free, to = routeOf(it), t = elapsed(r, r.index), goal = it.minutes * 60, over = t >= goal;
   if (over && !r.chimed[r.index] && !r.paused) { r.chimed[r.index] = true; write(RUN, r); chime(); }
   bar.hidden = false; document.body.classList.add('has-sessionbar');
   bar.classList.toggle('over', over); bar.classList.toggle('paused', !!r.paused);
   const last = r.index === r.items.length - 1;
   bar.innerHTML = '<div class="sb-in"><div class="sb-what"><span class="sb-r">' + esc(r.routineName) + ' · ' + (r.index + 1) + ' of ' + r.items.length + '</span><b>' + esc(it.title) + '</b></div>' +
     '<div class="sb-time" role="timer" aria-live="off"><b>' + clock(t) + '</b><span>of ' + it.minutes + ' min' + (over ? ' · time is up' : r.paused ? ' · paused' : '') + '</span></div>' +
-    '<div class="sb-btns">' + (k.route && location.hash.split('/')[1] !== k.route.slice(2) ? '<a class="btn small" href="' + k.route + '">Open ' + esc(k.label) + '</a>' : '') +
+    '<div class="sb-btns">' + (to && location.hash !== to && !(location.hash.split('/')[1] === to.slice(2) && !it.ref) ? '<a class="btn small" href="' + to + '">Open ' + esc(it.ref ? it.title : k.label) + '</a>' : '') +
     '<button type="button" class="btn small ghost" data-sb="pause">' + (r.paused ? 'Resume' : 'Pause') + '</button>' +
     '<button type="button" class="btn small ' + (last ? 'ghost' : 'primary') + '" data-sb="next">' + (last ? 'Done' : 'Next') + '</button>' +
     '<button type="button" class="btn small primary" data-sb="finish">Finish</button></div></div>';

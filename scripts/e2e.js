@@ -3,7 +3,7 @@
    and fails on any script error or missing result. Needs Chrome or Edge; set CHROME to its path
    if it is not found. Run: npm run e2e */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server/app.js';
@@ -30,7 +30,11 @@ const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run
 const wsUrl = await new Promise((resolve, reject) => {
   let buf = '';
   chrome.stderr.on('data', d => { buf += d; const m = buf.match(/DevTools listening on (ws:\/\/\S+)/); if (m) resolve(m[1]); });
-  setTimeout(() => reject(new Error('Chrome did not start')), 20000);
+  // some installs print nothing; the browser also writes its port and path to DevToolsActivePort in the profile
+  const poll = setInterval(() => {
+    try { const [port, path] = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').trim().split(/\r?\n/); if (port && path) { clearInterval(poll); resolve('ws://127.0.0.1:' + port + path); } } catch (e) { /* not yet */ }
+  }, 250);
+  setTimeout(() => { clearInterval(poll); reject(new Error('Chrome did not start')); }, 30000);
 });
 
 /* ---- a minimal DevTools client ---- */
@@ -216,6 +220,35 @@ try {
     if (!ok) throw new Error('no active service worker, manifest or icon');
   });
 
+  console.log('repertoire');
+  await step('the list: all compositions, a type filter and a search', async () => {
+    await click('#nav a[data-route="repertoire"]');
+    await until('location.hash === "#/repertoire" && document.querySelectorAll(".rp-item").length >= 60', 'the repertoire list', 15000);
+    await until('/^All 1[,.]?5\\d\\d compositions$/.test(document.getElementById("rp-count").textContent)', 'every composition counted');
+    await click('#rp-types [data-type="Geetham"]');
+    await until('/^3\\d compositions$/.test(document.getElementById("rp-count").textContent)', 'the geethams');
+    await js('const q = document.getElementById("rp-q"); q.value = "vandhe madhavam"; q.dispatchEvent(new Event("input"));');
+    await until('document.querySelectorAll(".rp-item").length === 1', 'one search result');
+  });
+  await step('a composition: the grid with sahitya, a section sung, a line looped', async () => {
+    await click('.rp-item');
+    await until('document.querySelector(".rp-line .rp-sw i") && document.querySelector(".rp-syl")', 'the notation with its sahitya', 10000);
+    await click('#rp-tr .play'); await until('document.querySelector(".rp-sw i.now")', 'a lit swara', 20000); await click('#rp-tr .play');
+    await until('!document.querySelector("#rp-tr .play[data-playing]")', 'playback to stop');
+    await click('[data-loop$=":1"]'); await until('document.querySelector(".rp-line.sel .rp-sw i.now")', 'a lit swara in the looped line', 20000);
+    await click('#rp-tr .play'); await until('!document.querySelector("#rp-tr .play[data-playing]")', 'the loop to stop');
+  });
+  await step('add it to a routine, and the routine opens it', async () => {
+    await click('#rp-addr'); await until('document.getElementById("rp-rsel")', 'the routine picker');
+    await js('document.getElementById("rp-rsel").value = "new";'); await click('#rp-radd');
+    await until('!document.getElementById("rp-rsel")', 'the item added');
+    await go('#/practice'); await until('document.querySelector(".pr-rt a[href^=\\"#/repertoire/\\"]")', 'the routine with its composition', 10000);
+    await js('const a = Array.from(document.querySelectorAll(".pr-rt")).find(c => c.querySelector("a[href^=\\"#/repertoire/\\"]")); a.querySelector("[data-start]").click();');
+    await until('location.hash.startsWith("#/repertoire/") && document.querySelector(".rp-line") && !document.getElementById("sessionbar").hidden', 'the composition, with the session bar', 10000);
+    await click('#sessionbar [data-sb="finish"]'); await until('location.hash === "#/practice/finish"', 'the finish page');
+    await click('#pr-keep'); await until('location.hash === "#/practice" && /Repertoire/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the repertoire session in the log', 10000);
+  });
+
   console.log('learn');
   await step('deep link to a term', async () => { await go('#/learn/teermanam'); await until('document.getElementById("t-teermanam")', 'the teermanam entry'); });
 
@@ -223,6 +256,7 @@ try {
   console.log('End-to-end test passed (' + steps + ' steps)');
 } catch (e) {
   console.error('End-to-end test FAILED: ' + e.message);
+  try { console.error('On ' + await js('return location.hash + ": " + document.getElementById("main").innerText.slice(0, 600)')); } catch (x) { /* the page is gone */ }
   if (errors.length) console.error('Page errors:\n  ' + errors.join('\n  '));
   process.exitCode = 1;
 } finally {

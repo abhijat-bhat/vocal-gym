@@ -17,6 +17,8 @@ const ROOT = fileURLToPath(new URL('../app/', import.meta.url));
 const SHARED = fileURLToPath(new URL('../web/shared/', import.meta.url));
 // /engine/ is src/engine/: the browser-safe engine as ES modules (the korvai lab computes in the page)
 const ENGINE = fileURLToPath(new URL('../src/engine/', import.meta.url));
+// /repertoire/ is data/repertoire/: the compositions imported from carnaticnotations.blogspot.com (v0.9)
+const REPERTOIRE = fileURLToPath(new URL('../data/repertoire/', import.meta.url));
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
@@ -99,8 +101,8 @@ async function handleStatic(req, res, path) {
   let rel;
   try { rel = decodeURIComponent(path); } catch { return send(res, 400, 'Bad path', 'text/plain'); }
   if (rel.endsWith('/')) rel += 'index.html';
-  const mountAt = rel.startsWith('/shared/') ? '/shared' : rel.startsWith('/engine/') ? '/engine' : '';
-  const base = mountAt === '/shared' ? SHARED : mountAt === '/engine' ? ENGINE : ROOT;
+  const mountAt = ['/shared', '/engine', '/repertoire'].find(m => rel.startsWith(m + '/')) || '';
+  const base = { '/shared': SHARED, '/engine': ENGINE, '/repertoire': REPERTOIRE }[mountAt] || ROOT;
   const file = normalize(join(base, mountAt ? rel.slice(mountAt.length) : rel));
   if (!file.startsWith(base.endsWith(sep) ? base : base + sep)) return send(res, 403, 'Forbidden', 'text/plain');
   try {

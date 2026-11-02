@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.8.8: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.9.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -48,17 +48,21 @@ var VGEngine = (() => {
     PDF_ALANKARA: () => PDF_ALANKARA,
     PDF_FAM: () => PDF_FAM,
     PDF_JATI: () => PDF_JATI,
+    REPERTOIRE_NOTE: () => REPERTOIRE_NOTE,
     SEMI: () => SEMI,
     SOLLU: () => SOLLU,
     TEER: () => TEER,
     TICKS: () => TICKS,
+    UNITS_PER_BEAT: () => UNITS_PER_BEAT,
     VERSION: () => VERSION,
     alankara: () => alankara,
     alankaraSeries: () => alankaraSeries,
     allRagas: () => allRagas,
     angaStarts: () => angaStarts,
+    bestUnits: () => bestUnits,
     buildContour: () => buildContour,
     canonicalMotif: () => canonicalMotif,
+    cellUnits: () => cellUnits,
     chakradarSolutions: () => chakradarSolutions,
     customTala: () => customTala,
     defineRaga: () => defineRaga,
@@ -84,6 +88,9 @@ var VGEngine = (() => {
     korvai: () => korvai_exports,
     korvaiFrame: () => korvaiFrame,
     korvaiPlans: () => korvaiPlans,
+    linePitches: () => linePitches,
+    lineTokens: () => lineTokens,
+    lineUnits: () => lineUnits,
     makeProjector: () => makeProjector,
     melaFromSwaras: () => melaFromSwaras,
     melaLabels: () => melaLabels,
@@ -104,6 +111,7 @@ var VGEngine = (() => {
     moveScore: () => moveScore,
     newMotif: () => newMotif,
     norm: () => norm,
+    parseCell: () => parseCell,
     parseInspiration: () => parseInspiration,
     parseJathiScript: () => parseJathiScript,
     parseRhythmTemplate: () => parseRhythmTemplate,
@@ -114,20 +122,25 @@ var VGEngine = (() => {
     pdfFamScores: () => pdfFamScores,
     pdfMotif: () => pdfMotif,
     pick: () => pick,
+    playPlan: () => playPlan,
+    ragaOf: () => ragaOf,
     renderGamaka: () => renderGamaka,
     rhythmPhrases: () => rhythmPhrases,
     rhythmPrompt: () => rhythmPrompt,
     rhythmTemplate: () => rhythmTemplate,
     rng: () => rng,
+    rowFits: () => rowFits,
     sampleMotif: () => sampleMotif,
     setProfiles: () => setProfiles,
     soft: () => soft,
     splitCompound: () => splitCompound,
     syllableOf: () => syllableOf,
     tala: () => tala,
+    talaOf: () => talaOf,
     talaSpec: () => talaSpec,
     tokenizeLine: () => tokenizeLine,
     trikaala: () => trikaala,
+    unitsPerBeat: () => unitsPerBeat,
     yatiBlocks: () => yatiBlocks
   });
 
@@ -599,18 +612,18 @@ var VGEngine = (() => {
       }
       if (ok) return { pitches: naive.slice(), adjusted: naive.map(() => false), feasible: true };
       const C = candidates(Math.min.apply(null, naive), Math.max.apply(null, naive));
-      const rank = (p) => C.indexOf(p);
+      const rank2 = (p) => C.indexOf(p);
       const sgn = (x) => x > 0 ? 1 : x < 0 ? -1 : 0;
       const n = naive.length, INF = 1e9;
       const cost = Array.from({ length: n }, () => new Array(C.length).fill(INF));
       const back = Array.from({ length: n }, () => new Array(C.length).fill(-1));
-      cost[0][rank(naive[0])] = 0;
+      cost[0][rank2(naive[0])] = 0;
       const anchor = naive[0], up = naive.some((p) => p > anchor), down = naive.some((p) => p < anchor);
       for (let i = 1; i < n; i++) {
         const want = sgn(naive[i] - naive[i - 1]);
         for (let j2 = 0; j2 < C.length; j2++) {
           if (up && !down && C[j2] < anchor || down && !up && C[j2] > anchor) continue;
-          const local = Math.abs(j2 - rank(naive[i]));
+          const local = Math.abs(j2 - rank2(naive[i]));
           for (let k = 0; k < C.length; k++) {
             if (cost[i - 1][k] >= INF) continue;
             if (!valid(C[k], C[j2])) continue;
@@ -5746,11 +5759,11 @@ var VGEngine = (() => {
       if (sourced(a) && sourced(b)) continue;
       const lo = a.ctx.p < b.ctx.p ? a : b, hi = lo === a ? b : a;
       if (!((lo.rule.hi || 0) > 0 || (hi.rule.lo || 0) < 0)) continue;
-      const RANK = { G2: 2, G3a: 2 }, rank = (x) => RANK[x.rule.grammar] || 1;
+      const RANK = { G2: 2, G3a: 2 }, rank2 = (x) => RANK[x.rule.grammar] || 1;
       let lose;
       if (sourced(a)) lose = b;
       else if (sourced(b)) lose = a;
-      else if (rank(a) !== rank(b)) lose = rank(a) < rank(b) ? a : b;
+      else if (rank2(a) !== rank2(b)) lose = rank2(a) < rank2(b) ? a : b;
       else {
         const lower = a.ctx.p < b.ctx.p ? a : b, upper = lower === a ? b : a;
         lose = Math.abs(a.ctx.p - b.ctx.p) === 1 ? lower : upper;
@@ -6932,8 +6945,8 @@ var VGEngine = (() => {
       gate.push({ id: "open", label: "Opens at the eduppu", ok: lead === 0, detail: lead === 0 ? "The first syllable sounds at the eduppu." : "The jathi opens with " + fm(lead) + " of karvai, so its first sound comes after the eduppu." });
       if (lead) fixes.push("Remove the opening karvai" + (Number.isInteger(lm) ? ' and set "eduppu: ' + (P.eduppu + lm === 0 ? "sam" : (P.eduppu + lm > 0 ? "+" : "") + (P.eduppu + lm)) + '"' : "") + ", so the jathi starts where it sounds.");
     }
-    const ORDER = ["span", "open", "trail", "bars", "teer"];
-    gate.sort((x, y) => ORDER.indexOf(x.id) - ORDER.indexOf(y.id));
+    const ORDER2 = ["span", "open", "trail", "bars", "teer"];
+    gate.sort((x, y) => ORDER2.indexOf(x.id) - ORDER2.indexOf(y.id));
     const gatePass = gate.every((g) => g.ok);
     const total = P.total, sounding = syls.length;
     const bodyUnits = units.filter((u) => u.role === "body" && u.nsyl > 0);
@@ -8595,7 +8608,302 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
     return { script: out.join("\n") + "\n" };
   }
 
+  // src/engine/repertoire.js
+  var LETTERS = "SRGMPDN";
+  var COMMON = { S: "S", R: "R2", G: "G3", M: "M1", P: "P", D: "D2", N: "N3" };
+  function parseCell(text) {
+    const out = [];
+    let speed = 1, k = 0;
+    const s = String(text || "");
+    while (k < s.length) {
+      const c = s[k];
+      if (c === "[") {
+        speed *= 2;
+        k++;
+        continue;
+      }
+      if (c === "]") {
+        speed = Math.max(1, speed / 2);
+        k++;
+        continue;
+      }
+      if (c === ",") {
+        out.push({ s: ",", v: 0, o: 0, d: 1 / speed });
+        k++;
+        continue;
+      }
+      const L = c.toUpperCase();
+      if (LETTERS.includes(L) && c !== " ") {
+        let v = 0, o = 0;
+        k++;
+        if (/[1-3]/.test(s[k] || "")) {
+          v = +s[k];
+          k++;
+        }
+        while (s[k] === "'") {
+          o++;
+          k++;
+        }
+        while (s[k] === ".") {
+          o--;
+          k++;
+        }
+        out.push({ s: L, v, o, d: 1 / speed });
+        continue;
+      }
+      k++;
+    }
+    return out;
+  }
+  var cellUnits = (text) => parseCell(text).reduce((a, t) => a + t.d, 0);
+  var lineUnits = (cells) => (cells || []).reduce((a, c) => a + cellUnits(c), 0);
+  var tokenPitch = (t) => {
+    const m = /^([SRGMPDN])([1-3]?)('*)(\.*)$/.exec(t);
+    if (!m) return null;
+    const lab = m[1] === "S" || m[1] === "P" ? m[1] : m[1] + (m[2] || COMMON[m[1]].slice(1));
+    return SEMI[lab] + 12 * (m[3].length - m[4].length);
+  };
+  var labelOf = (t) => {
+    const m = /^([SRGMPDN])([1-3]?)/.exec(t);
+    return m ? m[1] === "S" || m[1] === "P" ? m[1] : m[1] + (m[2] || COMMON[m[1]].slice(1)) : null;
+  };
+  var KNOWN2 = null;
+  var sameList = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  function ragaOf(scale) {
+    const aroT = scale && scale.aro || [], avT = scale && scale.avaro || [];
+    const aro = aroT.map(tokenPitch).filter((p) => p != null), avaro = avT.map(tokenPitch).filter((p) => p != null);
+    if (!aro.length || !avaro.length) return null;
+    if (!KNOWN2) {
+      const R = allRagas();
+      KNOWN2 = R.melakartas.concat(R.janyas);
+    }
+    const twin = KNOWN2.find((r) => sameList(r.aro, aro) && sameList(r.avaro, avaro));
+    const labels = { 0: "S" };
+    aroT.concat(avT).forEach((t) => {
+      const l = labelOf(t);
+      if (l && l !== "S") labels[SEMI[l]] = l;
+    });
+    const up = {}, down = {};
+    aroT.forEach((t) => {
+      const l = labelOf(t);
+      if (l && !up[l[0]]) up[l[0]] = l;
+    });
+    avT.forEach((t) => {
+      const l = labelOf(t);
+      if (l && !down[l[0]]) down[l[0]] = l;
+    });
+    const base = twin ? Object.assign({}, twin) : defineRaga("rep-" + slug(scale.name || "raga"), scale.name || "Raga", ["S"], ["S"], { kind: "repertoire" });
+    return Object.assign(base, { name: scale.name || base.name, aro, avaro, labels, up, down, twin: twin ? twin.id : null });
+  }
+  var slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+  var norm2 = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "").replace(/h/g, "").replace(/aa/g, "a").replace(/ee/g, "i").replace(/oo/g, "u").replace(/(.)\1/g, "$1");
+  var JATI_WORD = [["tis", 3], ["tris", 3], ["catu", 4], ["kand", 5], ["mis", 7], ["sank", 9]];
+  var FAM_WORD = [["triputa", "triputa"], ["tripuda", "triputa"], ["rupakam", "rupaka"], ["rupaka", "rupaka"], ["jampe", "jhampa"], ["jampa", "jhampa"], ["jumpa", "jhampa"], ["ata", "ata"], ["matya", "matya"], ["mata", "matya"], ["druva", "dhruva"], ["eka", "eka"], ["capu", "chapu"]];
+  var DEFAULT_JATI = { dhruva: 4, matya: 4, rupaka: 4, jhampa: 7, triputa: 3, ata: 5, eka: 4, chapu: 7 };
+  function talaOf(name) {
+    const n = norm2(name);
+    if (!n) return null;
+    let nadai = 4;
+    const tisraNadai = /\(.*(tisra|tisr|tris|tisa)/i.test(String(name)) || /tisranadai/.test(n);
+    if (tisraNadai) nadai = 3;
+    if (/kandanadai/.test(n)) nadai = 5;
+    const jatiOf2 = (s) => {
+      for (const [w, L] of JATI_WORD) if (s.includes(w)) return L;
+      return null;
+    };
+    if (/^(adi|desadi|madyadi)(tala|tal|tisra|tisr|tris|catusra|catusr|kanda|misra|nadai|kalam|kalai|[12])*$/.test(n)) {
+      const t = tala("triputa", 4);
+      return { fam: "triputa", L: 4, tala: t, nadai, name: "Adi" + (nadai === 3 ? " (tisra nadai)" : "") };
+    }
+    for (const [w, fam] of FAM_WORD) {
+      if (!n.includes(w)) continue;
+      if ((w === "ata" || w === "eka" || w === "mata") && !(n === w || n.endsWith(w) && jatiOf2(n.slice(0, -w.length)) || n.startsWith(w + "tal"))) continue;
+      const jati = jatiOf2(n.split(w)[0]);
+      if (fam === "chapu") {
+        const L2 = jati || 7;
+        if (L2 === 9) return { fam: "chapu", L: 9, tala: Object.assign(customTala([4, 5]), { name: "Sankeerna Chapu" }), nadai, name: "Sankeerna Chapu" };
+        if (![3, 5, 7].includes(L2)) return null;
+        const t2 = tala("chapu", L2);
+        return { fam: "chapu", L: L2, tala: t2, nadai, name: t2.name };
+      }
+      const L = jati || DEFAULT_JATI[fam];
+      const t = tala(fam, L);
+      const plain2 = { rupaka: "Roopakam", jhampa: "Jhampa", triputa: "Triputa", ata: "Ata", matya: "Matya", dhruva: "Dhruva", eka: "Eka" }[fam];
+      return { fam, L, tala: t, nadai, name: (jati ? t.name.replace(" jati ", " ") : plain2 + (fam === "rupaka" && L === 4 ? "" : " (" + t.name.replace(" jati ", " ") + ")")) + (nadai === 3 ? " (tisra nadai)" : "") };
+    }
+    return null;
+  }
+  function pitchOf2(raga, tok, dir, stats) {
+    const L = tok.s;
+    let lab;
+    if (L === "S" || L === "P") lab = L;
+    else if (tok.v) lab = L + tok.v;
+    else {
+      const u = raga.up && raga.up[L], d = raga.down && raga.down[L];
+      lab = dir < 0 ? d || u : dir > 0 ? u || d : u || d;
+      if (!lab) {
+        lab = COMMON[L];
+        if (stats) stats.outside++;
+      }
+    }
+    return SEMI[lab] + 12 * tok.o;
+  }
+  var ORDER = { S: 0, R: 1, G: 2, M: 3, P: 4, D: 5, N: 6 };
+  var rank = (t) => ORDER[t.s] + 7 * t.o;
+  function lineTokens(raga, cells, stats) {
+    const toks = [];
+    (cells || []).forEach((c, ci) => parseCell(c).forEach((t, ti) => toks.push(Object.assign({ cell: ci, tok: ti }, t))));
+    const sw = toks.map((t, i) => t.s === "," ? null : i).filter((i) => i !== null);
+    return toks.map((t, i) => {
+      if (t.s === ",") return Object.assign(t, { p: null });
+      const j = sw.indexOf(i), prev = j > 0 ? toks[sw[j - 1]] : null, next = j + 1 < sw.length ? toks[sw[j + 1]] : null;
+      const dir = next && rank(next) !== rank(t) ? Math.sign(rank(next) - rank(t)) : prev ? Math.sign(rank(t) - rank(prev)) : 1;
+      return Object.assign(t, { p: pitchOf2(raga, t, dir, stats) });
+    });
+  }
+  function linePitches(raga, cells, stats) {
+    const out = [];
+    lineTokens(raga, cells, stats).forEach((t) => {
+      if (t.p === null) {
+        if (out.length) out[out.length - 1].d += t.d;
+        else out.push({ p: null, d: t.d });
+      } else out.push({ p: t.p, d: t.d });
+    });
+    return out;
+  }
+  function playPlan(lines, opts) {
+    const o = opts || {}, tl = o.tala, upb = o.unitsPerBeat || 1;
+    const cyc = tl ? tl.total * upb : null;
+    const up = (x) => cyc ? Math.ceil((x - 1e-9) / cyc) * cyc : x;
+    let sub = 1;
+    lines.forEach((l) => (l.cells || []).forEach((c) => parseCell(c).forEach((t) => {
+      while (Math.abs(t.d * sub - Math.round(t.d * sub)) > 1e-9 && sub < 8) sub *= 2;
+    })));
+    const placed = [];
+    let pos = null, tail = null;
+    const put = (toks, a) => {
+      toks.forEach((t) => {
+        placed.push(Object.assign({}, t, { at: a }));
+        a += t.d;
+      });
+      return a;
+    };
+    lines.forEach((l, li) => {
+      let off = 0;
+      const toks = lineTokens(l.raga || o.raga, l.cells).map((t) => {
+        const x = Object.assign({ line: li, off }, t);
+        off += t.d;
+        return x;
+      });
+      if (!toks.length) return;
+      let lead = 0;
+      for (const t of toks) {
+        if (t.p !== null) break;
+        lead += t.d;
+      }
+      if (tail && lead + 1e-9 < tail.d) {
+        pos = put(tail.toks, pos);
+        tail = null;
+      }
+      let start;
+      if (pos === null) start = l.at || 0;
+      else if (l.join || !cyc) start = pos;
+      else if (l.at) {
+        start = up(pos) + l.at;
+        if (start - cyc >= pos - 1e-9) start -= cyc;
+      } else start = up(pos);
+      let drop = 0;
+      if (tail) {
+        put(tail.toks, start);
+        drop = tail.d;
+        tail = null;
+      }
+      const cut = l.tail && l.tail < off ? off - l.tail : off, rest = [];
+      toks.forEach((t) => {
+        if (t.off + 1e-9 >= cut) rest.push(t);
+        else if (!(t.p === null && t.off < drop - 1e-9)) placed.push(Object.assign({}, t, { at: start + t.off }));
+      });
+      if (rest.length) tail = { toks: rest, d: l.tail };
+      pos = start + cut;
+    });
+    if (tail) put(tail.toks, pos);
+    placed.sort((x, y) => x.at - y.at);
+    const first = placed.length ? placed[0].at : 0, notes = [], tokens2 = [];
+    let cur = null, end = first;
+    const cell = (x) => Math.round((x - first) * sub);
+    placed.forEach((t) => {
+      tokens2.push({ line: t.line, cell: t.cell, tok: t.tok, from: cell(t.at), to: cell(t.at + t.d) });
+      if (t.p === null) {
+        if (cur && Math.abs(cur.to - t.at) < 1e-9) {
+          cur.to += t.d;
+          end = cur.to;
+        }
+        return;
+      }
+      if (t.at > end + 1e-9) notes.push({ p: null, from: end, to: t.at });
+      cur = { p: t.p, from: t.at, to: t.at + t.d };
+      notes.push(cur);
+      end = cur.to;
+    });
+    const angaStarts2 = /* @__PURE__ */ new Set();
+    if (tl) {
+      let k = 0;
+      tl.angas.forEach((g) => {
+        angaStarts2.add(k);
+        k += g.len;
+      });
+    }
+    return {
+      notes: notes.map((n) => ({ p: n.p, slots: Math.max(1, cell(n.to) - cell(n.from)) })),
+      sub,
+      per: upb * sub,
+      unitsPerBeat: upb,
+      cycle: tl ? tl.total : null,
+      angaStarts: angaStarts2,
+      tokens: tokens2,
+      offset: cyc ? Math.round((first % cyc + cyc) % cyc * sub) : 0
+    };
+  }
+  function rowFits(tl, upb, cellsUnits) {
+    const lens = tl.angas.map((a2) => a2.len);
+    let a = 0, acc = 0;
+    for (const w of cellsUnits) {
+      if (!(w > 0)) return false;
+      let need2 = w;
+      while (need2 > 1e-9) {
+        const g = lens[a % lens.length] * upb - acc;
+        if (need2 + 1e-9 >= g) {
+          need2 -= g;
+          acc = 0;
+          a++;
+        } else {
+          acc += need2;
+          need2 = 0;
+        }
+      }
+      if (acc > 1e-9) return false;
+    }
+    return a % lens.length === 0;
+  }
+  var UNITS_PER_BEAT = [1, 2, 3, 4, 6, 8, 12, 16];
+  function unitsPerBeat(tl, rows) {
+    if (!tl) return 1;
+    return bestUnits(tl, rows).upb;
+  }
+  function bestUnits(tl, rows) {
+    let upb = 1, n = -1;
+    UNITS_PER_BEAT.forEach((u) => {
+      const k = rows.filter((r) => rowFits(tl, u, r)).length;
+      if (k > n || k === n && k > 0) {
+        upb = u;
+        n = k;
+      }
+    });
+    return { upb, n: Math.max(0, n) };
+  }
+  var REPERTOIRE_NOTE = "Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.";
+
   // src/engine/index.js
-  var VERSION = "0.8.8";
+  var VERSION = "0.9.0";
   return __toCommonJS(engine_exports);
 })();

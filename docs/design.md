@@ -12,7 +12,7 @@ The 0.8.8 layout follows published usability guidance. The sources were read on 
 
 | Principle | Source | How the app applies it |
 |---|---|---|
-| "Every extra unit of information in an interface competes with the relevant units of information" | [H] #8 | The top bar has three destinations (Practice, Tools, Learn), plus the account and theme buttons. A tool's page head is a title, a short lead and one line of quick starts. |
+| "Every extra unit of information in an interface competes with the relevant units of information" | [H] #8 | The top bar has four destinations (Practice, Repertoire, Tools, Learn; v0.9 added Repertoire), plus the account and theme buttons. A tool's page head is a title, a short lead and one line of quick starts. |
 | About 7 items in working memory; more choices take longer | [L] Miller's and Hick's laws | The five tools sit under Tools, each with a one-line description. On a phone, the menu drawer lists them all. |
 | "You are here" | [H] #1 | The current page's link is lit, and so is Tools while you are on one of its tools. |
 | Grouping by proximity and common region; use containers sparingly | [V], [L] | Settings sit in one glass panel beside the result, with their steps separated by a faint rule. Results are cards. |
@@ -31,8 +31,9 @@ The 0.8.8 layout follows published usability guidance. The sources were read on 
 | Design layer | `app/css/app.css`, "v0.8.8 design layer" | Glass surfaces with a lit top edge; deep, soft shadows; a slowly drifting aurora and a film grain behind the page; gold-gradient primary buttons with a passing sheen; gold type for accents and figures. |
 | Layout layer | `app/css/app.css`, "v0.8.8 layout" | The spacing scale, the Tools menu, the compact page head and its help popover, the glass settings panel, and results first on narrow screens. |
 | Motion | `app/js/fx.js` | `soundField(canvas)`: the home page's live 3D sound field. `initFx()`: card tilt with a following glare, scroll reveals and page entrances. |
-| Navigation | `app/index.html`, `app/js/main.js` | Practice · Tools (menu) · Learn, the account button and the theme. The menu opens on click or hover; Escape or a click outside closes it. |
+| Navigation | `app/index.html`, `app/js/main.js` | Practice · Repertoire · Tools (menu) · Learn, the account button and the theme. The menu opens on click or hover; Escape or a click outside closes it. |
 | Page head | `pageHead()` in `app/js/ui.js` | Eyebrow, title, lead, the quick-start strip and the help popover. |
+| Repertoire | `app/js/pages/repertoire.js`, the "v0.9 the repertoire" block of `app/css/app.css` | The list keeps the tool layout: filters in the panel, results in a card. A composition's panel holds its sections, practice speed, practice actions and raga; the result holds the player (one primary action, Play) and the sections. Lines wrap at the table's own cells, so a long cycle stays readable on a phone. |
 
 ## Motion, with restraint
 

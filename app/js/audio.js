@@ -148,17 +148,17 @@ function start(btn, job, ac) {
   const beats = job.root ? Array.from(job.root.querySelectorAll('[data-b]')) : [];
   const frame = () => {
     if (cur !== me) return;
-    const idx = Math.floor((ac.currentTime - t0) / slot);
+    const at = Math.floor((ac.currentTime - t0) / slot), idx = job.cellOf ? job.cellOf(at) : at;
     if (idx !== lastIdx) {
       const prev = byIdx.get(lastIdx); if (prev) prev.classList.remove('now');
       const el = byIdx.get(idx);
       if (el) {
         el.classList.add('now');
         const row = el.closest('.nrow');
-        if (row !== lastRow) { lastRow = row; const wrap = el.closest('.notation-wrap'); if (wrap) { const r = el.getBoundingClientRect(), w = wrap.getBoundingClientRect(); if (r.right > w.right || r.left < w.left) wrap.scrollLeft += r.left - w.left - 60; } }
+        if (row !== lastRow) { lastRow = row; if (job.follow && row) row.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); const wrap = el.closest('.notation-wrap'); if (wrap) { const r = el.getBoundingClientRect(), w = wrap.getBoundingClientRect(); if (r.right > w.right || r.left < w.left) wrap.scrollLeft += r.left - w.left - 60; } }
       }
-      if (job.per && job.total && idx >= 0) {
-        const b = Math.floor(idx / job.per) % job.total;
+      if (job.per && job.total && at >= 0) {
+        const b = Math.floor(at / job.per) % job.total;
         beats.forEach(x => x.classList.toggle('on', +x.dataset.b === b));
       }
       lastIdx = idx;
@@ -168,7 +168,7 @@ function start(btn, job, ac) {
   me.raf = requestAnimationFrame(frame);
   me.timer = setTimeout(() => {
     if (cur !== me) return;
-    if (settings.loop) { stop(); start(btn, job, ac); }
+    if (settings.loop || job.loop) { stop(); start(btn, job, ac); }
     else stop();
   }, (end - ac.currentTime) * 1000 + 250);
 }
@@ -177,25 +177,31 @@ function start(btn, job, ac) {
 /* notes: [{ p: semitones from Sa or null for a rest, slots }]; per: cells per beat; total: beats per cycle; angaStarts: Set of beat positions.
    opts.raga (an id) lets the voice sing the line with the raga's gamaka (settings.gamaka, or opts.gamaka to fix
    it for this job; 0 sings straight notes); opts.units (kalpana's units, [{ kind, notes }]) shape its phrasing. Without a raga, or with the
-   simple tone, or if the server cannot render, the swaras play as plain tones. */
+   simple tone, or if the server cannot render, the swaras play as plain tones.
+   v0.9 (the repertoire): opts.scale ({ name, aro, avaro } as printed) sings a raga the engine does not list;
+   opts.tempo() scales the tempo (practice speed); opts.offset is how many cells the first note comes after a sam
+   (so the clicks fall on the beats); opts.cellOf(cell) maps a grid cell to the notation's data-i to light;
+   opts.loop repeats this job whatever the Loop setting; opts.follow scrolls each new row of the notation into view. */
 export function pitchedJob(root, notes, per, total, angaStarts, opts) {
   const o = opts || {};
   let sung = null, renderedAt = null;
-  const sing = () => settings.voice !== 'tone' && o.raga && globalThis.VGVoice;
+  const sing = () => settings.voice !== 'tone' && (o.raga || o.scale) && globalThis.VGVoice;
   const gamaka = () => (o.gamaka != null ? o.gamaka : settings.gamaka);
-  const key = () => [settings.bpm, gamaka(), settings.voice, settings.sa].join('|');
+  const bpm = () => settings.bpm * (o.tempo ? o.tempo() : 1);
+  const key = () => [bpm(), gamaka(), settings.voice, settings.sa].join('|');
+  const off = o.offset || 0;
   const job = {
-    root, per, total,
+    root, per, total: o.offset != null ? null : total, cellOf: o.cellOf, loop: !!o.loop, follow: !!o.follow,
     schedule(ac, out, t0) {
-      const beat = 60 / settings.bpm, slot = beat / per;
+      const beat = 60 / bpm(), slot = beat / per;
       let t = t0, cells = 0;
       if (sung && sing() && renderedAt === key()) {
         globalThis.VGVoice.play(ac, out, t0, sung, { sa: saHz(), timbre: settings.voice, seed: o.seed || 1 });
         notes.forEach(n => { cells += n.slots; });
         t = t0 + cells * slot;
       } else notes.forEach(n => { if (n.p !== null) tone(ac, out, saHz() * Math.pow(2, n.p / 12), t, n.slots * slot * 0.95); t += n.slots * slot; cells += n.slots; });
-      const beats = Math.ceil(cells / per);
-      for (let k = 0; k < beats; k++) { const inCyc = k % total; click(ac, out, t0 + k * beat, inCyc === 0 || angaStarts.has(inCyc)); }
+      // the beats, counted from the sam before the first note
+      for (let k = Math.ceil(off / per); k * per - off < cells; k++) { const inCyc = k % total; click(ac, out, t0 + (k * per - off) * slot, inCyc === 0 || angaStarts.has(inCyc)); }
       return { end: t + (sung && sing() ? 0.2 : 0), slot };
     }
   };
@@ -204,7 +210,7 @@ export function pitchedJob(root, notes, per, total, angaStarts, opts) {
   job.prepare = ac => {
     if (!sing() || (sung && renderedAt === key())) return Promise.resolve();
     const k = key(), V = globalThis.VGVoice;
-    return api.render({ raga: o.raga, notes: notes.map(n => ({ p: n.p, dur: n.slots })), bpm: settings.bpm, per, intensity: gamaka() / 100,
+    return api.render({ raga: o.raga, scale: o.raga ? undefined : o.scale, notes: notes.map(n => ({ p: n.p, dur: n.slots })), bpm: bpm(), per, intensity: gamaka() / 100,
       seed: o.seed || 1, cycleBeats: total, angaStarts: Array.from(angaStarts), units: o.units })
       .then(c => { sung = V.render(V.lineOf(c), { sr: ac.sampleRate, sa: saHz(), timbre: settings.voice, seed: o.seed || 1 }); renderedAt = k; });
   };

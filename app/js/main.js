@@ -1,5 +1,5 @@
 /* App shell: hash routing, navigation, theme, and page mounting. v0.8.7: the account button, the practice
-   session bar (session.js) and the service worker that makes the app installable (sw.js). */
+   session bar (session.js) and the service worker that makes the app installable (sw.js). v0.9: the repertoire. */
 import { api } from './api.js';
 import { stop } from './audio.js';
 import { initGlossary, errorCard, $ } from './ui.js';
@@ -14,15 +14,17 @@ import { initSession, refreshUser, onUser } from './session.js';
 import { initFx, enter } from './fx.js';
 import * as judge from './pages/judge.js';
 import * as learn from './pages/learn.js';
+import * as repertoire from './pages/repertoire.js';
 
-const PAGES = { '': home, alankara, kalpana, korvai, melakarta, judge, learn, practice, account };
+const PAGES = { '': home, alankara, kalpana, korvai, melakarta, judge, learn, practice, account, repertoire };
 // v0.8: the jathi studio became the korvai lab
 const MOVED = { jathi: 'korvai' };
-const TITLES = { '': 'Vocal Gym', alankara: 'Alankaras · Vocal Gym', kalpana: 'Kalpana swaras · Vocal Gym', korvai: 'Korvai & tihai lab · Vocal Gym', melakarta: 'Melakartas · Vocal Gym', practice: 'Practice · Vocal Gym', account: 'Account · Vocal Gym', judge: 'Jathi judge · Vocal Gym', learn: 'Learn · Vocal Gym' };
+const TITLES = { '': 'Vocal Gym', alankara: 'Alankaras · Vocal Gym', kalpana: 'Kalpana swaras · Vocal Gym', korvai: 'Korvai & tihai lab · Vocal Gym', melakarta: 'Melakartas · Vocal Gym', practice: 'Practice · Vocal Gym', account: 'Account · Vocal Gym', judge: 'Jathi judge · Vocal Gym', learn: 'Learn · Vocal Gym', repertoire: 'Repertoire · Vocal Gym' };
 const main = $('#main');
-let unmount = null, meta = null;
+let unmount = null, meta = null, nav = 0;
 
 async function route() {
+  const me = ++nav;   // a newer move supersedes this one: its page must not touch the new one
   const parts = (location.hash.replace(/^#\/?/, '') || '').split('/');
   if (MOVED[parts[0]]) { location.replace('#/' + MOVED[parts[0]]); return; }
   const name = PAGES[parts[0]] ? parts[0] : '';
@@ -36,12 +38,16 @@ async function route() {
   document.title = TITLES[name];
   try {
     if (!meta) meta = await api.meta();
+    if (me !== nav) return;
     $('#ver').textContent = 'v' + meta.version;
     main.innerHTML = '';
-    unmount = await PAGES[name].mount(main, meta, parts.slice(1)) || null;
+    const off = await PAGES[name].mount(main, meta, parts.slice(1)) || null;
+    if (me !== nav) { if (off) try { off(); } catch (e) { /* ignore */ } return; }
+    unmount = off;
     enter(main);
     settingsJump(main);
   } catch (e) {
+    if (me !== nav) return;
     main.innerHTML = '<div class="wrap" style="padding-top:60px">' + errorCard(e.message) + '</div>';
   }
   if (!parts[1] || name !== 'learn') window.scrollTo(0, 0);

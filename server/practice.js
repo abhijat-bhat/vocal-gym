@@ -1,6 +1,6 @@
 /* Vocal Gym server · practice: routines, session logs, goals and streaks (v0.8.7)
    A routine is a named list of timed items, each a tool of the app (alankaras, kalpana swaras, the korvai lab,
-   melakartas, the judge) or free practice. Three starter routines are offered to everyone; a user's own are
+   melakartas, the judge, v0.9: a composition of the repertoire) or free practice. Three starter routines are offered to everyone; a user's own are
    stored. A log is one finished session: when, for how long, each item's planned and spent time, a rating and
    notes. The day of a log is the singer's own calendar day (sent by the page), so streaks follow the singer's
    time zone. A log carries a client id, so a session saved twice (an offline retry) is stored once. */
@@ -8,7 +8,10 @@ import { getDb, now } from './db.js';
 import { Invalid } from './auth.js';
 
 const bad = msg => { throw new Invalid(msg); };
-export const KINDS = ['alankara', 'kalpana', 'korvai', 'melakarta', 'judge', 'free'];
+export const KINDS = ['alankara', 'kalpana', 'korvai', 'melakarta', 'judge', 'repertoire', 'free'];
+// a repertoire item may name its composition (data/repertoire/c/<ref>.json), so Start opens it
+const REF = /^[a-z0-9][a-z0-9-]{0,119}$/;
+const refOf = (it, k) => { if (it.ref == null || it.ref === '') return undefined; if (typeof it.ref !== 'string' || !REF.test(it.ref)) bad('Item ' + (k + 1) + ': that is not a composition of the repertoire.'); return it.ref; };
 export const STARTERS = [
   { id: 'starter-warmup', name: 'Daily warm-up', builtin: true, items: [
     { kind: 'alankara', title: 'Sheet alankaras, slow then second speed', minutes: 8 },
@@ -20,7 +23,11 @@ export const STARTERS = [
   { id: 'starter-rhythm', name: 'Rhythm day', builtin: true, items: [
     { kind: 'korvai', title: 'Build a korvai in your tala', minutes: 10 },
     { kind: 'judge', title: 'Check it in the judge', minutes: 5 },
-    { kind: 'kalpana', title: 'Sing it as kalpana swaras', minutes: 5 }] }
+    { kind: 'kalpana', title: 'Sing it as kalpana swaras', minutes: 5 }] },
+  { id: 'starter-repertoire', name: 'Repertoire', builtin: true, items: [
+    { kind: 'alankara', title: 'Warm up: one alankara', minutes: 5 },
+    { kind: 'repertoire', title: 'A geetham: line by line with the voice', minutes: 10 },
+    { kind: 'repertoire', title: 'The same geetham, alone with the tala', minutes: 5 }] }
 ];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const str = (v, max, what) => { if (v == null) return ''; if (typeof v !== 'string') bad(what + ' must be text.'); const s = v.trim(); if (s.length > max) bad(what + ' must be at most ' + max + ' characters.'); return s; };
@@ -35,7 +42,9 @@ function cleanItems(items) {
     const kind = KINDS.includes(it.kind) ? it.kind : bad('Item ' + (k + 1) + ': choose what it practises (' + KINDS.join(', ') + ').');
     const minutes = Number(it.minutes);
     if (!(Number.isInteger(minutes) && minutes >= 1 && minutes <= 120)) bad('Item ' + (k + 1) + ': 1 to 120 minutes.');
-    return { kind, title: str(it.title, 80, 'An item’s title') || kind, minutes };
+    const item = { kind, title: str(it.title, 80, 'An item’s title') || kind, minutes }, ref = kind === 'repertoire' ? refOf(it, k) : undefined;
+    if (ref) item.ref = ref;
+    return item;
   });
 }
 const rowRoutine = r => ({ id: r.id, name: r.name, items: JSON.parse(r.items), builtin: false, updatedAt: r.updated_at });
@@ -75,10 +84,13 @@ export async function saveLog(body, ctx) {
   const seconds = Number(body.seconds);
   if (!(Number.isInteger(seconds) && seconds >= 1 && seconds <= 6 * 3600)) bad('A session lasts 1 second to 6 hours.');
   if (!Array.isArray(body.items) || body.items.length > 30) bad('A log has at most 30 items.');
-  const items = body.items.map(it => ({
-    kind: KINDS.includes(it && it.kind) ? it.kind : 'free', title: str(it && it.title, 80, 'An item’s title'),
-    plannedSec: Math.max(0, Math.min(7200, Math.round(Number(it && it.plannedSec) || 0))), spentSec: Math.max(0, Math.min(6 * 3600, Math.round(Number(it && it.spentSec) || 0))), done: !!(it && it.done)
-  }));
+  const items = body.items.map((it, k) => {
+    const item = { kind: KINDS.includes(it && it.kind) ? it.kind : 'free', title: str(it && it.title, 80, 'An item’s title'),
+      plannedSec: Math.max(0, Math.min(7200, Math.round(Number(it && it.plannedSec) || 0))), spentSec: Math.max(0, Math.min(6 * 3600, Math.round(Number(it && it.spentSec) || 0))), done: !!(it && it.done) };
+    const ref = item.kind === 'repertoire' && it ? refOf(it, k) : undefined;
+    if (ref) item.ref = ref;
+    return item;
+  });
   let rating = body.rating == null || body.rating === '' ? null : Number(body.rating);
   if (rating != null && !(Number.isInteger(rating) && rating >= 1 && rating <= 5)) bad('A rating is 1 to 5.');
   const notes = str(body.notes, 1000, 'The notes'), routineName = str(body.routineName, 60, 'The routine’s name') || 'Practice';

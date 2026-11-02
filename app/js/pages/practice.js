@@ -67,7 +67,7 @@ let lastRoutines = null;
 function drawRoutines(root, R) {
   lastRoutines = R;
   const card = (r, own) => '<article class="card pr-rt"><div class="pr-h"><h3>' + esc(r.name) + '</h3><span class="muted">' + minutes(r) + ' min' + (own ? '' : ' · starter') + '</span></div>' +
-    '<ol>' + r.items.map(it => '<li><span class="pr-kind">' + esc((KIND[it.kind] || KIND.free).label) + '</span> ' + esc(it.title) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
+    '<ol>' + r.items.map(it => '<li><span class="pr-kind">' + esc((KIND[it.kind] || KIND.free).label) + '</span> ' + (it.ref ? '<a href="#/repertoire/' + esc(it.ref) + '">' + esc(it.title) + '</a>' : esc(it.title)) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
     '<div class="pr-row"><button type="button" class="btn small primary" data-start="' + esc(r.id) + '">Start</button>' +
     (own ? '<button type="button" class="btn small ghost" data-edit="' + r.id + '">Edit</button><button type="button" class="btn small ghost" data-del="' + r.id + '">Delete</button>' : '<button type="button" class="btn small ghost" data-copy="' + esc(r.id) + '">Copy and edit</button>') + '</div></article>';
   $('#pr-routines', root).innerHTML = R.routines.map(r => card(r, true)).join('') + R.starters.map(r => card(r, false)).join('');
@@ -107,7 +107,7 @@ function editor(root, r) {
     $('#pr-cancel', el).onclick = () => { el.innerHTML = ''; };
     $('#pr-save', el).onclick = async () => {
       read();
-      const body = { name: $('#pr-name', el).value, items: items.map(it => ({ kind: it.kind, title: it.title.trim() || KIND[it.kind].label, minutes: it.minutes })) };
+      const body = { name: $('#pr-name', el).value, items: items.map(it => Object.assign({ kind: it.kind, title: it.title.trim() || KIND[it.kind].label, minutes: it.minutes }, it.kind === 'repertoire' && it.ref ? { ref: it.ref } : {})) };
       if (r && r.id) body.id = r.id;
       try { await api.practice.saveRoutine(body); el.innerHTML = ''; drawRoutines(root, await api.practice.routines()); toast('Routine saved.'); }
       catch (e) { $('#pr-err', el).textContent = e.message; }
