@@ -128,7 +128,7 @@ export function meta() {
     examples: [
       { id: 'adi', title: 'Adi tala, two cycles', blurb: 'A complete, correct jathi. Start here.', script: E.JATHI_EXAMPLES.adi },
       { id: 'short', title: 'One beat missing', blurb: 'The same jathi with a mistake. See how the judge finds it.', script: E.JATHI_EXAMPLES.short },
-      { id: 'chapu', title: 'Misra Chapu', blurb: 'A dance tala counted 3 + 2 + 2.', script: E.JATHI_EXAMPLES.chapu },
+      { id: 'chapu', title: 'Misra Chapu', blurb: 'A short tala counted 3 + 2 + 2.', script: E.JATHI_EXAMPLES.chapu },
       { id: 'speed', title: 'Changing speed', blurb: 'Phrases that switch to double speed.', script: E.JATHI_EXAMPLES.speed }
     ]
   };

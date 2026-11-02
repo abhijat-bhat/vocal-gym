@@ -23,7 +23,7 @@ export function mount(root, meta, args) {
     '</nav><div>' +
       '<section class="lsec" id="sec-start"><h2>Start here</h2>' +
         '<p>Carnatic music is the classical music of South India. Every piece is set in a <b>raga</b>, which decides which notes you may sing and how you may move between them, and a <b>tala</b>, a repeating rhythmic cycle kept with the hand.</p>' +
-        '<p>Students build their skill with exercises. Singers start with <b>alankaras</b>, patterns sung through the whole raga, and later learn to improvise <b>kalpana swaras</b>. Bharatanatyam dancers work with <b>jathis</b>, spoken rhythmic passages for footwork.</p>' +
+        '<p>Students build their skill with exercises. Singers start with <b>alankaras</b>, patterns sung through the whole raga, and later learn to improvise <b>kalpana swaras</b>. Rhythm is practised with <b>jathis</b> and <b>korvais</b>, passages spoken in drum syllables that must add up to the tala.</p>' +
         '<p>The hard part of making new exercises is keeping them correct: every note must fit the raga’s rules and every phrase must add up to the beat. Vocal Gym does that arithmetic for you, so every exercise it makes is correct and you can ask for as many as you like.</p>' +
       '</section>' +
       '<section class="lsec" id="sec-swaras"><h2>The seven swaras</h2><p>Like do-re-mi, but sung relative to a home note, Sa, that each singer chooses. Most swaras have more than one possible pitch; a raga picks one of each.</p>' +

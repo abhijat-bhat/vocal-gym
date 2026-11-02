@@ -613,7 +613,7 @@ table.ref td:first-child{white-space:nowrap}
     <div class="verdict"><h3>Research value</h3><span class="rating r-high">Four papers, one dataset</span>
       <p>Targets TISMIR/ISMIR, IEEE/ACM TASLP, Journal of Voice or JASA, and the TISMIR Education Track. The longitudinal practice corpus with strain labels would be the first of its kind for Carnatic singers.</p></div>
     <div class="verdict"><h3>Startup potential</h3><span class="rating r-med">Strong wedge, narrow core market</span>
-      <p>Comparable Indian practice apps convert under 1% of downloads to paid. A venture-scale outcome needs teacher and dance-school B2B plus a universal "vocal fitness" layer for all singers, with Carnatic depth as the credibility wedge.</p></div>
+      <p>Comparable Indian practice apps convert under 1% of downloads to paid. A venture-scale outcome needs teacher and music-school B2B plus a universal "vocal fitness" layer for all singers, with Carnatic depth as the credibility wedge.</p></div>
   </div>
 </section>
 
@@ -640,7 +640,7 @@ table.ref td:first-child{white-space:nowrap}
   <div class="prose">
   <p>Every Carnatic exercise is a sequence that must satisfy two grammars at once. The tala fixes how long it is and where its boundaries fall. The raga fixes which swaras may appear and in which direction. Vocal Gym treats both as finite-state constraints and asks every generator to sample only inside their intersection. Creativity is a separate dial.</p>
   <dl class="kv">
-    <dt>Tala</dt><dd>A sequence of angas: laghu |<sub>L</sub> with L ∈ {3, 4, 5, 7, 9} by jati, dhrutam O = 2, anudhrutam U = 1. Seven families × five jatis give 35 talas, from 3 aksharas (Tisra Eka) to 29 (Sankeerna Dhruva) [4]. For dance the engine adds Tisra (1 + 2), Khanda (2 + 3) and Misra (3 + 2 + 2) Chapu. Nadai g sets matras per akshara; speed (kalam) sets swaras per akshara.</dd>
+    <dt>Tala</dt><dd>A sequence of angas: laghu |<sub>L</sub> with L ∈ {3, 4, 5, 7, 9} by jati, dhrutam O = 2, anudhrutam U = 1. Seven families × five jatis give 35 talas, from 3 aksharas (Tisra Eka) to 29 (Sankeerna Dhruva) [4]. The engine also adds Tisra (1 + 2), Khanda (2 + 3) and Misra (3 + 2 + 2) Chapu. Nadai g sets matras per akshara; speed (kalam) sets swaras per akshara.</dd>
     <dt>Raga</dt><dd>An arohana list and an avarohana list. A step up must land on an arohana swara and a step down on an avarohana swara. Vakra ragas and anya swaras need explicit allow and deny lists (planned for the full engine).</dd>
     <dt>Exercise</dt><dd>Notes or syllables x<sub>1…n</sub> with durations, subject to a constraint set C: exact length, karvais that never cross an anga line, fixed start, fixed landing (eduppu or sam).</dd>
   </dl>
@@ -806,15 +806,14 @@ sample:     at (t, s) choose among moves with reach(t + dur, s') = true, weights
 
 <section id="jathi">
   <h2>Module B · Jathi creator, guide and judge</h2>
-  <p class="sub">A jathi is arithmetic that has to dance. This module teaches the rules, lets a student write a jathi in a precise text format, checks the arithmetic exactly, scores the craft and says what to change. It can also generate examples at any level of creativity.</p>
+  <p class="sub">A jathi is arithmetic that has to land. This module teaches the rules, lets a student write a jathi in a precise text format, checks the arithmetic exactly, scores the craft and says what to change. It can also generate examples at any level of creativity.</p>
   <div class="note teal"><b>v0.8: the korvai and tihai lab.</b> In the pages, the generator has given way to a teaching lab for the arithmetic behind moras, tihais and korvais. It covers any of the 35 talas, any gati, kalai and eduppu, and follows J. Balaji, <i>Korvais in Karnatak Music</i> (2024): 3P + 2G, the offsets counted back from sam, purvanga and uttaranga in a 30–70 balance, yatis and the 1-2-4 rule, trikaala, and the Hindustani tihai of tihais. It has nine lessons and a builder that lists every solution and plays it. Its results open in the judge below, and they pass its gate. v0.8.1 adds the Unit 3 course notes: purvanga patterns (AP, GP, Fibonacci-like, squares, polite numbers, kuraippu), the six yatis with their closed forms, the three-statement and progressive korvais, the Samam and Edapu algorithms, the constant-total methods, the chakkardar and drift. See <code>docs/research/korvai-tihai.md</code>; the generator stays in the engine and the CLI.</div>
   <div class="prose">
   <h3>B1 · Terms</h3>
   <dl class="kv">
-    <dt>Adavu</dt><dd>The basic unit of Bharatanatyam movement; adavus are combined to form dance sequences [77].</dd>
-    <dt>Sollukattu</dt><dd>A phrase of rhythmic syllables linked to a unit of movement and recited by the nattuvanar, for example tai ya tai ya, tai hat tai hi, tat tai tam [77]. Konnakol names standard groups by length: tha ka (2), tha ki ta (3), tha ka dhi mi (4), tha dhi gi na thom (5), tha ka dhi mi tha ka (6), tha ka dhi mi tha ki ta (7), tha ka dhi mi tha ka jho nu (8), tha ka dhi mi tha dhi gi na thom (9) [73].</dd>
-    <dt>Jathi</dt><dd>A passage of sollukattu set to the tala for pure dance, recited by the nattuvanar and closed by a teermanam.</dd>
-    <dt>Korvai</dt><dd>A string of adavus set to sollukattu that ends with a teermanam [19][77].</dd>
+    <dt>Sollukattu</dt><dd>A phrase of rhythmic syllables, for example tai ya tai ya, tai hat tai hi, tat tai tam [77]. Konnakol names standard groups by length: tha ka (2), tha ki ta (3), tha ka dhi mi (4), tha dhi gi na thom (5), tha ka dhi mi tha ka (6), tha ka dhi mi tha ki ta (7), tha ka dhi mi tha ka jho nu (8), tha ka dhi mi tha dhi gi na thom (9) [73].</dd>
+    <dt>Jathi</dt><dd>A passage of sollukattu set to the tala, recited in drum syllables and closed by a teermanam.</dd>
+    <dt>Korvai</dt><dd>A rhythmic passage in sollukattu that ends with a teermanam [19][77].</dd>
     <dt>Teermanam</dt><dd>"The final knot" [19]: a closing phrase performed three times [77]. Here the three statements must be identical and separated by equal karvais.</dd>
     <dt>Karvai</dt><dd>A silent or held matra, written ",". It counts exactly like a syllable.</dd>
     <dt>Yati</dt><dd>An arrangement of phrases whose lengths draw a shape [74]. Six types: sama, vishama, mridanga, damaru, gopuccha and srotovaha [72].</dd>
@@ -822,7 +821,7 @@ sample:     at (t, s) choose among moves with reach(t + dur, s') = true, weights
   </dl>
 
   <h3>B2 · The tala grid and the one equation</h3>
-  <p>An avartanam has A aksharas grouped into angas; nadai g is the number of matras in an akshara (tisra 3, chatusra 4, khanda 5, misra 7, sankeerna 9); kalai k counts each akshara k times. Bharatanatyam draws mostly on Adi (8), Rupaka (6), Misra Chapu (7 = 3 + 2 + 2) and Tisra Triputa (7) [18]; Adi and Rupaka are the usual talas for adavus [77]. Everything a jathi must satisfy reduces to one equation.</p>
+  <p>An avartanam has A aksharas grouped into angas; nadai g is the number of matras in an akshara (tisra 3, chatusra 4, khanda 5, misra 7, sankeerna 9); kalai k counts each akshara k times. Jathis draw mostly on Adi (8), Rupaka (6), Misra Chapu (7 = 3 + 2 + 2) and Tisra Triputa (7) [18]. Everything a jathi must satisfy reduces to one equation.</p>
   <div class="eq">matras per avartanam      C = A · k · g
 span from eduppu to sam   M = N · C − e        e &gt; 0: starts e matras after sam (anagata); e &lt; 0: starts |e| before (atita)
 slots to fill             S = M + 1            the last syllable sounds on sam  (S = M if the jathi ends exactly at sam)
@@ -841,7 +840,7 @@ the equation              body + yati + 3u + 2q = S</div>
     <li><div><strong>Beat and speed.</strong> Cross-rhythm should resolve within three or four aksharas; a change of speed (for example from 4 to 8 syllables per akshara) should start on a beat and stay within double the nadai.</div></li>
     <li><div><strong>Idiom.</strong> Use standard sollu groups and their suffixes, and put strong syllables (tha, dhi, tat, tai, thom) or phrase starts on the beats. End the teermanam on a closing syllable such as thom, dhit, tam, nam or jham.</div></li>
     <li><div><strong>Yati.</strong> Grow or cut each phrase from its neighbour so the shape is audible: tha ka dhi mi tha ki ta / dhi mi tha ki ta / tha ki ta.</div></li>
-    <li><div><strong>Danceability.</strong> Leave karvais where the dancer can settle (60–95% of matras sounding), no unbroken run longer than two avartanams, phrases of at most nine syllables so each maps to an adavu.</div></li>
+    <li><div><strong>Breathing room.</strong> Leave karvais where the phrases can settle (60–95% of matras sounding), no unbroken run longer than two avartanams, phrases of at most nine syllables so each can be recited in one breath.</div></li>
   </ol>
 
   <h3>B4 · Yati shapes</h3>
@@ -867,7 +866,7 @@ the equation              body + yati + 3u + 2q = S</div>
     <li><div><strong>Fill the body anga by anga.</strong> Laghu (16): tha ka dhi mi · tha ka jho nu · tha ka dhi mi · tha ka jho nu. Dhrutam (8): tha , dhi , tha ka dhi mi. Dhrutam (8): tha ka tha ki ta · tha ki ta.</div></li>
     <li><div><strong>Write it in JathiScript</strong> with bars where you expect anga lines, so the judge can check your counting.</div></li>
     <li><div><strong>Judge it.</strong> Fix the gate first: the judge names the line and the number of matras. Then raise the craft scores.</div></li>
-    <li><div><strong>Recite, then dance.</strong> Play it with the tala clicks, recite it with the tala in your hands, then dance it slowly before bringing it up to speed.</div></li>
+    <li><div><strong>Listen, then recite.</strong> Play it with the tala clicks, then recite it with the tala in your hands, slowly at first, before bringing it up to speed.</div></li>
   </ol>
   <pre class="eq" id="ex-adi"></pre>
   <p>The judge gives this jathi 100: correct, with a derived gopuccha yati and teermanam statements that start on beats. The "one matra short" exercise in the demo removes a single karvai from the second line; the judge answers "Start with line 11: the phrases before the bar there are 1 matra short. Fixing that also fixes the span."</p>
@@ -923,7 +922,7 @@ the equation              body + yati + 3u + 2q = S</div>
   <h3>B8 · The generator</h3>
   <p>The generator enumerates every combination of teermanam phrase, gap (0 to 4) and yati block that fits the equation exactly, chooses one by temperature, and fills the body with sollu groups whose lengths sum to what is left. Familiarity rewards teermanam statements that start on beats, beat-length groups, repetition, no yati or a sama yati, and a teermanam of about a third of the span. Novelty rewards shaped yatis (gopuccha, srotovaha, mridanga, damaru), gapped teermanams, odd-length groups and phrases that cross the beat. Every generated jathi is exported to JathiScript ("Open in editor") and judged by the same rules a student faces.</p>
   <p><b>Verified.</b> 12,417 generated jathis (35 talas and 3 Chapu talas × nadai 3–5 × 1–2 avartanams × eduppu −2, 0 and +2 × seven yati settings × three temperatures) summed exactly, had the requested yati shape and a threefold teermanam; 1,947 spans that were too short were refused with a message. 2,452 of them were exported to JathiScript and judged: all passed the gate, scoring 71 to 100 (median 88).</p>
-  <p><b>Next.</b> Adavu suggestions for each phrase, a teacher-calibrated judge, a style prior learned from a nattuvanar's corpus, konnakol audio and printable notation. <b>Evaluation:</b> agreement between the judge and teachers' marks on student jathis; blind ratings by dancers of generated against human jathis; a validity comparison against unconstrained generators such as KonakolSwaraLLM [16].</p>
+  <p><b>Next.</b> A teacher-calibrated judge, a style prior learned from a teacher's corpus, konnakol audio and printable notation. <b>Evaluation:</b> agreement between the judge and teachers' marks on student jathis; blind ratings by teachers of generated against human jathis; a validity comparison against unconstrained generators such as KonakolSwaraLLM [16].</p>
   </div>
 </section>
 
@@ -1105,7 +1104,7 @@ the equation              body + yati + 3u + 2q = S</div>
   <div class="tbl"><table>
     <thead><tr><th>Paper</th><th>Claim</th><th>Experiments</th><th>Target venues</th></tr></thead>
     <tbody>
-      <tr><td>P1 · Constraint-guaranteed generation of Carnatic exercises, jathis and kalpana swaras</td><td>One engine produces valid outputs 100% of the time while temperature, read as creativity, moves outputs from conventional to unconventional</td><td>Validity against LLM and n-gram baselines; conventionality and diversity against temperature; blind ratings by teachers and nattuvanars; agreement of the jathi judge with teachers' marks</td><td>TISMIR, ISMIR, JNMR</td></tr>
+      <tr><td>P1 · Constraint-guaranteed generation of Carnatic exercises, jathis and kalpana swaras</td><td>One engine produces valid outputs 100% of the time while temperature, read as creativity, moves outputs from conventional to unconventional</td><td>Validity against LLM and n-gram baselines; conventionality and diversity against temperature; blind ratings by teachers; agreement of the jathi judge with teachers' marks</td><td>TISMIR, ISMIR, JNMR</td></tr>
       <tr><td>P2 · Raga conformance for learners</td><td>Phrase-level open-set scoring with counterfactual training localises raga errors better than recognition-based scores</td><td>Per-error-type AUROC; event F1; allied-pair drift; teacher agreement; on-device latency</td><td>IEEE/ACM TASLP, TISMIR; ICASSP short version</td></tr>
       <tr><td>P3 · Personal vocal-strain estimation from daily phone probes</td><td>Personal baselines plus normalised embeddings track self-reported strain within singers</td><td>8-week pilot with about 30 Carnatic singers; within-person correlation; calibration; device robustness</td><td>Journal of Voice, JASA Express Letters, IEEE JBHI, Interspeech</td></tr>
       <tr><td>P4 · Closed-loop warm-up prescription</td><td>A safe bandit improves next-session readiness compared with a fixed routine</td><td>Randomised n-of-1 crossover trials</td><td>Journal of Voice, JSLHR</td></tr>
@@ -1134,7 +1133,7 @@ the equation              body + yati + 3u + 2q = S</div>
   </ol>
   <div class="legend"><span class="l-sym">Rules and symbolic engine (works offline from day one)</span><span class="l-ml">Learned models (Phases 2–3)</span></div>
   <div class="prose">
-  <p>The jathi creator and a katapayadi and melakarta explorer sit beside the session as standalone studios for dance teachers and theory students. Everything symbolic runs in the browser or app; learned models run on the device where possible; the cloud holds sync, opt-in data and federated aggregation.</p>
+  <p>The jathi creator and a katapayadi and melakarta explorer sit beside the session as standalone studios for teachers and theory students. Everything symbolic runs in the browser or app; learned models run on the device where possible; the cloud holds sync, opt-in data and federated aggregation.</p>
   </div>
 </section>
 
@@ -1150,10 +1149,10 @@ the equation              body + yati + 3u + 2q = S</div>
       <ul><li>On-device pitch, drone cancellation, swara transcription</li><li>Live intonation feedback in pattern practice</li><li>Raga conformance v1: rules plus swara language model</li><li>Kalpana tutor levels 1–3; swara-name check</li><li>Personal baselines from Voice Check (unsupervised)</li><li>Strain pilot: about 30 singers for 8 weeks</li></ul>
       <p class="exit">Exit: latency under 150 ms, teacher agreement above 0.7, P2 dataset ready</p></div>
     <div class="phase"><h3>Phase 3 · Personalisation</h3><p class="when">Months 10–18</p>
-      <ul><li>Supervised strain model with conformal intervals</li><li>Safe bandit warm-up prescriber; n-of-1 trials</li><li>Kalpana tutor levels 4–6; korvai coach</li><li>Teacher dashboard (B2B); jathi studio for dance schools</li><li>Papers P2–P5; dataset D1 release</li></ul>
+      <ul><li>Supervised strain model with conformal intervals</li><li>Safe bandit warm-up prescriber; n-of-1 trials</li><li>Kalpana tutor levels 4–6; korvai coach</li><li>Teacher dashboard (B2B); korvai studio for music schools</li><li>Papers P2–P5; dataset D1 release</li></ul>
       <p class="exit">Exit: 2,000 monthly active users, 10% paid, 20 teacher accounts</p></div>
     <div class="phase"><h3>Phase 4 · Expansion</h3><p class="when">Months 18–24</p>
-      <ul><li>Hindustani raga and tala packs</li><li>Universal Voice Check and warm-ups for all singers</li><li>Institutions: music schools, dance academies, university departments</li><li>Choir and voice-teacher partnerships</li></ul>
+      <ul><li>Hindustani raga and tala packs</li><li>Universal Voice Check and warm-ups for all singers</li><li>Institutions: music schools, university departments</li><li>Choir and voice-teacher partnerships</li></ul>
       <p class="exit">Exit: revenue mix with at least 40% B2B</p></div>
   </div>
 </section>
@@ -1173,7 +1172,7 @@ the equation              body + yati + 3u + 2q = S</div>
     <dt>Wedge</dt><dd>Serious Carnatic students and their teachers, where depth (35 talas, janya ragas, kalpana swaras, jathis) beats generic singing apps.</dd>
     <dt>Expansion</dt><dd>Voice Check and adaptive warm-ups apply to every singer, in any style; Hindustani packs; dance schools for jathis.</dd>
     <dt>Pricing</dt><dd>Free core; Pro at about ₹299–499 a month in India and US$8–12 abroad; Guru plan with a dashboard to assign and review routines; institution licences.</dd>
-    <dt>Go to market</dt><dd>Teachers first: one teacher brings 10–40 students. Then sabhas, exam-preparation packs, Bharatanatyam schools and diaspora schools.</dd>
+    <dt>Go to market</dt><dd>Teachers first: one teacher brings 10–40 students. Then sabhas, exam-preparation packs, music schools and diaspora schools.</dd>
     <dt>Moats</dt><dd>The constraint engine and raga grammars; a longitudinal voice and practice corpus with labels; teacher networks and bani-specific tolerances; published research.</dd>
   </dl>
   <h3>Scorecard</h3>
@@ -8252,7 +8251,7 @@ var VGEngine = (() => {
       const gapAk = maxGap / TICKS;
       const a1 = gapAk <= 3 ? 8 : gapAk <= 4 ? 6 : gapAk <= 6 ? 3 : 0;
       s += a1;
-      notes.push(a1 === 8 ? "Phrases come back to a beat within three aksharas." : "One stretch runs " + gapAk.toFixed(1) + " aksharas before a phrase starts on a beat again. Cross-rhythm is welcome, but resolve it within three or four aksharas so the dancer can find the beat.");
+      notes.push(a1 === 8 ? "Phrases come back to a beat within three aksharas." : "One stretch runs " + gapAk.toFixed(1) + " aksharas before a phrase starts on a beat again. Cross-rhythm is welcome, but resolve it within three or four aksharas so the listener can find the beat.");
       let a2 = 4;
       const firstEv = events[0];
       if (firstEv && firstEv.k === "kv") {
@@ -8279,7 +8278,7 @@ var VGEngine = (() => {
         }
         if (sp2.n > 2 * nadai) {
           a3 -= 1;
-          notes.push("@" + sp2.n + " is more than double the nadai; very fast for footwork.");
+          notes.push("@" + sp2.n + " is more than double the nadai; very fast to recite.");
         }
       });
       s += Math.max(0, a3);
@@ -8287,7 +8286,7 @@ var VGEngine = (() => {
       if (teer) {
         const step = teer.reps[1] - teer.reps[0];
         a4 = step % TICKS === 0 ? 4 : 2;
-        notes.push(a4 === 4 ? "Each teermanam repetition starts at the same point in the beat." : "The teermanam repetitions start at different points in the beat (a deliberate effect, but harder to dance).");
+        notes.push(a4 === 4 ? "Each teermanam repetition starts at the same point in the beat." : "The teermanam repetitions start at different points in the beat (a deliberate effect, but harder to follow).");
       } else a4 = 1;
       s += a4;
       asp.push({ id: "rhythm", name: "Rhythmic integrity", score: s, max: 20, notes });
@@ -8423,7 +8422,7 @@ var VGEngine = (() => {
       let s = 0;
       const dens = syls.reduce((a, e) => a + e.dur, 0) / Math.max(1, total);
       s += dens >= 0.6 && dens <= 0.95 ? 5 : dens >= 0.45 && dens <= 1 ? 3 : 1;
-      if (dens > 0.95) notes.push("Almost no karvai: the dancer has no place to settle.");
+      if (dens > 0.95) notes.push("Almost no karvai: the phrases have no place to settle.");
       else if (dens < 0.6) notes.push("Many karvais: the jathi may feel sparse.");
       let run = 0, maxRun = 0;
       events.forEach((e) => {
@@ -8437,10 +8436,10 @@ var VGEngine = (() => {
       if (runCyc > 2) notes.push("One unbroken run lasts " + runCyc.toFixed(1) + " avartanams without a karvai.");
       const big = allUnits.filter((u) => u.nsyl > 9).length;
       s += big ? 1 : 3;
-      if (big) notes.push(big + " phrase" + (big > 1 ? "s are" : " is") + " longer than 9 syllables; split long phrases so each maps to an adavu.");
+      if (big) notes.push(big + " phrase" + (big > 1 ? "s are" : " is") + " longer than 9 syllables; split long phrases so each can be recited in one breath.");
       const maxSpeed = Math.max.apply(null, [nadai].concat(speeds.map((x) => x.n)));
       s += maxSpeed <= 2 * nadai ? 3 : maxSpeed <= 3 * nadai ? 1 : 0;
-      asp.push({ id: "dance", name: "Danceability", score: s, max: 15, notes });
+      asp.push({ id: "dance", name: "Breathing room", score: s, max: 15, notes });
     }
     let totalScore = Math.round(asp.reduce((a, x) => a + x.score, 0));
     const cap = gatePass ? 100 : 49;

@@ -1,6 +1,6 @@
 # Vocal Gym
 
-Vocal Gym is a daily practice system for Carnatic vocalists, with a studio for Bharatanatyam dancers and teachers. The plan is for it to check how your voice is today, choose your warm-up, give you exercises in any raga and tala, listen for where you leave the raga, and coach the hardest skill to practise alone: kalpana swaras.
+Vocal Gym is a daily practice system for Carnatic vocalists and their teachers. The plan is for it to check how your voice is today, choose your warm-up, give you exercises in any raga and tala, listen for where you leave the raga, and coach the hardest skill to practise alone: kalpana swaras.
 
 This repository holds the part that works today: the **raga–tala constraint engine**. It drives three generators that cannot break the rules of raga or tala, plus a notation and judge for jathis:
 
@@ -497,7 +497,7 @@ Rules 1–5 are **hard**: the judge's gate fails until they hold. Rules 6–9 ar
 6. **Beat and speed.** Cross-rhythm should resolve within three or four aksharas. A change of speed should start on a beat and stay within double the nadai.
 7. **Idiom.** Use standard sollu groups and their suffixes. Put strong syllables (tha, dhi, tat, tai, thom) or phrase starts on the beats. End the teermanam on a closing syllable (thom, dhit, tam, nam, jham, tai, dhim, dhi, tat).
 8. **Yati.** Grow or cut each phrase from its neighbour so the shape is audible: *tha ka dhi mi tha ki ta / dhi mi tha ki ta / tha ki ta*.
-9. **Danceability.** Leave karvais where the dancer can settle (60–95% of matras sounding), no unbroken run longer than two avartanams, and phrases of at most nine syllables so each maps to an adavu.
+9. **Breathing room** (called Danceability before v0.8.8; its id is still `dance`). Leave karvais where the phrases can settle (60–95% of matras sounding), no unbroken run longer than two avartanams, and phrases of at most nine syllables so each can be recited in one breath.
 
 ### 8.4 Yati shapes
 
@@ -722,7 +722,7 @@ repeat   = ( "x" | "×" | "*" ) digits ;
 | Teermanam quality | 15 | Three equal statements with equal gaps (8), a closing syllable at the end (3), gap no longer than the phrase (2), a phrase of 3+ matras opening on a strong syllable (2). |
 | Sollu idiom | 15 | 5 × the share of known syllables; 5 × the share of phrases (2+ syllables) that are library groups, suffixes of them, or up to three joined; 5 × the share of on-beat syllables that are strong or start a phrase. |
 | Variety and creativity | 15 | Distinct phrase lengths: 3+ (5), 2 (3), 1 (1). Yati: a shaped, derived yati (4), shaped but not derived (3), sama or vishama (2), none (0). Phrase repetition: distinct/total ≥ 0.4 (3), ≥ 0.25 (2), lower (1). Some cross-rhythm, karvai or speed change (3, else 1). |
-| Danceability | 15 | Sounding share 60–95% (5), 45–100% (3), else (1). Longest unbroken run ≤ 2 avartanams (4), ≤ 3 (2), longer (0). No phrase over 9 syllables (3, else 1). Top speed ≤ 2 × nadai (3), ≤ 3 × (1), faster (0). |
+| Breathing room (id `dance`) | 15 | Sounding share 60–95% (5), 45–100% (3), else (1). Longest unbroken run ≤ 2 avartanams (4), ≤ 3 (2), longer (0). No phrase over 9 syllables (3, else 1). Top speed ≤ 2 × nadai (3), ≤ 3 × (1), faster (0). |
 
 **Grades:** 85 and above is Excellent; 70–84 Good; 55–69 Fair; below 55 Needs work.
 

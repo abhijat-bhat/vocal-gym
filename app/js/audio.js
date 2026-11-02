@@ -175,14 +175,15 @@ function start(btn, job, ac) {
 
 /* ---- common jobs ---- */
 /* notes: [{ p: semitones from Sa or null for a rest, slots }]; per: cells per beat; total: beats per cycle; angaStarts: Set of beat positions.
-   opts.raga (an id) lets the voice sing the line with the raga's gamaka (settings.gamaka; 0 sings straight
-   notes); opts.units (kalpana's units, [{ kind, notes }]) shape its phrasing. Without a raga, or with the
+   opts.raga (an id) lets the voice sing the line with the raga's gamaka (settings.gamaka, or opts.gamaka to fix
+   it for this job; 0 sings straight notes); opts.units (kalpana's units, [{ kind, notes }]) shape its phrasing. Without a raga, or with the
    simple tone, or if the server cannot render, the swaras play as plain tones. */
 export function pitchedJob(root, notes, per, total, angaStarts, opts) {
   const o = opts || {};
   let sung = null, renderedAt = null;
   const sing = () => settings.voice !== 'tone' && o.raga && globalThis.VGVoice;
-  const key = () => [settings.bpm, settings.gamaka, settings.voice, settings.sa].join('|');
+  const gamaka = () => (o.gamaka != null ? o.gamaka : settings.gamaka);
+  const key = () => [settings.bpm, gamaka(), settings.voice, settings.sa].join('|');
   const job = {
     root, per, total,
     schedule(ac, out, t0) {
@@ -203,7 +204,7 @@ export function pitchedJob(root, notes, per, total, angaStarts, opts) {
   job.prepare = ac => {
     if (!sing() || (sung && renderedAt === key())) return Promise.resolve();
     const k = key(), V = globalThis.VGVoice;
-    return api.render({ raga: o.raga, notes: notes.map(n => ({ p: n.p, dur: n.slots })), bpm: settings.bpm, per, intensity: settings.gamaka / 100,
+    return api.render({ raga: o.raga, notes: notes.map(n => ({ p: n.p, dur: n.slots })), bpm: settings.bpm, per, intensity: gamaka() / 100,
       seed: o.seed || 1, cycleBeats: total, angaStarts: Array.from(angaStarts), units: o.units })
       .then(c => { sung = V.render(V.lineOf(c), { sr: ac.sampleRate, sa: saHz(), timbre: settings.voice, seed: o.seed || 1 }); renderedAt = k; });
   };

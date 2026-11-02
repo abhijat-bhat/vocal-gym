@@ -2,6 +2,8 @@
 
 ## 0.8.8
 
+- **The website is for singers and their teachers.** Dancers are no longer mentioned anywhere in the app, the landing page, the playground, the research plan or the pitch: page labels, the glossary (karvai, jathi, chapu), the Learn page, a judge example and the audience lists are reworded. The jathi judge's sixth aspect is now called **Breathing room**, as it measures karvais, run length and phrase length; its id stays `dance` for the API, and its notes speak of reciting, not dancing. Two bibliography entries keep the titles of their sources.
+- **The home page sample plays plain swaras** (no gamaka), whatever the gamaka setting: `pitchedJob` takes `opts.gamaka` to fix it for one job.
 - **A cleaner, calmer layout** (`docs/design.md`; the "v0.8.8 layout" block in `app/css/app.css`). It follows the Nielsen Norman Group's usability heuristics and visual-hierarchy guidance and the Laws of UX, cited in the note. Every tool, control and route is still there; they are rearranged, not removed.
   - **Navigation.** Practice · Tools · Learn. The five tools sit in a menu, each with a one-line description and its colour. It opens on click or hover; Escape or a click outside closes it. Tools is lit while you are on one of them. On a phone, the drawer lists everything, and the brand no longer wraps.
   - **Page heads.** The quick starts are one scrolling line, and "How to use this page" is a small button that opens a popover (Escape or a click outside closes it). Each tool starts about 120 px higher.

@@ -29,7 +29,7 @@ export async function mount(root, meta) {
   if (S.script == null) S.script = meta.examples[0].script;
 
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For dancers and teachers',
+    eyebrow: 'For students and teachers',
     title: 'Jathi judge',
     lead: 'Write a jathi in ' + term('jathiscript', 'JathiScript') + ', a simple text notation, and the judge checks the arithmetic exactly: does it fill the cycles, start at the ' + term('eduppu') + ', and land on sam? If not, it tells you which line to fix and by how much. Then it scores the craft out of 100.',
     steps: [

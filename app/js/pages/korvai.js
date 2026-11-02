@@ -26,7 +26,7 @@ function structureJob(job) {
 
 export async function mount(root) {
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers, dancers, drummers and teachers',
+    eyebrow: 'For singers, drummers and teachers',
     title: 'Korvai & tihai lab',
     lead: 'A ' + term('mora') + ', a tihai and a ' + term('korvai') + ' are arithmetic: they are counted so that they land exactly on sam, or on the song’s ' + term('eduppu') + '. Choose your ' + term('tala') + ' (any of the 35) once, then learn the counting step by step, or build your own and see every way it can be done.'
   }) + '<div id="kl-app"></div></div>';
