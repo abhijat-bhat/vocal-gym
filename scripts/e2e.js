@@ -249,6 +249,78 @@ try {
     await click('#pr-keep'); await until('location.hash === "#/practice" && /Repertoire/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the repertoire session in the log', 10000);
   });
 
+  await step('correct a line: the editor, the log, stepping through it and undoing', async () => {
+    await go('#/repertoire'); await until('document.querySelectorAll(".rp-item").length >= 1', 'the list', 15000);
+    await js('const q = document.getElementById("rp-q"); q.value = "vandhe madhavam"; q.dispatchEvent(new Event("input"));');
+    await until('document.querySelectorAll(".rp-item").length === 1', 'one composition'); await click('.rp-item');
+    await until('document.querySelector(".rp-line .rp-sw i")', 'the notation', 10000);
+    await click('#rp-edit'); await until('document.querySelector(".rp-pen")', 'a pen beside each line');
+    const flagBefore = await js('return document.querySelectorAll(".rp-mine").length;');
+    if (flagBefore !== 0) throw new Error('a line is marked as edited before any edit');
+    // the editor opens with the line, says what is wrong as you type, and shows the grid
+    await click('.rp-pen'); await until('document.querySelector(".rp-edit .rp-edin") && document.querySelector(".rp-sylin")', 'the editor with a box for each syllable');
+    const was = await js('return document.querySelector(".rp-edin").value;');
+    await js('const i = document.querySelector(".rp-edin"); i.value = "S X"; i.dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('document.querySelector(".rp-edstat.bad") && document.querySelector(".rp-edin.bad")', 'the mistake pointed out');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('/not part of the notation/.test(document.querySelector(".rp-edstat").textContent) && !document.querySelector(".rp-mine")', 'nothing saved');
+    // the site's marks are understood; the line is saved, marked and in the log
+    await js('const i = document.querySelector(".rp-edin"); i.value = "‘N S’ , ,"; i.dispatchEvent(new Event("input", { bubbles: true })); document.getElementById("rp-ednote").value = "From the recording"; document.querySelector(".rp-edsave").click();');
+    await until('document.querySelector(".rp-line .rp-mine") && !document.querySelector(".rp-edit")', 'the edited line', 10000);
+    await until('document.querySelector(".rp-log") && /1 change by you/.test(document.querySelector(".rp-log summary").textContent)', 'the log of this composition');
+    const lit = await js('return document.querySelector(".rp-line").textContent;');
+    if (!/Ṇ/.test(lit) || !/Ṡ/.test(lit)) throw new Error('the new swaras are not on the page: ' + lit.slice(0, 60));
+    // it is sung as edited
+    await click('[data-loop$=":0"]'); await until('document.querySelector(".rp-line.sel .rp-sw i.now")', 'the edited line sung', 20000);
+    await click('#rp-tr .play'); await until('!document.querySelector("#rp-tr .play[data-playing]")', 'the loop to stop');
+    // a second change, then step back through the log
+    await js('document.querySelectorAll(".rp-pen")[1].click();'); await until('document.querySelector(".rp-edit")', 'the second editor');
+    await js('const i = document.querySelector(".rp-edin"); i.value = "S R G M"; i.dispatchEvent(new Event("input", { bubbles: true })); document.querySelector(".rp-edsave").click();');
+    await until('/2 changes by you/.test(document.querySelector(".rp-log summary").textContent)', 'the second change', 10000);
+    await js('document.querySelector(".rp-log").open = true;');
+    await until('document.querySelector(".rp-stepnow") && /Change 2 of 2/.test(document.querySelector(".rp-stepnow").textContent)', 'the stepper at the newest');
+    await click('#rp-older');
+    await until('/Change 1 of 2/.test(document.querySelector(".rp-stepnow").textContent) && document.querySelector(".rp-line.rp-flash")', 'the earlier change, with its line lit');
+    // the imported version is one switch away
+    await js('Array.from(document.querySelectorAll("#rp-view button")).find(b => /imported/i.test(b.textContent)).click();');
+    await until('!document.querySelector(".rp-mine") && document.querySelector(".rp-line .rp-sw i")', 'the imported version');
+    await js('Array.from(document.querySelectorAll("#rp-view button")).find(b => /mine|my/i.test(b.textContent)).click();');
+    await until('document.querySelectorAll(".rp-mine").length === 2', 'my version again');
+    // the page of all changes, its filter and its way back to the line
+    await go('#/repertoire/changes');
+    await until('document.querySelectorAll("#rc-list .rp-chg").length === 2 && /From the recording/.test(document.getElementById("rc-list").textContent)', 'every change, with its note', 10000);
+    await until('/^2 changes$/.test(document.getElementById("rc-count").textContent)', 'the count');
+    await js('document.querySelector("#rc-what [data-what=\\"add\\"]").click();'); await until('/No changes match/.test(document.getElementById("rc-count").textContent)', 'the filter');
+    await js('document.querySelector("#rc-what [data-what=\\"\\"]").click();'); await until('document.querySelectorAll("#rc-list .rp-chg").length === 2', 'the filter cleared');
+    await js('document.querySelectorAll("#rc-list .rp-chg a.btn")[1].click();');
+    await until('location.hash.includes("/change/") && document.querySelector(".rp-log[open]") && document.querySelector(".rp-chg.cur") && document.querySelector(".rp-line.rp-flash")', 'the composition at that change', 10000);
+    // undo, in the log: a new entry, and the line is as imported again
+    await js('document.querySelector(".rp-chg.cur [data-undo]").click();');
+    await until('/3 changes by you/.test(document.querySelector(".rp-log summary").textContent) && document.querySelectorAll(".rp-mine").length === 1', 'the undo', 10000);
+    const now = await js('return document.querySelector(".rp-line .rp-mine") ? "" : "gone";');
+    if (now) throw new Error('the undone line lost its place: ' + was);
+  });
+
+  await step('a line off the cycle says so, explains itself, and clears when corrected', async () => {
+    await go('#/repertoire/2025-06-abhayambikayai-ashvaroodayai-yadhukula');
+    await until('document.querySelector(".rp-off")', 'the tag on the line with an extra swara', 10000);
+    const tags = await js('return Array.from(document.querySelectorAll(".rp-off")).map(b => b.textContent);');
+    if (tags.join() !== '1 over') throw new Error('expected one tag, "1 over": ' + tags.join());
+    await click('.rp-off');
+    await until('document.querySelector(".rp-offnote") && /49 units/.test(document.querySelector(".rp-offnote").textContent) && /cell 2/.test(document.querySelector(".rp-offnote").textContent)', 'the note: how long, and where');
+    await click('.rp-off'); await until('!document.querySelector(".rp-offnote")', 'the note to close');
+    await click('.rp-off'); await until('document.querySelector(".rp-offnote")', 'the note again');
+    await click('.rp-offnote button'); await until('document.querySelector(".rp-edit .rp-edin")', 'the editor on that line');
+    await until('/1 over whole cycles of 12, first off at cell 2/.test(document.querySelector(".rp-edstat").textContent)', 'the editor saying the same');
+    await js('const i = document.querySelectorAll(".rp-edin")[1]; i.value = "P M P D , S\' D P , P D D"; i.dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('/48 units: 4 whole cycles/.test(document.querySelector(".rp-edstat").textContent)', 'the editor seeing it fit');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('!document.querySelector(".rp-edit") && !document.querySelector(".rp-off") && document.querySelector(".rp-line .rp-mine")', 'the tag gone once corrected', 10000);
+    // the imported version still shows it
+    await js('Array.from(document.querySelectorAll("#rp-view button")).find(b => /imported/i.test(b.textContent)).click();');
+    await until('document.querySelector(".rp-off")', 'the tag in the imported version');
+  });
+
   console.log('learn');
   await step('deep link to a term', async () => { await go('#/learn/teermanam'); await until('document.getElementById("t-teermanam")', 'the teermanam entry'); });
 

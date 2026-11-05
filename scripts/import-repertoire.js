@@ -9,10 +9,11 @@
      data/repertoire/c/<id>.json     one composition: its sections, lyrics and lines (below)
    A section is a heading row of the table ("pallavi - …", "chittaswaram", "charaNam - …") with its lyrics,
    its raga (the scale row above it; a ragamalika changes it) and its lines. A line is one row of swaras:
-     { cells: ['S , R [M G] , , ,', …], label?, at?, syl?: [[unit, 'syllable'], …] }
+     { cells: ['S , R [M G] , , ,', …], label?, at?, syl?: [[unit, 'syllable'], …], fixed?: [{ cell, was, why }] }
    cells keep the table's cells (usually one per anga or one per cycle) in the compact text of
    src/engine/repertoire.js: an underlined group on the site (sung at double speed) becomes [ … ], ’ after a
-   swara becomes ' and ‘ before it becomes . after it. at: a lead-in line (its first cells empty) starts that
+   swara becomes ' and ‘ before it becomes . after it. fixed: the cells where a typing slip in the marks was
+   corrected (swaraCell), with the text the site prints. at: a lead-in line (its first cells empty) starts that
    many units into the cycle and ends on sam. syl: the sahitya row under the line, each syllable at the unit it
    is written above (the site aligns them in a monospace font). Sangatis are the stacked lines of a block; each
    gets the block's sahitya.
@@ -21,7 +22,7 @@
    Usage: node scripts/import-repertoire.js [--cache feed.json] [--save-feed feed.json] [--only <id>] [--report]
      --cache       read the posts from a saved feed (an array of Blogger entries) instead of the site
      --save-feed   also save the posts fetched, for a later --cache run
-     --report      print each composition whose lines do not all fill whole cycles */
+     --report      print each composition whose lines do not all fill whole cycles, and each slip corrected */
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -36,35 +37,45 @@ export const SITE = { name: 'Carnatic Music Notations', url: 'https://carnaticno
 
 /* ---------- reading the site's swara text ---------- */
 const SW = 'SRGMPDN';
-const LOWER = /[‘`]/, UPPER = /[’']/;
-/* runs [{ text, u }] of one cell → { text: compact, units, bad: chars not understood, cols: [{ c0, c1, at }] }
-   cols: each token's character columns in the cell (for lining up the sahitya) and its unit offset */
+const LOWER = /[‘`“]/, UPPER = /[’'”]/;
+const isSwara = ch => !!ch && SW.includes(ch.c.toUpperCase()) && /[a-z]/i.test(ch.c);
+/* runs [{ text, u }] of one cell → { text: compact, units, bad: chars not understood, cols: [{ c0, c1, at }], slips, was }
+   cols: each token's character columns in the cell (for lining up the sahitya) and its unit offset.
+   The marks are read across the runs, so one on the far side of an underline's edge stays with its swara.
+   slips: the typing slips corrected here; was: the cell as the site prints it. A line keeps both (fixed), so the
+   page can say what changed:
+     lower-run    ‘N’D: a swara cannot be both lower and upper, so the ’ stands for ‘ on the next swara
+     lower-mark   ’N: the ’ has no swara before it, so it is ‘ on the swara after it
+     upper-mark   R”: ” typed for ’ */
 export function swaraCell(runs) {
-  const toks = [], bad = [];
-  let col = 0, at = 0;
-  runs.forEach(r => {
-    const s = r.text, d = r.u ? 0.5 : 1;
-    let lower = 0;
-    for (let k = 0; k < s.length; k++, col++) {
-      const c = s[k], L = c.toUpperCase();
-      if (LOWER.test(c)) { lower++; continue; }
-      if (SW.includes(L) && /[a-z]/i.test(c)) {
-        let v = '';
-        if (/[1-3]/.test(s[k + 1] || '')) { v = s[k + 1]; k++; col++; }
-        let up = 0;
-        while (UPPER.test(s[k + 1] || '')) { up++; k++; col++; }
-        toks.push({ t: L + v + "'".repeat(up) + '.'.repeat(up ? 0 : lower), u: r.u, c0: col - v.length - up - lower, c1: col, at, d });
-        at += d; lower = 0; continue;
+  const toks = [], bad = [], slips = [];
+  const ch = runs.flatMap(r => r.text.split('').map(c => ({ c, u: r.u })));
+  let at = 0, lower = 0;
+  for (let k = 0; k < ch.length; k++) {
+    const c = ch[k].c, u = ch[k].u, d = u ? 0.5 : 1;
+    if (LOWER.test(c)) { lower++; continue; }
+    if (isSwara(ch[k])) {
+      const start = k - lower;
+      let v = '', j = k + 1, up = 0;
+      if (ch[j] && /[1-3]/.test(ch[j].c)) { v = ch[j].c; j++; }
+      while (ch[j] && UPPER.test(ch[j].c)) { if (ch[j].c === '”') slips.push('upper-mark'); up++; j++; }
+      let next = 0;
+      // a ‘ standing apart ("‘ S’") says nothing about this swara: its own ’ holds
+      if (up && lower) {
+        if (k && (LOWER.test(ch[k - 1].c) || UPPER.test(ch[k - 1].c))) { slips.push('lower-run'); up = 0; if (isSwara(ch[j])) next = 1; }
+        else lower = 0;
       }
-      if (c === ',' || c === ';') {
-        const n = c === ';' ? 2 : 1;
-        for (let j = 0; j < n; j++) { toks.push({ t: ',', u: r.u, c0: col, c1: col, at, d }); at += d; }
-        lower = 0; continue;
-      }
-      if (UPPER.test(c)) continue;   // a stray mark
-      if (!/[\s|_()\-.:–—​]/.test(c)) bad.push(c);
+      toks.push({ t: c.toUpperCase() + v + "'".repeat(up) + '.'.repeat(lower), u, c0: start, c1: j - 1, at, d });
+      at += d; lower = next; k = j - 1; continue;
     }
-  });
+    if (c === ',' || c === ';') {
+      const n = c === ';' ? 2 : 1;
+      for (let i = 0; i < n; i++) { toks.push({ t: ',', u, c0: k, c1: k, at, d }); at += d; }
+      lower = 0; continue;
+    }
+    if (UPPER.test(c)) { if (isSwara(ch[k + 1])) { slips.push('lower-mark'); lower = Math.max(lower, 1); } continue; }
+    if (!/[\s|_()\-.:–—​]/.test(c)) bad.push(c);
+  }
   let text = '', inU = false;
   toks.forEach((t, i) => {
     if (t.u && !inU) { text += (text ? ' ' : '') + '['; inU = true; }
@@ -72,7 +83,7 @@ export function swaraCell(runs) {
     text += (text && !text.endsWith('[') ? ' ' : '') + t.t;
     if (i === toks.length - 1 && inU) text += ']';
   });
-  return { text, units: at, bad, cols: toks.map(t => ({ c0: t.c0, c1: t.c1, at: t.at })) };
+  return { text, units: at, bad, cols: toks.map(t => ({ c0: t.c0, c1: t.c1, at: t.at })), slips, was: runs.map(r => r.text).join('').replace(/\s+/g, ' ').trim() };
 }
 const VOWEL = /[aeiouAEIOU]/;
 const SECTION_WORD = /pallav|anupal|charan|caran|chitt|cittas|swara|svara|sahith|sahit|mukt|ettugad|madhyama|madyama|kalam|similar|like|sangath|sangat|avartha|line|part|ragam|thanam|pada|muktayi|jathi|jati|thirmanam|teermanam|korvai|notes|varise|sthayi|ugabhoga|shlok|slok|verse|stanza|^\d+$|^[ivx]+$/i;
@@ -180,7 +191,7 @@ export function parsePost(entry) {
       if (swaraRow) {
         if (!sec) newSection('', []);
         const label = labelCol && row[0].origin && row[0].text.trim() ? row[0].text.trim() : undefined;
-        const parsed = content.map(c => c.origin ? (c.paras.length ? swaraCell(c.paras.flat()) : { text: '', units: 0, bad: [], cols: [] }) : null).filter(Boolean);
+        const parsed = content.map(c => c.origin ? (c.paras.length ? swaraCell(c.paras.flat()) : { text: '', units: 0, bad: [], cols: [], slips: [], was: '' }) : null).filter(Boolean);
         parsed.forEach(p => p.bad.forEach(ch => bad.add(ch)));
         stats.badChars += parsed.reduce((a, p) => a + p.bad.length, 0);
         // leading empty cells mark a lead-in; trailing ones are dropped
@@ -189,6 +200,8 @@ export function parsePost(entry) {
         const used = parsed.slice(lead, end);
         const line = { cells: used.map(p => p.text) };
         if (label) line.label = label;
+        const fixed = used.map((p, k) => p.slips.length ? { cell: k, was: p.was, why: Array.from(new Set(p.slips)) } : null).filter(Boolean);
+        if (fixed.length) { line.fixed = fixed; stats.slips = (stats.slips || 0) + used.reduce((n, p) => n + p.slips.length, 0); }
         if (lead) line.leadCells = lead;
         line._cols = used.map(p => p.cols); line._colIdx = content.map((c, i) => c.origin ? i : -1).filter(i => i >= 0).slice(lead, end);
         sec.lines.push(line); block.push(line);
@@ -377,8 +390,9 @@ async function main(argv) {
   if (only) { const c = comps.find(x => x.id === only || x.title === only); console.log(JSON.stringify(c, null, 1)); return; }
   const T = comps.reduce((t, c) => { Object.keys(c.stats).forEach(k => { t[k] = (t[k] || 0) + c.stats[k]; }); return t; }, {});
   const withLines = comps.filter(c => c.stats.lines), clean = withLines.filter(c => c.stats.partial === 0);
-  console.log(comps.length + ' compositions; ' + withLines.length + ' with swara lines (' + T.lines + ' lines: ' + T.full + ' fill whole cycles, ' + T.lead + ' lead-ins, ' + T.joined + ' in split lines that fill cycles, ' + T.link + ' short links, ' + T.tail + ' with an overlap cell, ' + T.partial + ' off the cycle; ' + T.fast4 + ' read with four-times groups); ' + clean.length + ' with every line on the cycle; ' + comps.filter(c => !c.tala).length + ' without a tala; ' + comps.filter(c => c.tala && c.tala.inferred).length + ' with the tala inferred.');
+  console.log(comps.length + ' compositions; ' + withLines.length + ' with swara lines (' + T.lines + ' lines: ' + T.full + ' fill whole cycles, ' + T.lead + ' lead-ins, ' + T.joined + ' in split lines that fill cycles, ' + T.link + ' short links, ' + T.tail + ' with an overlap cell, ' + T.partial + ' off the cycle; ' + T.fast4 + ' read with four-times groups); ' + (T.slips || 0) + ' typing slips in the octave marks corrected, in ' + withLines.filter(c => c.stats.slips).length + ' compositions; ' + clean.length + ' with every line on the cycle; ' + comps.filter(c => !c.tala).length + ' without a tala; ' + comps.filter(c => c.tala && c.tala.inferred).length + ' with the tala inferred.');
   if (argv.includes('--report')) comps.filter(c => c.stats.partial).sort((a, b) => b.stats.partial / b.stats.lines - a.stats.partial / a.stats.lines).forEach(c => console.log(c.stats.partial + '/' + c.stats.lines + '\t' + (c.tala ? c.tala.name + ' ×' + c.tala.unitsPerBeat : '-') + '\t' + c.title + (c.unknown ? '\t?' + c.unknown : '')));
+  if (argv.includes('--report')) comps.filter(c => c.stats.slips).forEach(c => c.sections.forEach(s => s.lines.forEach(l => (l.fixed || []).forEach(x => console.log('corrected\t' + c.id + '\t' + x.why.join(',') + '\t' + x.was + '\t=> ' + l.cells[x.cell])))));
   if (argv.includes('--dry')) return;
   if (existsSync(join(OUT, 'c'))) rmSync(join(OUT, 'c'), { recursive: true });
   mkdirSync(join(OUT, 'c'), { recursive: true });

@@ -43,5 +43,12 @@ export const api = {
     logs: body => request('POST', '/api/practice/logs', body || {}),
     deleteLog: id => request('POST', '/api/practice/logs/delete', { id }),
     summary: today => request('POST', '/api/practice/summary', { today })
+  },
+  // v0.9.1: a singer's corrections to the repertoire, and the log of them (server/edits.js)
+  repertoire: {
+    edits: comp => request('POST', '/api/repertoire/edits', { comp }),
+    save: body => request('POST', '/api/repertoire/edits/save', body),
+    restore: body => request('POST', '/api/repertoire/edits/restore', body),
+    changes: body => request('POST', '/api/repertoire/changes', body || {})
   }
 };

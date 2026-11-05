@@ -1,6 +1,6 @@
 {
   "name": "vocal-gym",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Vocal Gym: a Carnatic practice system built on a raga–tala constraint engine. Alankaras across the 35 talas, kalpana swaras with a creativity dial, a korvai and tihai lab, a melakarta and katapayadi explorer, practice routines with streaks, and a jathi notation (JathiScript) and judge.",
   "private": true,
   "license": "UNLICENSED",

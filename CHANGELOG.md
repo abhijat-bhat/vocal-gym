@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.1
+
+- **The importer corrects the site's typing slips in the octave marks.** Checked against the site, line by line, the repertoire agreed on 21,534 of its 21,578 lines, but some marks were read literally and sung in the wrong octave. 371 slips in 142 compositions (257 lines) are now corrected (`swaraCell`, `scripts/import-repertoire.js`):
+  - `‘N’D` is two lower notes, however long the run (it was an upper N and a middle D): a swara cannot be both lower and upper, so the `’` stands for `‘` on the next swara.
+  - `’N`, with no swara before the mark, is a lower N (it was a middle N).
+  - `R”` is an upper R (the `”` was dropped).
+  - A corrected line keeps what the site prints (`fixed: [{ cell, was, why }]`), and the page marks it. `--report` lists every correction.
+  - Left as written, because the intent is not clear: `S‘` (7; `M‘ R’` looks upper, `S‘ N D S` may mean `S ‘N`), `.` for a karvai (8), and rows with a letter that is not a swara, such as `S , R , G , F ,` (about 6, which are not imported as notes). The editor below can fix them.
+- **Fixed: an octave mark on the far side of an underline's edge was lost.** The site's `NS’`, with only `NS` underlined, was read as `[N S]`, and `‘N,SS` lost its lower mark. The marks are now read across a cell's runs (19 lines).
+- **A line off the cycle says so.** A tag beside a line tells how far it is from whole cycles of its tala (`1 over`, `½ short`), on 354 lines in 186 compositions. Pressing it opens a note: how long the line is, the cell where it first goes off, and a way into the editor. These are usually slips in the source, like abhayAmbikAyai's `P M P D , S’ D P , P D , D`, thirteen swaras in a cell of twelve, which shifts every sam line after it. They are shown and sung as written, because the right correction is a singer's call. Links, lead-ins, overlap cells and split lines are short or long on purpose and have no tag; nor do the 13 lines that fill whole cycles with uneven cells. The editor reports the same as you type, and the tag goes when the line fits. `cycleGap` and `offCycle` in the engine.
+- **Correct the notation, and keep a log of it.** A singer can change any line for their own account: its swaras, its sahitya and its label, or add and remove lines. The app then sings their version.
+  - **The editor** (a composition's page, Correct the notation, then ✎ beside a line): one box per cell, in the compact notation or the site's own marks; the line on the tala grid as you type, with a box under each swara for its syllable; what is wrong in words, and how the line fits the tala. A line that does not fill a cycle can still be saved.
+  - **The log of changes** (on the composition's page): every change with what the line was and what it became, the swaras that differ marked, the time and an optional reason. Earlier and Later step through the changes and go to each line. Undo, and Use this version, are new entries, so nothing in the log is ever rewritten. The slips corrected at import are listed with what the site prints. **As imported** shows the piece without your changes, and **Back to the imported line** resets one line.
+  - **All my changes** (`#/repertoire/changes`): every change, by day, with filters by composition and kind and a link to each line (`#/repertoire/<id>/change/<n>`).
+  - **The imported files never change.** The edits are rows in a new table, `notation_edits` (`server/edits.js`), and the engine's `applyEdits` lays them over a composition when it is read, so they outlast a re-import: an edit finds its line by its text if the line has moved, and says so if the line has gone. They belong to one account, and are deleted with it.
+  - **The engine:** `cleanCell`, `cleanLine`, `lineText`, `sameLine` and `applyEdits` (exported from the index), used by both the page and the server. Routes: `POST /api/repertoire/edits`, `edits/save`, `edits/restore` and `changes`, all needing a login.
+  - **Tests:** the slips; typed cells; edits laid over a composition (changed, added, removed, moved and lost lines); that all 71,491 stored cells read back as written; the routes (one singer's edits stay theirs, a stale page cannot overwrite a newer change, the imported file is untouched, and deleting the account deletes the edits); and an end-to-end run through the editor and the log. 120 tests in all.
+
 ## 0.9.0
 
 - **The repertoire: every composition of Carnatic Music Notations, to read and to sing.** [carnaticnotations.blogspot.com](https://carnaticnotations.blogspot.com/) (Balaji J.) offers 1,548 notations, "free for anyone to download and use". All of them are now in the app, each linking to its page there.
