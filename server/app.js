@@ -51,7 +51,8 @@ const ACCOUNT = {
   'POST /api/practice/logs': ['user', practice.logs], 'POST /api/practice/logs/delete': ['user', practice.deleteLog],
   'POST /api/practice/summary': ['user', practice.summary],
   'POST /api/repertoire/edits': ['user', edits.edits], 'POST /api/repertoire/edits/save': ['user', edits.save],
-  'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes]
+  'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes],
+  'POST /api/repertoire/octave-ok': ['user', edits.octaveOk], 'POST /api/repertoire/octave-ask': ['user', edits.octaveAsk]
 };
 const MAX_BODY = 256 * 1024;
 

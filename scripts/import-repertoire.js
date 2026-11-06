@@ -27,7 +27,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { blocks } from './repertoire-html.js';
-import { parseCell, cellUnits, talaOf, bestUnits, rowFits } from '../src/engine/repertoire.js';
+import { parseCell, cellUnits, talaOf, bestUnits, rowFits, notesOutside, allowedNotes } from '../src/engine/repertoire.js';
 import { melaLabels, MELA_NAMES, JANYA } from '../src/engine/ragas.js';
 import { mergeLessons, SOURCES } from './lessons.js';
 
@@ -202,6 +202,60 @@ const NOT_THE_PIECE = /https?:\/\/|www\.|^please share/i;
 const MELA_NOTE = /\bm[eE]la(kart[h]?a)?\b|janya\b|anya ?swara|bh?ashanga/i;
 
 /* ---------- one post ---------- */
+/* v0.9.5: slips a singer has confirmed, which no rule can tell from a real leap: [composition, as the site has it, as meant].
+   Each replacement shows behind the line's "fixed" tag with what the site printed. */
+const CONFIRMED_SLIPS = [['2021-08-mahaganapathim-nattai-adi', "[S' , R' S]", "[S' , R' S']"]];
+function applyConfirmedSlips(comps) {
+  CONFIRMED_SLIPS.forEach(([id, from, to]) => {
+    const c = comps.find(x => x.id === id);
+    let n = 0;
+    if (c) c.sections.forEach(s => s.lines.forEach(l => l.cells.forEach((cell, k) => {
+      const times = cell.split(from).length - 1;
+      if (!times) return;
+      n += times;
+      l.cells[k] = cell.split(from).join(to);
+      const had = (l.fixed = l.fixed || []).find(x => x.cell === k);
+      if (had) had.why.push('confirmed'); else l.fixed.push({ cell: k, was: cell, why: ['confirmed'] });
+    })));
+    if (c) c.stats.slips = (c.stats.slips || 0) + n;
+    if (!n) console.warn('A confirmed slip is no longer there: ' + id + ' ' + from + ' (has the site corrected it?)');
+  });
+}
+/* v0.9.5: the swaras a singer may write in a raga beyond its own printed scale (scale.also). The raga profiles have no anya
+   swaras, so they come from the notation: a swara this composition writes, a swara at least two other posts print for this
+   raga (Bhairavi's D2 and D1), or one written in this raga in at least three cells of at least two compositions (Khamas's
+   N3). One stray cell elsewhere is taken for a slip, and a ragamalika is no evidence for other pieces, since which of its
+   scales a section takes is less sure. */
+const ALSO_PRINTED = 2, ALSO_CELLS = 3, ALSO_COMPS = 2;
+function allowAnyaSwaras(comps) {
+  const raga = r => key(String(r.name || '').replace(/\s*\(.*$/, ''));
+  const notes = r => r.aro.concat(r.avaro).map(n => n.replace(/['.]/g, ''));
+  const sectionScale = (c, s) => c.ragas[s.raga != null && c.ragas[s.raga] ? s.raga : 0];
+  const printed = new Map(), written = new Map(), own = new Map();
+  comps.forEach(c => {
+    c.ragas.forEach(r => { const k = raga(r); if (!printed.has(k)) printed.set(k, new Map()); new Set(notes(r)).forEach(n => printed.get(k).set(n, (printed.get(k).get(n) || 0) + 1)); });
+    c.sections.forEach(s => {
+      const r = sectionScale(c, s);
+      if (!r) return;
+      const k = raga(r);
+      s.lines.forEach(l => l.cells.forEach(cell => notesOutside([cell], { aro: r.aro, avaro: r.avaro }).forEach(n => {
+        if (!own.has(r)) own.set(r, new Set());
+        own.get(r).add(n);
+        if (c.ragamalika) return;
+        if (!written.has(k)) written.set(k, new Map());
+        const w = written.get(k).get(n) || { cells: 0, comps: new Set() };
+        w.cells++; w.comps.add(c.id); written.get(k).set(n, w);
+      })));
+    });
+  });
+  comps.forEach(c => c.ragas.forEach(r => {
+    const k = raga(r), also = new Set(own.get(r) || []);
+    (printed.get(k) || new Map()).forEach((n, name) => { if (n >= ALSO_PRINTED) also.add(name); });
+    (written.get(k) || new Map()).forEach((w, name) => { if (w.cells >= ALSO_CELLS && w.comps.size >= ALSO_COMPS) also.add(name); });
+    const list = Array.from(also).filter(n => notesOutside([n], { aro: r.aro, avaro: r.avaro }).length);
+    if (list.length) r.also = allowedNotes({ also: list }).filter(n => list.includes(n)); else delete r.also;
+  }));
+}
 const TYPE = { Basics: 'Basics', Geetham: 'Geetham', LakshanaGeetham: 'Lakshana geetham', PillariGeetham: 'Geetham', Nottuswaram: 'Nottuswaram', Jathiswara: 'Jathiswaram', Swarajathi: 'Swarajathi', Varnam: 'Varnam', PadhaVarnam: 'Pada varnam', DaruVarnam: 'Daru varnam', Daru: 'Daru', Krithi: 'Krithi', Dasarapadha: 'Dasara pada', Vachana: 'Vachana', Thillana: 'Thillana', Thiruppavai: 'Thiruppavai', Thiruppugazh: 'Thiruppugazh', Shlokam: 'Shlokam', ashtapadhi: 'Ashtapadi', ugAbhoga: 'Ugabhoga', mallari: 'Mallari', Talamalika: 'Talamalika' };
 const TYPE_ORDER = ['Basics', 'Geetham', 'Lakshana geetham', 'Nottuswaram', 'Jathiswaram', 'Swarajathi', 'Varnam', 'Pada varnam', 'Daru varnam', 'Daru', 'Thillana', 'Krithi', 'Dasara pada', 'Ashtapadi', 'Thiruppavai', 'Thiruppugazh', 'Vachana', 'Ugabhoga', 'Shlokam', 'Mallari', 'Talamalika'];
 const LANG = { Telugu: 'Telugu', Tamil: 'Tamil', Sanskrit: 'Sanskrit', Kannada: 'Kannada', Malayalam: 'Malayalam', Hindi: 'Hindi', 'MaNipravALa': 'Manipravalam' };
@@ -622,9 +676,11 @@ async function main(argv) {
     comps.push(c);
   });
   fillScales(comps, entries);
+  applyConfirmedSlips(comps);
   // v0.9.3: the lesson books (data/lessons/, scripts/lessons.js); where a lesson is in several sources, the best is used
   const merged = mergeLessons(comps);
   comps = merged.comps;
+  allowAnyaSwaras(comps);
   comps.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.id.localeCompare(b.id));
   if (only) { const c = comps.find(x => x.id === only || x.title === only); console.log(JSON.stringify(c, null, 1)); return; }
   const T = comps.reduce((t, c) => { Object.keys(c.stats).forEach(k => { t[k] = (t[k] || 0) + c.stats[k]; }); return t; }, {});
@@ -640,6 +696,8 @@ async function main(argv) {
   console.log('Wrote data/repertoire/index.json and ' + comps.length + ' compositions in data/repertoire/c/.');
   // v0.9.4: the numbers in docs/repertoire-status.md
   (await import('./repertoire-stats.js')).writeStats();
+  // v0.9.5: the octave review list
+  (await import('./octave-review.js')).writeReview();
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main(process.argv.slice(2)).catch(e => { console.error(e); process.exit(1); });

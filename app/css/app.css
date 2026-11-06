@@ -857,6 +857,25 @@ button.rp-flag{background:transparent;cursor:pointer}
 .rp-flag.rp-mine{color:var(--saffron);border-color:var(--saffron)}
 .rp-flag.rp-fixed{color:var(--teal);border-color:var(--teal)}
 .rp-flag.rp-off{color:var(--rose);border-color:var(--rose);white-space:nowrap}
+/* v0.9.5 octave checks: the tag, the swara it asks about, and the fixes */
+.rp-flag.rp-oct{color:var(--violet);border-color:var(--violet);white-space:nowrap}
+.rp-flag.rp-octok{color:var(--muted);border-style:dashed;white-space:nowrap}
+.rp-cells > .rp-oct,.rp-cells > .rp-octok{align-self:center;margin-left:var(--s2);font-size:.6rem;padding:0 6px}
+.rp-sw i.rp-octmark{box-shadow:inset 0 -2px 0 var(--violet);border-radius:2px}
+.rp-octfix{padding:var(--s2) 0;border-top:1px solid var(--line)}
+.rp-octfix .btn{margin-top:var(--s1,4px)}
+.rp-octswap code{font-family:var(--font-mono);font-size:.84rem;overflow-wrap:anywhere}
+.rp-octnote code{font-family:var(--font-mono)}
+.rp-octnote > .hint{margin-top:var(--s2)}
+.rp-edrules{font-size:.84rem;line-height:1.5;color:var(--fg-2)}
+.rp-edrules > summary{cursor:pointer;color:var(--muted)}
+.rp-edrules dl{display:grid;grid-template-columns:72px minmax(0,1fr);gap:var(--s1,4px) var(--s3);margin:var(--s2) 0}
+.rp-edrules dt{font-weight:600;color:var(--fg)}
+.rp-edrules dd{margin:0}
+.rp-edwarn{font-size:.86rem;color:var(--fg-2)}
+.rp-edwarn:empty{display:none}
+.rp-edwarn ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--s2)}
+.rp-edwarn li{padding-left:var(--s3);border-left:2px solid var(--violet)}
 .rp-offnote{margin:0 0 var(--s2) 44px;padding:var(--s3);border-left:2px solid var(--rose);font-size:.88rem;line-height:1.5;color:var(--fg-2)}
 .rp-offnote p{margin:0 0 var(--s2)}
 .rp-line.rp-flash{border-color:var(--saffron);background:var(--saffron-soft)}
@@ -913,4 +932,4 @@ button.rp-flag{background:transparent;cursor:pointer}
 .rp-chgnote{margin:var(--s2) 0 0;font-size:.88rem;font-style:italic;color:var(--fg-2)}
 .rp-loghead{margin:var(--s4) 0 0;font-size:.92rem}
 .rp-lablock{display:block;margin-bottom:var(--s2);font-weight:600;font-size:.92rem}
-@media (max-width:980px){ .rp-edmeta{grid-template-columns:minmax(0,1fr)} .rp-all{margin-left:0} .rp-offnote{margin-left:0} }
+@media (max-width:980px){ .rp-edrules dl{grid-template-columns:minmax(0,1fr)} .rp-edrules dd{margin-bottom:var(--s2)} .rp-edmeta{grid-template-columns:minmax(0,1fr)} .rp-all{margin-left:0} .rp-offnote{margin-left:0} }

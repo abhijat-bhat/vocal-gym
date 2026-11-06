@@ -4,7 +4,7 @@
    GET /api/meta (the lists of ragas and talas the shell needs to start); accounts and logs always go to the
    server, and a log made offline waits in the page (app/js/session.js) until the server is back. v0.9: the
    repertoire's list is cached with the shell, and each composition (/repertoire/c/) once it has been opened. */
-const CACHE = 'vg-shell-0.9.4';
+const CACHE = 'vg-shell-0.9.5';
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png',
   '/css/app.css', '/shared/korvai-lab.css', '/shared/mela-explorer.css',

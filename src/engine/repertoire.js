@@ -354,6 +354,7 @@ export function bestUnits(tl, rows) {
    outlast a re-import. A line is named by a key: b:<section>:<line> for a line of the import, n:<id> for one
    the singer added. */
 const MARK_LOW = /[‘`“]/, MARK_UP = /[’'”]/;
+const VARIANTS = { S: 0, R: 3, G: 3, M: 2, P: 0, D: 3, N: 3 }, MOST_MARKS = 4;
 /* a cell as typed, in the compact text or the site's own marks (S’ ‘N ; and lower case) →
    { text: the compact text, units, errors: [what is wrong, in words] } */
 export function cleanCell(typed) {
@@ -380,16 +381,24 @@ export function cleanCell(typed) {
     if (LETTERS.includes(L)) {
       let v = '', up = 0, down = low;
       k++;
-      if (/[1-3]/.test(s[k] || '')) v = s[k++];
+      if (/\d/.test(s[k] || '')) {
+        const d = +s[k++];
+        if (d >= 1 && d <= VARIANTS[L]) v = String(d);
+        else errors.push(VARIANTS[L] ? L + ' has the variants ' + Array.from({ length: VARIANTS[L] }, (_, n) => L + (n + 1)).join(', ') + ', so ' + L + d + ' is not a swara.' : L + ' has no variants, so write ' + L + ', not ' + L + d + '.');
+      }
       while (MARK_UP.test(s[k] || '')) { up++; k++; }
       while (s[k] === '.') { down++; k++; }
+      if (/\d/.test(s[k] || '') && (up || down)) { errors.push('The variant goes before the octave mark: ' + L + s[k] + (up ? "'" : '.') + ', not ' + L + (up ? "'" : '.') + s[k] + '.'); k++; }
       if (up && down) errors.push(L + ' cannot be in both the upper and the lower octave.');
+      if (up > MOST_MARKS || down > MOST_MARKS) errors.push('An octave mark goes ' + MOST_MARKS + ' octaves at most, which is past any instrument: ' + L + "'".repeat(MOST_MARKS) + ' or ' + L + '.'.repeat(MOST_MARKS) + '.');
       put(L + v + "'".repeat(up) + '.'.repeat(up ? 0 : down));
       units += 1 / 2 ** Math.min(depth, 2);
       low = 0;
       continue;
     }
-    errors.push('“' + c + '” is not part of the notation.');
+    if (c === '.') errors.push('A lower-octave mark goes after its swara: N. not .N');
+    else if (MARK_UP.test(c)) errors.push("An upper-octave mark goes after its swara: S' not 'S");
+    else errors.push('“' + c + '” is not part of the notation.');
     k++;
   }
   if (low) errors.push('A lower-octave mark needs a swara after it.');
@@ -397,8 +406,10 @@ export function cleanCell(typed) {
   return { text, units, errors: Array.from(new Set(errors)) };
 }
 export const lineText = cells => (cells || []).join(' | ');
-/* a line as sent or typed → { line: { cells, syl, label }, units, errors }; empty cells are dropped */
-export function cleanLine(raw) {
+/* a line as sent or typed → { line: { cells, syl, label }, units, errors }; empty cells are dropped.
+   opts.scale (the section's scale) restricts its swaras to those of the raga; opts.keep (the line's cells as they stand)
+   lets a swara the line already has stay, so a singer can correct the rest of it. */
+export function cleanLine(raw, opts) {
   const r = raw && typeof raw === 'object' ? raw : {}, errors = [];
   if (!Array.isArray(r.cells)) return { line: null, units: 0, errors: ['A line needs its swaras.'] };
   if (r.cells.length > 32) errors.push('A line has at most 32 cells.');
@@ -409,6 +420,10 @@ export function cleanLine(raw) {
     if (String(typed || '').length > 800) { errors.push('Cell ' + (i + 1) + ' is too long.'); return; }
     const c = cleanCell(typed);
     c.errors.forEach(e => errors.push('Cell ' + (i + 1) + ': ' + e));
+    if (opts && opts.scale && c.text && !c.errors.length) {
+      const out = notesOutside([c.text], opts.scale, opts.keep);
+      if (out.length) errors.push('Cell ' + (i + 1) + ': ' + out.join(', ') + (out.length > 1 ? ' are' : ' is') + ' not in ' + (opts.scale.name || 'this raga') + ', which has ' + allowedNotes(opts.scale).join(' ') + '.');
+    }
     if (c.text) { cells.push(c.text); units += c.units; }
   });
   if (!cells.length && !errors.length) errors.push('A line needs at least one swara or karvai.');
@@ -504,6 +519,154 @@ export function applyEdits(comp, edits) {
     return Object.assign({}, s, { lines: out });
   });
   return { comp: Object.assign({}, comp, { sections }), lost };
+}
+
+/* ---------- octave checks (v0.9.5) ----------
+   A mark left off a swara is the slip the tala cannot show: the line still fills its cycles. Two checks look for it, and
+   neither changes anything: the page tags the line and offers the fix, and the singer decides, because a real leap would
+   be damaged by correcting it unasked.
+     spike  one swara far from both its neighbours, which an octave's move would bring close to both: R' S S' (S').
+            S S' S is left alone: a swara and its own octave is a phrase, not a slip
+     piece  the same swaras elsewhere in this composition, usually with another octave shape: a run with a mark left off,
+            which a spike cannot show since its notes move together
+   A fix stays inside the range the piece already uses, and one from the piece must not make the line leap further. */
+const PLACE = { S: 0, R: 1, G: 2, M: 3, P: 4, D: 5, N: 6 };
+const OCT = 7, SPIKE_LEAP = 5, SPIKE_NEAR = 2, RUN = 6, MOST_MOVED = 3;
+const octaveMarks = o => (o > 0 ? "'".repeat(o) : '.'.repeat(-o));
+const noteText = (n, o) => n.s + (n.v || '') + octaveMarks(o);
+/* a cell with its token tok (an index into parseCell's tokens, karvais included) at octave o */
+export function withOctave(cell, tok, o) {
+  const s = String(cell || '');
+  let k = 0, n = 0;
+  while (k < s.length) {
+    const c = s[k];
+    if (c === ',') { n++; k++; continue; }
+    if (LETTERS.includes(c.toUpperCase())) {
+      k++;
+      if (/[1-3]/.test(s[k] || '')) k++;
+      const from = k;
+      while (s[k] === "'" || s[k] === '.') k++;
+      if (n === tok) return s.slice(0, from) + octaveMarks(o) + s.slice(k);
+      n++;
+      continue;
+    }
+    k++;
+  }
+  return s;
+}
+const notesOf = l => (l.cells || []).flatMap((cell, ci) => parseCell(cell).map((t, tok) => ({ cell: ci, tok, s: t.s, v: t.v, o: t.o, p: PLACE[t.s] + OCT * t.o })).filter(n => n.s !== ','));
+const pathAround = (q, from, to, at) => { let n = 0; for (let i = Math.max(1, from); i <= Math.min(q.length - 1, to + 1); i++) n += Math.abs(at(i) - at(i - 1)); return n; };
+/* sections → the same shape by line: for sections[i].lines[j], the suggestions
+   [{ changes: [{ cell, tok, was, now }], checks: ['spike', 'piece'], usually?: 'the reading elsewhere', times?: n, cells: the line's cells with this fix }] */
+export function octaveChecks(sections) {
+  const lines = sections.map(s => s.lines.map(notesOf));
+  const out = sections.map(s => s.lines.map(() => []));
+  let lo = Infinity, hi = -Infinity;
+  lines.forEach(ls => ls.forEach(q => q.forEach(n => { if (n.p < lo) lo = n.p; if (n.p > hi) hi = n.p; })));
+  const inRange = (n, o) => { const p = PLACE[n.s] + OCT * o; return p >= lo && p <= hi; };
+  // the same swaras over a run of six, by octave shape
+  const shapes = new Map();
+  lines.forEach((ls, si) => ls.forEach((q, li) => {
+    for (let i = 0; i + RUN <= q.length; i++) {
+      const w = q.slice(i, i + RUN), letters = w.map(n => n.s).join(''), rel = w.map(n => n.o - w[0].o);
+      if (!shapes.has(letters)) shapes.set(letters, new Map());
+      const m = shapes.get(letters), k = rel.join();
+      if (!m.has(k)) m.set(k, { rel, text: w.map(n => noteText(n, n.o)).join(' '), hits: [] });
+      m.get(k).hits.push({ si, li, i });
+    }
+  }));
+  const votes = new Map();   // "si:li" → note index → octave → { n, usually }
+  shapes.forEach(m => {
+    if (m.size < 2) return;
+    const r = Array.from(m.values()).sort((a, b) => b.hits.length - a.hits.length), top = r[0];
+    if (top.hits.length < 2 || r.slice(1).some(x => x.hits.length > top.hits.length / 2)) return;
+    r.slice(1).forEach(x => x.hits.forEach(h => {
+      const q = lines[h.si][h.li];
+      // the least that makes this run read like the others
+      let best = null;
+      [0, 1, -1].forEach(sh => {
+        const want = top.rel.map(d => q[h.i].o + sh + d), moved = want.reduce((n, o, k) => n + (o !== q[h.i + k].o ? 1 : 0), 0);
+        if (!best || moved < best.moved) best = { want, moved };
+      });
+      if (!best.moved || best.moved > MOST_MOVED) return;
+      const key = h.si + ':' + h.li;
+      if (!votes.has(key)) votes.set(key, new Map());
+      best.want.forEach((o, k) => {
+        const n = q[h.i + k];
+        if (o === n.o || !inRange(n, o)) return;
+        const v = votes.get(key);
+        if (!v.has(h.i + k)) v.set(h.i + k, new Map());
+        const at = v.get(h.i + k), was = at.get(o) || { n: 0, usually: top.text, times: top.hits.length };
+        was.n += top.hits.length; at.set(o, was);
+      });
+    }));
+  });
+  const suggest = (si, li, ids, target, checks, extra) => {
+    const q = lines[si][li], cells = sections[si].lines[li].cells.slice();
+    const changes = ids.map(i => { cells[q[i].cell] = withOctave(cells[q[i].cell], q[i].tok, target(i)); return { cell: q[i].cell, tok: q[i].tok, was: noteText(q[i], q[i].o), now: noteText(q[i], target(i)) }; });
+    return Object.assign({ first: ids[0], ids, changes, checks, cells }, extra);
+  };
+  lines.forEach((ls, si) => ls.forEach((q, li) => {
+    const found = [], v = votes.get(si + ':' + li);
+    if (v) {
+      const ids = Array.from(v.keys()).sort((a, b) => a - b), choice = new Map();
+      ids.forEach(i => { let bestO = null, bestN = -1; v.get(i).forEach((x, o) => { if (x.n > bestN || (x.n === bestN && Math.abs(o - q[i].o) < Math.abs(bestO - q[i].o))) { bestO = o; bestN = x.n; } }); choice.set(i, bestO); });
+      let g = [];
+      const close = () => {
+        if (!g.length) return;
+        const f = g[0], t = g[g.length - 1], moved = i => PLACE[q[i].s] + OCT * choice.get(i);
+        const whole = pathAround(q, f, t, i => (i >= f && i <= t && choice.has(i) ? moved(i) : q[i].p));
+        if (whole <= pathAround(q, f, t, i => q[i].p)) {
+          // the smallest fix: one swara, if moving it alone leaps no further than moving them all
+          let one = null, least = whole;
+          g.forEach(j => { const n = pathAround(q, f, t, i => (i === j ? moved(i) : q[i].p)); if (n <= least) { one = j; least = n; } });
+          const ids = g.length > 1 && one != null ? [one] : g, x = v.get(ids[0]).get(choice.get(ids[0]));
+          // more than that is a passage in another octave, or another phrase: no slip to fix in one click
+          if (ids.length <= MOST_MOVED) found.push(suggest(si, li, ids, i => choice.get(i), ['piece'], { usually: x.usually, times: x.times }));
+        }
+        g = [];
+      };
+      ids.forEach(i => { if (g.length && i !== g[g.length - 1] + 1) close(); g.push(i); });
+      close();
+    }
+    for (let i = 1; i + 1 < q.length; i++) {
+      const a = q[i - 1].p, b = q[i].p, e = q[i + 1].p;
+      if (Math.abs(a - b) < SPIKE_LEAP || Math.abs(b - e) < SPIKE_LEAP) continue;
+      if (q[i - 1].s === q[i].s && q[i + 1].s === q[i].s) continue;   // S S' S: a swara and its octave, on purpose
+      [1, -1].forEach(d => {
+        const n = b + d * OCT, o = q[i].o + d;
+        if (Math.abs(a - n) > SPIKE_NEAR || Math.abs(n - e) > SPIKE_NEAR || !inRange(q[i], o)) return;
+        const same = found.find(x => x.ids.includes(i) && x.changes[x.ids.indexOf(i)].now === noteText(q[i], o));
+        if (same) same.checks = ['spike', 'piece'];
+        else found.push(suggest(si, li, [i], () => o, ['spike']));
+      });
+    }
+    out[si][li] = found.sort((x, y) => x.first - y.first).map(({ first, ids, ...x }) => x);
+  }));
+  return out;
+}
+/* the swaras a singer may write in a raga, without octave marks: its printed scale { aro, avaro }, and also: the anya
+   swaras it is written with (added at import, from the notation itself). A letter with no digit stands for any variant.
+   [] when no scale is known, and then nothing is restricted. */
+export function allowedNotes(scale) {
+  const names = [].concat(scale && scale.aro || [], scale && scale.avaro || [], scale && scale.also || []).map(n => /^([SRGMPDN])(\d?)/.exec(n)).filter(Boolean).map(m => m[1] + m[2]);
+  if (!names.length) return [];
+  return Array.from(new Set(['S'].concat(names))).sort((a, b) => PLACE[a[0]] - PLACE[b[0]] || a.localeCompare(b));
+}
+/* the swaras of a line outside allowedNotes(scale): a swara no one writes in this raga, or a slip. keep: cells whose
+   swaras may stay. → ['G', 'R1'] */
+export function notesOutside(cells, scale, keep) {
+  const names = allowedNotes(scale);
+  if (!names.length) return [];
+  const kept = new Set((keep || []).flatMap(c => parseCell(c).map(t => t.s + (t.v || ''))));
+  const out = new Set();
+  (cells || []).forEach(c => parseCell(c).forEach(t => {
+    if (t.s === ',') return;
+    const n = t.s + (t.v || ''), same = names.filter(x => x[0] === t.s);
+    if (kept.has(n)) return;
+    if (!same.length || (t.v && !same.some(x => x.length === 1 || +x[1] === t.v))) out.add(n);
+  }));
+  return Array.from(out);
 }
 
 export const REPERTOIRE_NOTE ='Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.';

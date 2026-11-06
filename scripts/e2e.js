@@ -336,6 +336,64 @@ try {
     await until('document.querySelector(".rp-off")', 'the tag in the imported version');
   });
 
+  await step('a confirmed slip is corrected; check octave offers a fix or correct as written; the editor states its rules and the raga\'s swaras', async () => {
+    await go('#/repertoire/2021-08-mahaganapathim-nattai-adi');
+    await until('document.querySelector(".rp-line[data-key=\\"b:1:2\\"] .rp-fixed")', 'the confirmed slip behind its fixed tag', 10000);
+    if (await js('return !!document.querySelector(".rp-line[data-key=\\"b:1:2\\"] .rp-oct");')) throw new Error('the corrected line still asks about its octave');
+    const tag = '.rp-line[data-key="b:0:3"]', before = await js('return document.querySelector(' + JSON.stringify(tag) + ').textContent;');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && document.querySelector(' + JSON.stringify(tag + ' .rp-octmark') + ')', 'the tag, and the swara it asks about');
+    await click(tag + ' .rp-oct');
+    await until('/stay as written/.test(document.querySelector(".rp-octnote").textContent) && document.querySelector(".rp-octnote [data-usefix]") && /far from the swaras/.test(document.querySelector(".rp-octnote").textContent)', 'the suggested fix and why');
+    if (await js('return document.querySelector(' + JSON.stringify(tag) + ').textContent;') !== before) throw new Error('opening the note changed the line');
+    await click(tag + ' .rp-oct'); await until('!document.querySelector(".rp-octnote")', 'the note to close');
+    await click(tag + ' .rp-oct'); await until('document.querySelector(".rp-octnote [data-usefix]")', 'the note again');
+    await click('.rp-octnote [data-usefix]');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-mine') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && /1 change by you/.test(document.querySelector(".rp-log summary").textContent)', 'the fix taken, marked and logged', 10000);
+    await js('document.querySelector(".rp-log").open = true;');
+    await until('/Octave check: S to S/.test(document.querySelector(".rp-log").textContent)', 'the log saying what it was');
+    // undone, the tag comes back
+    await click('.rp-log [data-undo]');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ')', 'the tag back after undoing', 10000);
+    // correct as written: the tag goes, the notation does not change, it survives a reload, and it can be asked again
+    await click(tag + ' .rp-oct'); await until('document.querySelector(".rp-octnote [data-okfix]")', 'the choice to keep it');
+    const swaras = 'return Array.from(document.querySelectorAll(' + JSON.stringify(tag + ' .rp-sw') + ')).map(x => x.textContent).join(" ");', asWritten = await js(swaras);
+    await click('.rp-octnote [data-okfix]');
+    await until('!document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ')', 'the tag settled', 10000);
+    if (await js(swaras) !== asWritten) throw new Error('marking it correct changed the notation');
+    await js('location.reload();');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ')', 'still settled after a reload', 15000);
+    await js('document.querySelector(".rp-log").open = true;');
+    await until('/marked correct as written/.test(document.querySelector(".rp-log summary").textContent) && document.querySelector("[data-askok]")', 'in the log, with a way back');
+    await click(tag + ' .rp-octok');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ')', 'asked again', 10000);
+    // the editor: its rules in view, every mistake named, warnings that do not stop a save
+    await click('#rp-edit'); await until('document.querySelector(".rp-pen")', 'the pens');
+    await click('.rp-line[data-key="b:0:0"] .rp-pen'); await until('document.querySelector(".rp-edrules[open]") && /no digit/i.test(document.querySelector(".rp-edrules").textContent) && /you can write S R3 G3 M1 P D3 N3/.test(document.querySelector(".rp-edrules").textContent)', 'the notation rules, with this raga\'s swaras');
+    const type = v => js('const i = document.querySelector(".rp-edin"); i.value = ' + JSON.stringify(v) + '; i.dispatchEvent(new Event("input", { bubbles: true }));');
+    await type('S2 M3'); await until('/S has no variants/.test(document.querySelector(".rp-edstat").textContent) && /M1, M2/.test(document.querySelector(".rp-edstat").textContent) && document.querySelector(".rp-edin[aria-invalid]")', 'both mistakes named');
+    await js('document.querySelector(".rp-edsave").click();'); await until('document.querySelector(".rp-edstat.bad")', 'the save refused');
+    // a variant the raga does not have is refused; the raga's own go through, and notes beyond three octaves
+    await type('R1 D1'); await until('/R1, D1 are not in/.test(document.querySelector(".rp-edstat").textContent) && document.querySelector(".rp-edin[aria-invalid]")', 'variants outside the raga refused');
+    await type("R3''' N3.... G3 D3"); await until('!document.querySelector(".rp-edstat.bad") && !document.querySelector(".rp-edin[aria-invalid]") && document.querySelector(".rp-edgrid").textContent.includes("₃")', 'the raga\'s variants, and octaves past three, taken and drawn');
+    await type("R' S S' D1"); await until('/D1 is not in/.test(document.querySelector(".rp-edstat").textContent)', 'one wrong variant among good swaras');
+    await type("R' S S' D"); await until('/Check the octave/.test(document.querySelector(".rp-edwarn").textContent) && !document.querySelector(".rp-edstat.bad")', 'an octave warning, with no refusal');
+    await click('[data-edfix]'); await until('document.querySelector(".rp-edin").value === "R\' S\' S\' D"', 'the suggestion in the box');
+    // a line made shorter loses the syllables past its end, says so, and saves
+    await js('const a = Array.from(document.querySelectorAll(".rp-edin")); a.slice(1).forEach(i => { i.value = ""; }); a[0].value = "S R"; a[0].dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('/will be dropped/.test(document.querySelector(".rp-edwarn").textContent)', 'the warning about syllables');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('!document.querySelector(".rp-edit") && document.querySelector(".rp-line[data-key=\\"b:0:0\\"] .rp-mine")', 'a shorter line saved', 10000);
+    // notes past three octaves save, and are sung
+    await click('.rp-line[data-key="b:0:1"] .rp-pen'); await until('document.querySelector(".rp-edit .rp-edin")', 'the editor again');
+    await js('const a = Array.from(document.querySelectorAll(".rp-edin")); a.slice(1).forEach(i => { i.value = ""; }); a[0].value = "S S\'\' S\'\'\' S\'\'\'\' S.. S... S.... R3\'"; a[0].dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('!document.querySelector(".rp-edstat.bad")', 'far octaves accepted');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('!document.querySelector(".rp-edit") && document.querySelector(".rp-line[data-key=\\"b:0:1\\"] .rp-mine")', 'far octaves saved', 10000);
+    await click('.rp-line[data-key="b:0:1"] .rp-loop');
+    await until('document.querySelector(".rp-line[data-key=\\"b:0:1\\"] .rp-sw i.now")', 'far octaves sung', 20000);
+    await click('#rp-tr .play'); await until('!document.querySelector("#rp-tr .play[data-playing]")', 'the loop to stop');
+  });
+
   await step('a lesson from a book: its source, why this notation was chosen, and a post that gave way', async () => {
     await go('#/repertoire/lesson-gurukulam-vani-veena-pustaka-pani-hindolam');
     await until('document.querySelector(".rp-line .rp-sw i") && /Geetham notes/.test(document.querySelector(".rp-head").textContent)', 'a new lesson, with its source', 10000);

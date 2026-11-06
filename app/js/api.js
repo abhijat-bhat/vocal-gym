@@ -49,6 +49,8 @@ export const api = {
     edits: comp => request('POST', '/api/repertoire/edits', { comp }),
     save: body => request('POST', '/api/repertoire/edits/save', body),
     restore: body => request('POST', '/api/repertoire/edits/restore', body),
-    changes: body => request('POST', '/api/repertoire/changes', body || {})
+    changes: body => request('POST', '/api/repertoire/changes', body || {}),
+    octaveOk: body => request('POST', '/api/repertoire/octave-ok', body),
+    octaveAsk: body => request('POST', '/api/repertoire/octave-ask', body)
   }
 };
