@@ -11,7 +11,7 @@
    stay as written until the singer takes it. The editor states the notation's rules and warns about what it may not stop. */
 import { api } from '../api.js';
 import { toggle, pitchedJob, stop, isPlaying } from '../audio.js';
-import { esc, $, $$, pageHead, transport, seg, toast, errorCard, explain, plural } from '../ui.js';
+import { esc, $, $$, pageHead, transport, seg, toast, errorCard, explain, plural, ARROW, BACK } from '../ui.js';
 import { getUser, refreshUser, userKnown, getRun, startRun } from '../session.js';
 import { parseCell, ragaOf, talaOf, playPlan, cleanCell, cleanLine, applyEdits, cycleGap, offCycle, sustainText, sustainLayout, octaveChecks, notesOutside, allowedNotes, lineText } from '/engine/repertoire.js';
 
@@ -144,8 +144,8 @@ function changeHtml(e, o) {
   const rows = [];
   if (e.before) rows.push('<div class="rp-chgrow"><span class="k">Was</span><code>' + was + '</code></div>');
   if (e.after) rows.push('<div class="rp-chgrow"><span class="k">Now</span><code>' + now + '</code></div>');
-  if (e.before && e.after && sylText(e.before) !== sylText(e.after)) rows.push('<div class="rp-chgrow"><span class="k">Sahitya</span><span>' + esc(sylText(e.before) || '(none)') + ' → ' + esc(sylText(e.after) || '(none)') + '</span></div>');
-  if (e.before && e.after && (e.before.label || '') !== (e.after.label || '')) rows.push('<div class="rp-chgrow"><span class="k">Label</span><span>' + esc(e.before.label || '(none)') + ' → ' + esc(e.after.label || '(none)') + '</span></div>');
+  if (e.before && e.after && sylText(e.before) !== sylText(e.after)) rows.push('<div class="rp-chgrow"><span class="k">Sahitya</span><span>' + esc(sylText(e.before) || '(none)') + ' ' + ARROW + ' ' + esc(sylText(e.after) || '(none)') + '</span></div>');
+  if (e.before && e.after && (e.before.label || '') !== (e.after.label || '')) rows.push('<div class="rp-chgrow"><span class="k">Label</span><span>' + esc(e.before.label || '(none)') + ' ' + ARROW + ' ' + esc(e.after.label || '(none)') + '</span></div>');
   const verb = e.action === 'restore' && !e.after ? 'Took back an added line' : VERB[e.action] || e.action;
   const acts = [];
   if (o.link) acts.push('<a class="btn small ghost" href="#/repertoire/' + esc(e.comp) + '/change/' + e.id + '">Open the line</a>');
@@ -162,7 +162,7 @@ async function showChanges(root) {
   if (!userKnown()) await refreshUser();
   if (location.hash !== here) return;
   document.title = 'Your changes · Repertoire · Vocal Gym';
-  const back = '<a class="rp-back" href="#/repertoire">← All compositions</a>';
+  const back = '<a class="rp-back" href="#/repertoire">' + BACK + 'All compositions</a>';
   if (!getUser()) { root.innerHTML = '<div class="wrap"><div class="phead rp-head">' + back + '<h1>Your changes to the notation</h1></div><div class="card pr-cta"><p>Your corrections belong to your account, so they are there next time.</p><div class="pr-row"><a class="btn primary" href="#/account">Log in or create an account</a></div></div></div>'; return; }
   const F = { comp: '', action: '' };
   let list = [], more = false, comps = [];
@@ -299,7 +299,7 @@ async function showComposition(root, id, jumpTo) {
     : scales[0].from === 'engine' ? 'The post prints no scale; this is ' + esc(scales[0].name) + ' as the engine knows it.' : '';
 
   root.innerHTML = '<div class="wrap">' +
-    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><h1>' + esc(nice(c.name)) + '</h1>' +
+    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">' + BACK + 'All compositions</a><h1>' + esc(nice(c.name)) + '</h1>' +
       '<p class="lead">' + [esc(c.type) + (c.ragamalika ? ', ragamalika' : ''), c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(nice(c.composer)), c.language && esc(c.language)].filter(Boolean).join(' · ') +
       '<br><span class="muted">' + creditOf(c) + '</span></p>' + comparedHtml(c) + '</div>' +
     '<div class="tool"><aside class="panel" aria-label="Settings">' +
@@ -501,7 +501,7 @@ async function showComposition(root, id, jumpTo) {
     const note = document.createElement('div');
     note.className = 'rp-offnote rp-octnote'; note.setAttribute('role', 'note'); note.dataset.for = b.dataset.oct;
     note.innerHTML = '<p>This line fills its tala either way, so only a singer can say which is right. Its swaras stay as written unless you take a fix.</p>' +
-      found.map((x, k) => '<div class="rp-octfix"><p class="rp-octswap">' + Array.from(new Set(x.changes.map(ch => ch.cell))).map(ci => 'Cell ' + (ci + 1) + ': <code>' + esc(sustainText(l.cells[ci])) + '</code> → <code>' + esc(sustainText(x.cells[ci])) + '</code>').join('<br>') + '</p><p class="hint muted">' + octaveWhy(x) + '</p>' +
+      found.map((x, k) => '<div class="rp-octfix"><p class="rp-octswap">' + Array.from(new Set(x.changes.map(ch => ch.cell))).map(ci => 'Cell ' + (ci + 1) + ': <code>' + esc(sustainText(l.cells[ci])) + '</code> ' + ARROW + ' <code>' + esc(sustainText(x.cells[ci])) + '</code>').join('<br>') + '</p><p class="hint muted">' + octaveWhy(x) + '</p>' +
         '<div class="rp-acts">' + (view === 'mine' ? '<button type="button" class="btn small" data-usefix="' + k + '">Use ' + esc(x.changes.map(ch => ch.now).join(' ')) + '</button>' : '') + '<button type="button" class="btn small ghost" data-okfix="' + k + '">Correct as written</button></div></div>').join('') +
       (view === 'mine' ? '<p class="hint muted">A fix changes your copy, and goes in your log of changes, where you can undo it. “Correct as written” changes nothing and stops asking about this reading, for you, unless the line changes.</p><button type="button" class="btn small ghost rp-octedit">Correct this line myself</button>' : '<p class="hint muted">Switch to My version to take a fix.</p>');
     note.querySelectorAll('[data-usefix]').forEach(u => { u.onclick = () => useOctaveFix(si, li, found[+u.dataset.usefix]); });

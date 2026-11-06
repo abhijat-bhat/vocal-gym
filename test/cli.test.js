@@ -21,8 +21,8 @@ test('command line', () => {
   assert.match(r.stdout, /attested · .*\[mela65#\d+, S\d+: /); assert.match(r.stdout, /% of swaras from attested phrases/);
   r = run('kalpana', '--raga', 'bilahari', '--aksharas', '16', '--eduppu-swara', 'P', '--allow-exceptions', '--ending', 'free');
   assert.equal(r.status, 0); assert.match(r.stdout, /direction-rule exceptions allowed/);
-  r = run('kalpana', '--raga', 'mela1', '--aksharas', '8', '--eduppu-swara', 'S');
-  assert.equal(r.status, 0); assert.match(r.stdout, /Phrase data: none for Kanakangi/);
+  r = run('kalpana', '--raga', 'mela6', '--aksharas', '8', '--eduppu-swara', 'S');
+  assert.equal(r.status, 0); assert.match(r.stdout, /Phrase data: none for Tanarupi/);
   r = run('kalpana', '--raga', 'mayamalavagowla', '--aksharas', '16', '--eduppu-swara', 'S', '--ending', 'mora', '--mora-style', 'gopuccha', '--temp', '0');
   assert.equal(r.status, 0); assert.match(r.stdout, /gopuccha mora \(/); assert.equal((r.stdout.match(/mora · mora \d of 3/g) || []).length, 3);
   r = run('kalpana', '--raga', 'kalyani', '--mora-style', 'zigzag');

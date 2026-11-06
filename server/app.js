@@ -11,6 +11,8 @@ import * as api from './api.js';
 import * as auth from './auth.js';
 import * as practice from './practice.js';
 import * as edits from './edits.js';
+import * as voiceCheck from './voice-check.js';
+import * as review from './review.js';
 import * as signin from './signin.js';
 import { Unavailable as DbUnavailable } from './db.js';
 
@@ -54,9 +56,15 @@ const ACCOUNT = {
   'POST /api/practice/routines/delete': ['user', practice.deleteRoutine], 'POST /api/practice/log': ['user', practice.saveLog],
   'POST /api/practice/logs': ['user', practice.logs], 'POST /api/practice/logs/delete': ['user', practice.deleteLog],
   'POST /api/practice/summary': ['user', practice.summary],
+  'POST /api/practice/share': ['user', practice.shareRoutine], 'POST /api/practice/shares': ['user', practice.myShares],
+  'POST /api/practice/shared': ['any', practice.sharedRoutine], 'POST /api/practice/shared/take': ['user', practice.takeRoutine],
   'POST /api/repertoire/edits': ['user', edits.edits], 'POST /api/repertoire/edits/save': ['user', edits.save],
   'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes],
-  'POST /api/repertoire/octave-ok': ['user', edits.octaveOk], 'POST /api/repertoire/octave-ask': ['user', edits.octaveAsk]
+  'POST /api/repertoire/octave-ok': ['user', edits.octaveOk], 'POST /api/repertoire/octave-ask': ['user', edits.octaveAsk],
+  'POST /api/voice/save': ['user', voiceCheck.save], 'POST /api/voice/list': ['user', voiceCheck.list],
+  'POST /api/voice/remove': ['user', voiceCheck.remove], 'POST /api/voice/remove-all': ['user', voiceCheck.removeAll],
+  'POST /api/review/overview': ['user', review.overview], 'POST /api/review/raga': ['user', review.raga],
+  'POST /api/review/verdict': ['user', review.verdict], 'POST /api/review/suggest': ['user', review.suggest], 'POST /api/review/unsuggest': ['user', review.unsuggest]
 };
 const MAX_BODY = 256 * 1024;
 

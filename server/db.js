@@ -4,6 +4,7 @@
    It opens on first use, so the rest of the server runs on older Node versions with accounts unavailable.
    Tables: users, sessions (login tokens, stored hashed), routines (a user's practice routines) and logs
    (finished practice sessions); v0.9.1: notation_edits (a singer's corrections to the repertoire, server/edits.js); v0.9.5: octave_ok (octave questions a singer has settled as correct as written); v0.10: identities and login_codes (signing in with Google, or with an email or phone and a code, server/signin.js).
+   v0.11: voice_checks (a singer's daily numbers, server/voice-check.js), phrase_reviews and phrase_suggestions (server/review.js).
    Foreign keys cascade, so deleting a user deletes everything of theirs. */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -93,6 +94,45 @@ CREATE TABLE IF NOT EXISTS login_codes (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS login_codes_to ON login_codes(kind, value, created_at);
+CREATE TABLE IF NOT EXISTS routine_shares (
+  code TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  routine_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  items TEXT NOT NULL,
+  taken INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  UNIQUE (user_id, routine_id)
+);
+CREATE TABLE IF NOT EXISTS voice_checks (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  local_date TEXT NOT NULL,
+  features TEXT NOT NULL,
+  form TEXT NOT NULL,
+  context TEXT NOT NULL,
+  consent_version INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (user_id, local_date)
+);
+CREATE TABLE IF NOT EXISTS phrase_reviews (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  raga TEXT NOT NULL,
+  phrase_id TEXT NOT NULL,
+  swaras TEXT NOT NULL,
+  verdict TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, raga, phrase_id)
+);
+CREATE TABLE IF NOT EXISTS phrase_suggestions (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  raga TEXT NOT NULL,
+  swaras TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS octave_ok (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   comp TEXT NOT NULL,

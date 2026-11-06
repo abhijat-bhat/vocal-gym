@@ -1,7 +1,7 @@
 /* Alankaras: the sheet pattern for a tala, carried through any raga, plus new patterns on demand. */
 import { api } from '../api.js';
 import { toggle, pitchedJob, stop } from '../audio.js';
-import { esc, $, term, q, pageHead, stepHead, seg, dial, ragaPicker, talaPicker, talaShort, transport, notation, notationText, legend, checks, explain, errorCard, copy, toast } from '../ui.js';
+import { esc, $, term, q, pageHead, stepHead, seg, dial, ragaPicker, talaPicker, talaShort, transport, notation, notationText, legend, checks, explain, errorCard, copy, toast, ARROW, BACK } from '../ui.js';
 
 const S = {
   raga: 'mela15', tala: { fam: 'triputa', L: 4 }, speed: 1, T: 0.8, span: null, numbers: false,
@@ -39,7 +39,7 @@ export async function mount(root, meta) {
   '</aside><section class="result" aria-live="polite">' +
     '<div class="card"><div class="card-h"><div><h2 id="a-title">…</h2><div class="card-sub" id="a-sub"></div></div><span id="a-badge"></span></div>' +
       '<div id="a-explain"></div>' +
-      '<div class="varnav"><button class="btn small" id="a-prev">← Previous</button><span class="count" id="a-count"></span><button class="btn small" id="a-next">Next →</button><span class="spacer"></span><button class="btn small ghost" id="a-sheet">Back to the sheet pattern</button><button class="btn" id="a-new">New pattern</button></div>' +
+      '<div class="varnav"><button class="btn small" id="a-prev">' + BACK + 'Previous</button><span class="count" id="a-count"></span><button class="btn small" id="a-next">Next' + ARROW + '</button><span class="spacer"></span><button class="btn small ghost" id="a-sheet">Back to the sheet pattern</button><button class="btn" id="a-new">New pattern</button></div>' +
     '</div>' +
     '<div class="card"><div id="a-tr"></div><div class="kfloor" id="a-clock" aria-hidden="true"></div><div class="notation-wrap" id="a-n"></div><div id="a-legend"></div><div class="notation-actions"><button class="btn small" id="a-copy">Copy notation</button></div></div>' +
     '<div class="card tool-about"><p class="lead">' + about + '</p></div>' +

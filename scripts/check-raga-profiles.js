@@ -26,12 +26,14 @@ const TOKEN = /^([SRGMPDN])([123])?(['.])?$/;
 
 /* Map from swara letter to pitch class for a raga, e.g. { S: 0, R: 2, G: 4, ... }. */
 export function letterMap(raga) {
-  const m = {};
+  const m = {}, two = new Set();
   Object.entries(raga.labels).forEach(([pc, lab]) => {
     const L = lab[0];
-    if (m[L] != null && m[L] !== +pc) throw new Error(raga.id + ': two variants of ' + L);
+    // a bhashanga raga may have two (Bhairavi's D1 and D2): then a phrase must say which
+    if (m[L] != null && m[L] !== +pc) { two.add(L); return; }
     m[L] = +pc;
   });
+  two.forEach(L => { delete m[L]; });
   return m;
 }
 
@@ -60,7 +62,7 @@ export function parsePhrase(raga, str) {
       if (pc == null) return { error: 'unknown variant "' + tok + '"' };
     } else {
       pc = lm[L];
-      if (pc == null) return { error: 'swara ' + L + ' is not in ' + raga.name + ' (write an explicit variant for an anya swara)' };
+      if (pc == null) return { error: 'swara ' + L + ' is not in ' + raga.name + ', or it has two variants (write an explicit variant, such as ' + L + '2)' };
     }
     if (!union.has(pc)) anya.push(tok.replace(/['.]$/, ''));
     pitches.push(pc + (oct === "'" ? 12 : oct === '.' ? -12 : 0));
@@ -264,6 +266,9 @@ export function validateProfiles(doc, { fix = false } = {}) {
     const raga = E[id], p = doc.ragas[id];
     if (p.scale.arohana !== scaleString(raga, 'arohana')) errs.push(id + ': arohana differs from the engine');
     if (p.scale.avarohana !== scaleString(raga, 'avarohana')) errs.push(id + ': avarohana differs from the engine');
+    const kr = raga.krama ? raga.krama.text : null, pk = p.scale.krama || null;
+    if (JSON.stringify(kr) !== JSON.stringify(pk ? [pk.arohana, pk.avarohana] : null)) errs.push(id + ': krama differs from the engine');
+    if (pk && !srcOk(pk.source)) errs.push(id + ': krama has no known source');
     (p.phrases || []).forEach((ph, k) => {
       const c = checkPhrase(raga, ph.swaras);
       if (c.error) { errs.push(id + ' phrase ' + k + ' "' + ph.swaras + '": ' + c.error); return; }

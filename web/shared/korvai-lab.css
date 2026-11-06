@@ -1,6 +1,6 @@
 /* Vocal Gym · the Korvai & Tihai lab (web/shared/korvai-lab.js). Uses the theme tokens shared by the
    playground (web/shared/theme.css) and the app (app/css/app.css). */
-.kl{--kl-r:12px;--kl-rs:8px;--kl-cw:30px;display:flex;flex-direction:column;gap:14px;font-family:var(--font-body)}
+.kl{--kl-r:2px;--kl-rs:2px;--kl-cw:30px;display:flex;flex-direction:column;gap:14px;font-family:var(--font-body)}
 .kl *{box-sizing:border-box}
 .kl button{font:inherit;color:inherit;cursor:pointer}
 .kl button:disabled{cursor:not-allowed;opacity:.45}
@@ -48,10 +48,9 @@
 .kl-rail [aria-current="step"] .n{background:var(--saffron);border-color:var(--saffron);color:var(--bg)}
 .kl-lesson{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--kl-r);padding:20px 24px 18px;min-width:0}
 .kl-lesson h3{font-family:var(--font-display);font-size:1.6rem;margin:2px 0 8px}
-.kl-kicker{margin:0;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--saffron);font-weight:600}
 .kl-lbody>p{max-width:72ch;color:var(--fg-2);margin:.5rem 0}
 .kl-lbody>p b{color:var(--fg)}
-.kl-tip{font-size:.88rem;color:var(--muted)!important;border-left:2px solid var(--teal);padding-left:10px}
+.kl-tip{font-size:.88rem;color:var(--muted)!important}
 .kl-lnav{display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-2)}
 .kl-dots{flex:1;display:flex;justify-content:center;gap:5px}
 .kl-dots i{width:7px;height:7px;border-radius:50%;background:var(--line-2)}

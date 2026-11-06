@@ -42,7 +42,25 @@ export const api = {
     log: body => request('POST', '/api/practice/log', body),
     logs: body => request('POST', '/api/practice/logs', body || {}),
     deleteLog: id => request('POST', '/api/practice/logs/delete', { id }),
-    summary: today => request('POST', '/api/practice/summary', { today })
+    summary: today => request('POST', '/api/practice/summary', { today }),
+    share: id => request('POST', '/api/practice/share', { id }),
+    shares: () => request('POST', '/api/practice/shares', {}),
+    shared: code => request('POST', '/api/practice/shared', { code }),
+    take: code => request('POST', '/api/practice/shared/take', { code })
+  },
+  // v0.11: Voice Check's numbers, and a teacher's review of the phrases
+  voice: {
+    list: () => request('POST', '/api/voice/list', {}),
+    save: body => request('POST', '/api/voice/save', body),
+    remove: id => request('POST', '/api/voice/remove', { id }),
+    removeAll: () => request('POST', '/api/voice/remove-all', {})
+  },
+  review: {
+    overview: () => request('POST', '/api/review/overview', {}),
+    raga: raga => request('POST', '/api/review/raga', { raga }),
+    verdict: body => request('POST', '/api/review/verdict', body),
+    suggest: body => request('POST', '/api/review/suggest', body),
+    unsuggest: id => request('POST', '/api/review/unsuggest', { id })
   },
   // v0.10: signing in with Google, or with an email and a code (server/signin.js)
   signin: {

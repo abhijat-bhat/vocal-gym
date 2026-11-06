@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.10.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.11.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -32,6 +32,8 @@ var VGEngine = (() => {
     FAM: () => FAM,
     FAMILIAR: () => FAMILIAR,
     FAM_WORDS: () => FAM_WORDS,
+    FORM: () => FORM,
+    FORM_SCALE: () => FORM_SCALE,
     GAMAKA_CONSTANTS: () => constants_exports,
     HEAVY: () => HEAVY,
     INSPIRATION_SCHEMA: () => INSPIRATION_SCHEMA,
@@ -48,7 +50,10 @@ var VGEngine = (() => {
     PDF_ALANKARA: () => PDF_ALANKARA,
     PDF_FAM: () => PDF_FAM,
     PDF_JATI: () => PDF_JATI,
+    PROBE: () => PROBE,
+    PROBE_SECONDS: () => PROBE_SECONDS,
     REPERTOIRE_NOTE: () => REPERTOIRE_NOTE,
+    SARALI_1: () => SARALI_1,
     SEMI: () => SEMI,
     SOLLU: () => SOLLU,
     TEER: () => TEER,
@@ -61,6 +66,7 @@ var VGEngine = (() => {
     allowedNotes: () => allowedNotes,
     angaStarts: () => angaStarts,
     applyEdits: () => applyEdits,
+    baseline: () => baseline,
     bestUnits: () => bestUnits,
     buildContour: () => buildContour,
     canonicalMotif: () => canonicalMotif,
@@ -101,6 +107,7 @@ var VGEngine = (() => {
     lineTokens: () => lineTokens,
     lineUnits: () => lineUnits,
     makeProjector: () => makeProjector,
+    measureStep: () => measureStep,
     melaFromSwaras: () => melaFromSwaras,
     melaLabels: () => melaLabels,
     melaName: () => melaName,
@@ -147,6 +154,7 @@ var VGEngine = (() => {
     setProfiles: () => setProfiles,
     soft: () => soft,
     splitCompound: () => splitCompound,
+    summariseProbe: () => summariseProbe,
     sustainLayout: () => sustainLayout,
     sustainText: () => sustainText,
     syllableOf: () => syllableOf,
@@ -156,6 +164,7 @@ var VGEngine = (() => {
     tokenizeLine: () => tokenizeLine,
     trikaala: () => trikaala,
     unitsPerBeat: () => unitsPerBeat,
+    voiceFrames: () => voiceFrames,
     withOctave: () => withOctave,
     yatiBlocks: () => yatiBlocks
   });
@@ -215,6 +224,11 @@ var VGEngine = (() => {
   var NL = { 9: "N1", 10: "N2", 11: "N3" };
   var CHAKRA = ["Indu", "Netra", "Agni", "Veda", "Bana", "Rutu", "Rishi", "Vasu", "Brahma", "Disi", "Rudra", "Aditya"];
   var MELA_NAMES = ["Kanakangi", "Ratnangi", "Ganamurti", "Vanaspati", "Manavati", "Tanarupi", "Senavati", "Hanumatodi", "Dhenuka", "Natakapriya", "Kokilapriya", "Rupavati", "Gayakapriya", "Vakulabharanam", "Mayamalavagowla", "Chakravakam", "Suryakantam", "Hatakambari", "Jhankaradhwani", "Natabhairavi", "Keeravani", "Kharaharapriya", "Gourimanohari", "Varunapriya", "Mararanjani", "Charukesi", "Sarasangi", "Harikambhoji", "Dheerasankarabharanam", "Naganandini", "Yagapriya", "Ragavardhini", "Gangeyabhushani", "Vagadheeswari", "Shulini", "Chalanata", "Salagam", "Jalarnavam", "Jhalavarali", "Navaneetam", "Pavani", "Raghupriya", "Gavambhodi", "Bhavapriya", "Shubhapantuvarali", "Shadvidamargini", "Suvarnangi", "Divyamani", "Dhavalambari", "Namanarayani", "Kamavardhini", "Ramapriya", "Gamanashrama", "Vishwambari", "Shamalangi", "Shanmukhapriya", "Simhendramadhyamam", "Hemavati", "Dharmavati", "Neetimati", "Kantamani", "Rishabhapriya", "Latangi", "Vachaspati", "Mechakalyani", "Chitrambari", "Sucharitra", "Jyotiswarupini", "Dhatuvardhani", "Nasikabhushani", "Kosalam", "Rasikapriya"];
+  var sp = (s) => s.trim().split(/\s+/);
+  var pitchOf = (t) => {
+    const m = /^([SRGMPDN][123]?)(['.]?)$/.exec(t);
+    return SEMI[m[1]] + (m[2] === "'" ? 12 : m[2] === "." ? -12 : 0);
+  };
   function melaLabels(n) {
     const i = (n - 1) % 36, ma = n <= 36 ? 5 : 6;
     const rg = RG[Math.floor(i / 6)], dn = DN[i % 6];
@@ -230,7 +244,15 @@ var VGEngine = (() => {
     labels[0] = "S";
     const nA = new Set(aro.map((p) => p % 12)).size, nD = new Set(avaro.map((p) => p % 12)).size;
     const cls = (n) => n === 5 ? "audava" : n === 6 ? "shadava" : n === 7 ? "sampurna" : n + "-note";
-    return Object.assign({ id, name, aro, avaro, labels, cls: cls(nA) + "\u2013" + cls(nD) }, meta || {});
+    const m = Object.assign({}, meta), krama = m.krama, deny = m.deny;
+    delete m.krama;
+    delete m.deny;
+    if (krama) m.krama = { aro: sp(krama[0]).map(toPitch), avaro: sp(krama[1]).map(toPitch), text: krama.slice() };
+    if (deny) m.deny = deny.map((d) => {
+      const [a, b] = sp(d);
+      return [pitchOf(a), pitchOf(b)];
+    });
+    return Object.assign({ id, name, aro, avaro, labels, cls: cls(nA) + "\u2013" + cls(nD) }, m);
   }
   function melakarta(n) {
     const L = melaLabels(n);
@@ -242,7 +264,6 @@ var VGEngine = (() => {
       { mela: n, chakra: CHAKRA[Math.floor((n - 1) / 6)], kind: "melakarta" }
     );
   }
-  var sp = (s) => s.trim().split(/\s+/);
   var JANYA = [
     ["mohanam", "Mohanam", 28, "S R2 G3 P D2 S'", "S' D2 P G3 R2 S"],
     ["hamsadhwani", "Hamsadhwani", 29, "S R2 G3 P N3 S'", "S' N3 P G3 R2 S"],
@@ -257,8 +278,23 @@ var VGEngine = (() => {
     ["kedaragowla", "Kedaragowla", 28, "S R2 M1 P N2 S'", "S' N2 D2 P M1 G3 R2 S"],
     ["abheri", "Abheri", 22, "S G2 M1 P N2 S'", "S' N2 D2 P M1 G2 R2 S"],
     ["sriranjani", "Sriranjani", 22, "S R2 G2 M1 D2 N2 S'", "S' N2 D2 M1 G2 R2 S"],
-    ["kambhoji", "Kambhoji", 28, "S R2 G3 M1 P D2 S'", "S' N2 D2 P M1 G3 R2 S"]
-  ].map((j) => defineRaga(j[0], j[1], sp(j[3]), sp(j[4]), { parent: j[2], kind: "janya" }));
+    ["kambhoji", "Kambhoji", 28, "S R2 G3 M1 P D2 S'", "S' N2 D2 P M1 G3 R2 S"],
+    // v0.11: vakra and bhashanga. Scales and krama from data/raga-profiles.json's sources (scale.krama, grammar)
+    ["begada", "Begada", 28, "S R2 G3 M1 P D2 S'", "S' N2 D2 P M1 G3 R2 S", { krama: ["S G3 R2 G3 M1 P D2 P S'", "S' N2 D2 P M1 G3 R2 S"], deny: ["D2 S'"], oneWay: true }],
+    ["sahana", "Sahana", 28, "S R2 G3 M1 P D2 N2 S'", "S' N2 D2 P M1 G3 R2 S", { krama: ["S R2 G3 M1 P M1 D2 N2 S'", "S' N2 D2 P M1 G3 M1 R2 G3 R2 S"], deny: [], oneWay: true }],
+    ["sri", "Sri", 22, "S R2 M1 P N2 S'", "S' N2 D2 P M1 G2 R2 S", { krama: ["S R2 M1 P N2 S'", "S' N2 P D2 N2 P M1 R2 G2 R2 S"], deny: ["N2 D2", "D2 P", "M1 G2"], oneWay: true }],
+    ["darbar", "Darbar", 22, "S R2 M1 P D2 N2 S'", "S' N2 D2 P M1 G2 R2 S", { krama: ["S R2 M1 P D2 N2 S'", "S' N2 D2 P M1 R2 G2 G2 R2 S"], deny: ["M1 G2"], oneWay: true }],
+    ["nayaki", "Nayaki", 22, "S R2 M1 P D2 S'", "S' N2 D2 P M1 G2 R2 S", { krama: ["S R2 M1 P D2 N2 D2 P S'", "S' N2 D2 P M1 R2 G2 R2 S"], deny: ["D2 S'", "M1 G2"], oneWay: true }],
+    ["kanada", "Kanada", 22, "S R2 G2 M1 D2 N2 S'", "S' N2 P M1 G2 R2 S", { krama: ["S R2 G2 M1 D2 N2 S'", "S' N2 P M1 G2 M1 R2 S"], deny: ["G2 R2"], oneWay: true }],
+    ["anandabhairavi", "Anandabhairavi", 20, "S R2 G2 M1 P D2 S'", "S' N2 D2 P M1 G2 R2 S", { krama: ["S G2 R2 G2 M1 P D2 P S'", "S' N2 D2 P M1 G2 R2 S"], deny: ["S R2", "D2 S'"], oneWay: true }],
+    ["bhairavi", "Bhairavi", 20, "S R2 G2 M1 P D2 N2 S'", "S' N2 D1 P M1 G2 R2 S", { deny: [], oneWay: true }],
+    ["mukhari", "Mukhari", 20, "S R2 M1 P D2 N2 S'", "S' N2 D1 P M1 G2 R2 S", { krama: ["S R2 M1 P N2 D2 S'", "S' N2 D1 P M1 G2 R2 S"], deny: ["D2 N2", "N2 S'"], oneWay: true }],
+    ["kapi", "Kapi", 22, "S R2 M1 P N3 S'", "S' N2 D2 P M1 G2 R2 S", { krama: ["S R2 M1 P N3 S'", "S' N2 D2 N2 P M1 G2 R2 S"], deny: ["D2 P"], oneWay: true }],
+    ["huseni", "Huseni", 22, "S R2 G2 M1 P D2 N2 S'", "S' N2 D1 P M1 G2 R2 S", { krama: ["S R2 G2 M1 P N2 D2 N2 S'", "S' N2 D1 P M1 G2 R2 S"], deny: ["P D2"], oneWay: true }],
+    ["devagandhari", "Devagandhari", 29, "S R2 M1 P D2 S'", "S' N3 D2 P M1 G3 R2 S", { krama: ["S R2 M1 P D2 S'", "S' N3 D2 P M1 G3 R2 S"], oneWay: true }],
+    ["dhanyasi", "Dhanyasi", 8, "S G2 M1 P N2 S'", "S' N2 D1 P M1 G2 R1 S", { oneWay: true }],
+    ["sama", "Sama", 28, "S R2 M1 P D2 S'", "S' D2 P M1 G3 R2 S", { oneWay: true }]
+  ].map((j) => defineRaga(j[0], j[1], sp(j[3]), sp(j[4]), Object.assign({ parent: j[2], kind: "janya" }, j[5])));
   function allRagas() {
     const m = [];
     for (let n = 1; n <= 72; n++) m.push(melakarta(n));
@@ -610,7 +646,25 @@ var VGEngine = (() => {
     const unionPC = Array.from(new Set(aro.concat(av).map(mod12))).sort((a, b) => a - b);
     const aroExt = (i) => aro[(i % nA + nA) % nA] + 12 * Math.floor(i / nA);
     const avExt = (i) => av[(i % nD + nD) % nD] - 12 * Math.floor(i / nD);
-    const valid = (a, b) => b > a ? aroPC.has(mod12(b)) : b < a ? avPC.has(mod12(b)) : true;
+    const moveKey = (a, b) => mod12(a) * 24 + mod12(b) * 2 + (b > a ? 1 : 0);
+    const walked = /* @__PURE__ */ new Set(), denied = /* @__PURE__ */ new Set();
+    if (raga.krama) [raga.krama.aro, raga.krama.avaro].forEach((l) => {
+      for (let i = 1; i < l.length; i++) if (l[i] !== l[i - 1]) walked.add(moveKey(l[i - 1], l[i]));
+    });
+    (raga.deny || []).forEach(([a, b]) => denied.add(moveKey(a, b)));
+    const graded = walked.size > 0 || denied.size > 0 || !!raga.oneWay;
+    const direct = (a, b) => b > a ? aroPC.has(mod12(b)) : b < a ? avPC.has(mod12(b)) : true;
+    const valid = !graded ? direct : (a, b) => {
+      if (b === a) return true;
+      const k = moveKey(a, b);
+      if (walked.has(k)) return true;
+      if (denied.has(k)) return false;
+      if (raga.oneWay) {
+        const pc = mod12(a);
+        if (b > a ? !aroPC.has(pc) : !avPC.has(pc)) return false;
+      }
+      return direct(a, b);
+    };
     function candidates(lo, hi) {
       const out = [];
       for (let o = Math.floor(lo / 12) - 1; o <= Math.floor(hi / 12) + 1; o++)
@@ -1081,6 +1135,27 @@ var VGEngine = (() => {
       exceptions: [],
       avoid: []
     },
+    "anandabhairavi": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "low",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "anandabhairavi#0", "pitches": [10, 7], "durs": [2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S234" },
+        { "id": "anandabhairavi#2", "pitches": [5, 7, 7, 5, 3, 2, 3], "durs": [1, 2, 1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S234" },
+        { "id": "anandabhairavi#3", "pitches": [3, 5, 7, 9, 7, 12], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S234" }
+      ],
+      exceptions: [
+        { "id": "anandabhairavi#1", "pitches": [5, 7, 10, 7, 10, 7, 5], "durs": [1, 1, 1, 2, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S234", "anya": [] }
+      ],
+      avoid: []
+    },
     "arabhi": {
       landing: [0, 2, 7],
       avoidLanding: [4, 11],
@@ -1109,6 +1184,67 @@ var VGEngine = (() => {
         { "pitches": [7, 5, 9, 12], "strength": "hard" }
       ]
     },
+    "begada": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "begada#0", "pitches": [4, 5, 7, 5, 9, 7], "durs": [1, 2, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#1", "pitches": [9, 7, 5, 4, 2, 0], "durs": [1, 1, 2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#4", "pitches": [-5, 0, 4], "durs": [1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#5", "pitches": [4, 5, 9, 9, 7, 5], "durs": [1, 1, 2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#7", "pitches": [7, 9, 7, 12], "durs": [1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#8", "pitches": [7, 12, 16], "durs": [1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#9", "pitches": [16, 17, 16, 14, 12], "durs": [1, 2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#10", "pitches": [14, 10, 9, 9, 7], "durs": [1, 2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#11", "pitches": [4, 5, 9, 14, 14, 12, 10, 9, 7, 5, 4, 2], "durs": [2, 2, 2, 2, 1, 1, 2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S228" },
+        { "id": "begada#13", "pitches": [4, 5, 9, 7, 5, 7, 4, 2, 0], "durs": [1, 2, 1, 1, 1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228" }
+      ],
+      exceptions: [
+        { "id": "begada#2", "pitches": [-2, 0, 4, 2, 0], "durs": [1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228", "anya": [] },
+        { "id": "begada#3", "pitches": [-2, 0, 2, 2, 0, -2, -3, -5, -3, -5], "durs": [1, 1, 2, 1, 1, 2, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228", "anya": [] },
+        { "id": "begada#6", "pitches": [5, 7, 9, 7, 9, 10, 9, 7], "durs": [1, 1, 1, 1, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228", "anya": [] },
+        { "id": "begada#12", "pitches": [4, 5, 7, 9, 10, 9, 7, 5, 4, 2], "durs": [1, 1, 1, 1, 2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S228", "anya": [] },
+        { "id": "begada#14", "pitches": [0, -1, -3, -5, 0, -2, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S228", "anya": ["N3"] }
+      ],
+      avoid: []
+    },
+    "bhairavi": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "medium",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "bhairavi#0", "pitches": [12, 14, 12, 10, 8], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#1", "pitches": [2, 0, 2, 0, -2], "durs": [2, 2, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#2", "pitches": [7, 7, 5, 3, 2], "durs": [1, 1, 1, 3, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#3", "pitches": [8, 7, 7, 5, 3], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#4", "pitches": [14, 12, 10, 8, 7], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#5", "pitches": [8, 7, 5, 3, 2], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#6", "pitches": [-2, 0, 2, 2, 0], "durs": [1, 1, 2, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#7", "pitches": [-2, 0, 2, 3, 2, 0], "durs": [1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S236" },
+        { "id": "bhairavi#8", "pitches": [10, 8, 7, 5, 3], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#9", "pitches": [15, 14, 12, 10, 8, 7], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#10", "pitches": [7, 5, 3, 2, 0], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" },
+        { "id": "bhairavi#11", "pitches": [0, 2, 3, 2, 0], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S237" },
+        { "id": "bhairavi#12", "pitches": [14, 12, 10, 8, 7], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S235" }
+      ],
+      exceptions: [],
+      avoid: []
+    },
     "bilahari": {
       landing: [0, 2, 7, 9],
       avoidLanding: [],
@@ -1127,6 +1263,98 @@ var VGEngine = (() => {
       ],
       exceptions: [
         { "id": "bilahari#2", "pitches": [7, 9, 10, 7, 9, 7, 5, 4, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S169", "anya": ["N2"] }
+      ],
+      avoid: []
+    },
+    "darbar": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "darbar#0", "pitches": [2, 5, 7, 9, 10, 7], "durs": [1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#1", "pitches": [7, 5, 9, 7, 5, 2, 3, 3, 2, 0, 2], "durs": [1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#2", "pitches": [2, 0, -2, 0, -3, -5], "durs": [1, 1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#4", "pitches": [0, 2, 9, 9, 7, 5, 2], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#5", "pitches": [5, 7, 9, 10, 12, 7], "durs": [1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#6", "pitches": [9, 10, 12, 14, 12], "durs": [1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#7", "pitches": [14, 15, 15, 14, 12, 14], "durs": [1, 1, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#8", "pitches": [14, 19, 17, 14, 15, 15, 14, 12], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#9", "pitches": [7, 14, 12, 10, 12, 9, 10, 7], "durs": [1, 1, 1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#10", "pitches": [7, 9, 7, 5], "durs": [1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#11", "pitches": [5, 7, 5, 2], "durs": [1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#12", "pitches": [3, 3, 2, 0, 2], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#13", "pitches": [9, 7, 9], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#14", "pitches": [14, 12, 14], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#15", "pitches": [14, 12, 10, 12, 9, 7, 5, 2, 3, 3, 2, 0, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S231" },
+        { "id": "darbar#16", "pitches": [2, 7, 5, 2, 3, 3, 2, 0, 2, 0], "durs": [2, 1, 1, 2, 2, 2, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S231" }
+      ],
+      exceptions: [],
+      avoid: []
+    },
+    "devagandhari": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "devagandhari#4", "pitches": [5, 7, 9], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241" },
+        { "id": "devagandhari#6", "pitches": [9, 14, 12], "durs": [1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S241" },
+        { "id": "devagandhari#8", "pitches": [5, 4, 2], "durs": [2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241" },
+        { "id": "devagandhari#9", "pitches": [12, 11, 9], "durs": [2, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241" },
+        { "id": "devagandhari#10", "pitches": [17, 16, 14], "durs": [2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241" },
+        { "id": "devagandhari#12", "pitches": [9, 14, 12], "durs": [1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S241" }
+      ],
+      exceptions: [
+        { "id": "devagandhari#0", "pitches": [12, 11, 9, 10, 9, 7], "durs": [1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S241", "anya": ["N2"] },
+        { "id": "devagandhari#1", "pitches": [7, 9, 10, 9, 7, 5, 4, 2], "durs": [2, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": ["N2"] },
+        { "id": "devagandhari#2", "pitches": [0, 2, 4, 2, 0, -1, -3], "durs": [2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": [] },
+        { "id": "devagandhari#3", "pitches": [-1, 0, 2], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": [] },
+        { "id": "devagandhari#5", "pitches": [11, 12, 14, 16, 17, 16, 14, 14], "durs": [1, 1, 1, 1, 2, 2, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": [] },
+        { "id": "devagandhari#7", "pitches": [12, 14, 12, 11, 12, 11, 9, 10, 9, 7, 9, 7, 5, 4, 2], "durs": [2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": ["N2"] },
+        { "id": "devagandhari#11", "pitches": [12, 11, 9, 10, 9, 7, 5, 9], "durs": [1, 1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S241", "anya": ["N2"] }
+      ],
+      avoid: []
+    },
+    "dhanyasi": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "dhanyasi#0", "pitches": [7, 7, 5, 3, 5, 7, 10, 8, 7], "durs": [1, 1, 1, 1, 2, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#2", "pitches": [0, 3, 1, 0, -2], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#4", "pitches": [-2, 0, 5, 7, 3], "durs": [1, 1, 3, 1, 3], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#5", "pitches": [3, 5, 7, 10, 10, 12, 8, 7], "durs": [1, 1, 1, 2, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#7", "pitches": [10, 12, 17, 15, 13, 12], "durs": [1, 1, 2, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#9", "pitches": [5, 7, 3], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#10", "pitches": [5, 3, 1, 0], "durs": [2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242" },
+        { "id": "dhanyasi#12", "pitches": [-5, -2, 0, -2, 3, 1, 0], "durs": [1, 2, 2, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242" }
+      ],
+      exceptions: [
+        { "id": "dhanyasi#1", "pitches": [5, 3, 7, 5, 8, 7, 3, 1, 0], "durs": [1, 1, 1, 1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242", "anya": [] },
+        { "id": "dhanyasi#3", "pitches": [-2, 0, 1, 0, -4, -5], "durs": [1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242", "anya": [] },
+        { "id": "dhanyasi#6", "pitches": [7, 10, 12, 13, 12], "durs": [1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242", "anya": [] },
+        { "id": "dhanyasi#8", "pitches": [3, 5, 7, 13, 12, 8, 7], "durs": [1, 1, 1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242", "anya": [] },
+        { "id": "dhanyasi#11", "pitches": [-2, 0, 1, 0, -2, -2, 0, -4, -5], "durs": [1, 1, 1, 1, 4, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S242", "anya": [] }
       ],
       avoid: []
     },
@@ -1200,6 +1428,36 @@ var VGEngine = (() => {
       exceptions: [],
       avoid: []
     },
+    "huseni": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "huseni#2", "pitches": [2, 3, 5, 2, 3, 0], "durs": [2, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240" },
+        { "id": "huseni#5", "pitches": [5, 7, 10, 9, 10, 12], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240" },
+        { "id": "huseni#7", "pitches": [7, 7, 12, 12, 14], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240" },
+        { "id": "huseni#8", "pitches": [14, 15, 17, 19, 17, 15, 14, 12], "durs": [1, 1, 2, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240" }
+      ],
+      exceptions: [
+        { "id": "huseni#0", "pitches": [0, 0, 7, 7, 10, 9, 5], "durs": [1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#1", "pitches": [7, 8, 5, 7, 5, 3, 2], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#3", "pitches": [2, 3, 2, 3, 5, 3, 5, 7, 5, 7, 8, 7, 5, 3, 2], "durs": [1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#4", "pitches": [2, 10, 9, 10, 7, 8, 5, 7, 5, 3, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#6", "pitches": [10, 12, 14, 15, 14, 12, 14, 12, 10, 9, 7, 5], "durs": [1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#9", "pitches": [9, 10, 12, 14, 12, 10, 9, 7, 5], "durs": [1, 1, 2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#10", "pitches": [7, 12, 10, 12, 7, 8, 7], "durs": [1, 1, 1, 1, 2, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#11", "pitches": [5, 7, 8, 7, 7, 5, 3, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240", "anya": [] },
+        { "id": "huseni#12", "pitches": [2, 3, 5, 7, 8, 7, 5, 7, 5, 3, 2, 0], "durs": [1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S240", "anya": [] }
+      ],
+      avoid: []
+    },
     "kambhoji": {
       landing: [0, 4, 5, 7, 9],
       avoidLanding: [],
@@ -1231,6 +1489,76 @@ var VGEngine = (() => {
       avoid: [
         { "pitches": [0, 2, 4, 5, 7], "strength": "soft" }
       ]
+    },
+    "kanada": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "kanada#0", "pitches": [2, 3, 5, 9, 10, 7], "durs": [1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#2", "pitches": [3, 5, 2], "durs": [1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#5", "pitches": [-3, -2, 2, 0, -2, -5], "durs": [1, 1, 2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#7", "pitches": [3, 5, 9], "durs": [1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#10", "pitches": [3, 5, 9, 10, 12], "durs": [1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#11", "pitches": [12, 10, 14, 12, 7], "durs": [1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#15", "pitches": [5, 9, 9, 10, 10, 12, 12, 14, 15], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#16", "pitches": [17, 14, 12, 10, 7, 5, 9, 10], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233" },
+        { "id": "kanada#18", "pitches": [3, 5, 2, 0], "durs": [1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233" }
+      ],
+      exceptions: [
+        { "id": "kanada#1", "pitches": [5, 7, 9, 3], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#3", "pitches": [2, 7, 3, 5, 2, 0], "durs": [1, 1, 2, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#4", "pitches": [0, 2, 0, -1, -3, -2, -3], "durs": [1, 1, 2, 1, 1, 2, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": ["N3"] },
+        { "id": "kanada#8", "pitches": [5, 9, 10, 9, 10, 12, 10, 10, 7], "durs": [2, 1, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#9", "pitches": [5, 7, 10, 9, 7, 5, 3], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#12", "pitches": [10, 12, 14, 19, 15], "durs": [1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#13", "pitches": [14, 15, 17, 19, 17, 15, 17, 14], "durs": [1, 1, 2, 1, 1, 1, 2, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": [] },
+        { "id": "kanada#14", "pitches": [12, 11, 9, 10, 9, 12, 10, 2, 12, 7], "durs": [3, 1, 1, 2, 1, 2, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S233", "anya": ["N3"] },
+        { "id": "kanada#17", "pitches": [7, 9, 10, 9, 9, 7, 7, 5, 3], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S233", "anya": [] }
+      ],
+      avoid: []
+    },
+    "kapi": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "kapi#0", "pitches": [10, 7, 3, 2], "durs": [1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239" },
+        { "id": "kapi#3", "pitches": [2, 5, 5, 7], "durs": [1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239" },
+        { "id": "kapi#7", "pitches": [2, 5, 7, 11], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239" },
+        { "id": "kapi#14", "pitches": [11, 12, 14, 19, 15], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239" },
+        { "id": "kapi#16", "pitches": [5, 7, 12, 10, 7, 3, 2], "durs": [1, 1, 2, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239" }
+      ],
+      exceptions: [
+        { "id": "kapi#1", "pitches": [2, 3, 2, 3, 2, 0, -1], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#2", "pitches": [2, 5, 7, 10, 7, 3], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#4", "pitches": [2, 5, 7, 10, 7, 12, 10, 7, 3, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#5", "pitches": [2, 5, 7, 9], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#6", "pitches": [7, 9, 10, 14, 12, 7], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#8", "pitches": [5, 7, 11, 12, 14, 15, 14, 12], "durs": [1, 1, 1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#9", "pitches": [11, 12, 14, 15, 14, 12, 10, 9, 10, 7], "durs": [1, 1, 2, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#10", "pitches": [5, 7, 11, 12, 14, 15, 14], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#11", "pitches": [14, 15, 14, 17, 15, 14, 15, 12, 14, 11], "durs": [1, 1, 1, 1, 1, 1, 2, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#12", "pitches": [11, 12, 14, 16, 17, 16], "durs": [1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": ["G3"] },
+        { "id": "kapi#13", "pitches": [16, 17, 16, 17, 9, 10, 9, 10, 17, 15, 14], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S239", "anya": ["G3"] },
+        { "id": "kapi#15", "pitches": [14, 12, 11, 12, 10, 9, 10, 7], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239", "anya": [] },
+        { "id": "kapi#17", "pitches": [2, 3, 2, 3, 2, 0, -1, 0], "durs": [1, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S239", "anya": [] }
+      ],
+      avoid: []
     },
     "kedaragowla": {
       landing: [0, 2, 7],
@@ -1345,9 +1673,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela1#0", "pitches": [13, 12, 12, 9, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#1", "pitches": [13, 12, 12, 9, 9, 12], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#2", "pitches": [8, 7, 7, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#3", "pitches": [9, 8, 8, 7, 7, 5], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#4", "pitches": [12, 9, 13, 12, 12, 9, 9, 12], "durs": [2, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#5", "pitches": [12, 9, 9, 8, 8, 7, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#6", "pitches": [12, 12, 9, 9, 8, 8, 7, 7], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#7", "pitches": [9, 8, 8, 7, 7, 5, 5], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" },
+        { "id": "mela1#8", "pitches": [9, 8, 7, 8, 7], "durs": [1, 2, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S245" },
+        { "id": "mela1#9", "pitches": [7, 5, 2, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S244" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1360,9 +1699,18 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela10#0", "pitches": [3, 7, 5, 3, 1], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#1", "pitches": [9, 10, 7, 5, 5, 3], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#2", "pitches": [3, 7, 5, 3, 1, 3, 5], "durs": [1, 1, 1, 1, 2, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#3", "pitches": [7, 5, 3, 1, 0, 3, 5, 7], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#4", "pitches": [5, 3, 1, 0, 3, 5, 7, 9], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#5", "pitches": [7, 10, 9, 7, 9, 10, 12], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#6", "pitches": [5, 7, 9, 10, 9, 10], "durs": [2, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" },
+        { "id": "mela10#7", "pitches": [5, 7, 9, 5, 7], "durs": [1, 3, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S222" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1392,7 +1740,18 @@ var VGEngine = (() => {
       dattu: "unknown",
       confidence: "low",
       gamaka: { "style": "medium", "basis": "text", "maxChain": 4, "rules": { "3": [{ "when": { "minSec": 0.35 }, "onset": "none", "body": "kampita", "exit": "none", "lo": -2, "hi": 0, "end": "self", "cycles": [1, 1], "depth": 1, "src": "S35", "basis": "text-vague", "spec": 1 }], "10": [{ "when": {}, "onset": "nokku", "body": "plain", "exit": "none", "from": 1, "end": "self", "depth": 1, "src": "S35", "basis": "text", "spec": 0 }] }, "sources": ["S35", "S193"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela12#5", "pitches": [12, 13, 15, 15, 13], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#6", "pitches": [10, 7, 7, 5, 5, 5, 3, 3], "durs": [2, 2, 1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#7", "pitches": [15, 15, 13, 15, 17, 15, 15, 13], "durs": [2, 2, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#8", "pitches": [15, 13, 12, 12, 11, 11, 10, 11], "durs": [2, 2, 2, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#9", "pitches": [15, 13, 15, 17, 15, 15, 13, 13], "durs": [2, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#10", "pitches": [15, 15, 13, 13, 13, 12, 12, 11], "durs": [1, 1, 1, 2, 2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#11", "pitches": [15, 17, 15, 15, 13, 13, 13, 12], "durs": [1, 1, 1, 1, 1, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#12", "pitches": [15, 13, 13, 13, 12, 12, 11, 11], "durs": [1, 1, 2, 2, 2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#13", "pitches": [17, 15, 15, 13, 13, 13, 12, 12], "durs": [1, 1, 1, 1, 2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" },
+        { "id": "mela12#14", "pitches": [11, 12, 13, 15, 13, 12, 12, 11], "durs": [2, 1, 1, 2, 2, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S250" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1420,9 +1779,26 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "high",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela14#0", "pitches": [0, 1, 4, 5], "durs": [1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#1", "pitches": [4, 1, 0, -2], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#2", "pitches": [-4, -2, 0, -2, -4, -5], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#3", "pitches": [-4, -2, 0, 1, 4], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#4", "pitches": [5, 7, 5, 8, 7, 5, 4], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#5", "pitches": [10, 10, 8, 8, 7, 7, 5, 4, 1], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#6", "pitches": [4, 5, 7, 8, 10], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#7", "pitches": [7, 8, 10, 12], "durs": [1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#8", "pitches": [10, 8, 7, 8, 10, 12, 13, 16], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#9", "pitches": [16, 17, 19, 17, 16, 13], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#10", "pitches": [12, 13, 12, 10, 12, 10, 12, 10, 8, 10, 8, 10, 8, 7, 8], "durs": [2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#11", "pitches": [7, 8, 10, 12, 10, 8, 7, 5, 4], "durs": [1, 1, 1, 2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#12", "pitches": [8, 8, 7, 5, 4], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#13", "pitches": [7, 7, 5, 4, 1], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#14", "pitches": [4, 5, 4, 1, 0, -2], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S215" },
+        { "id": "mela14#15", "pitches": [-4, -2, 0, 1, 4, 1, 0], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S215" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1530,9 +1906,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela19#0", "pitches": [8, 7, 5, 3, 2, 0, 2, 3], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#1", "pitches": [3, 3, 2, 0, 2, 3, 5, 5], "durs": [2, 1, 1, 1, 2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#2", "pitches": [5, 3, 2, 0, 2, 3, 5, 7], "durs": [1, 1, 1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#3", "pitches": [7, 5, 3, 2, 0, 2, 3, 5], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#4", "pitches": [2, 3, 3, 2, 0, 2, 3, 5], "durs": [1, 2, 1, 1, 1, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#5", "pitches": [12, 14, 15, 14, 12, 9, 8, 7], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#6", "pitches": [15, 14, 12, 9, 12], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#7", "pitches": [9, 9, 12, 12, 14], "durs": [1, 2, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#8", "pitches": [9, 12, 9, 12, 9, 12, 14], "durs": [1, 2, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" },
+        { "id": "mela19#9", "pitches": [14, 12, 14, 15], "durs": [2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S251" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1545,9 +1932,15 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela2#0", "pitches": [8, 10, 12, 10, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S246" },
+        { "id": "mela2#1", "pitches": [8, 10, 10, 12], "durs": [2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S246" },
+        { "id": "mela2#2", "pitches": [2, 2, 1, 0], "durs": [2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S246" },
+        { "id": "mela2#3", "pitches": [7, 8, 7, 5], "durs": [1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S246" },
+        { "id": "mela2#4", "pitches": [0, 1, 0, -2], "durs": [1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S246" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1560,7 +1953,7 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "low",
+      confidence: "high",
       gamaka: { "style": "light", "basis": "text", "maxChain": 4, "rules": { "3": [{ "when": {}, "onset": "none", "body": "kampita", "exit": "none", "lo": -1, "hi": 0, "end": "self", "cycles": [1, 1], "depth": 0.5, "src": "S61", "basis": "text-vague", "spec": 0 }], "10": [{ "when": {}, "onset": "none", "body": "kampita", "exit": "none", "lo": -2, "hi": 0, "end": "self", "cycles": [1, 1], "depth": 0.5, "src": "S61", "basis": "text-vague", "spec": 0 }] }, "sources": ["S61", "S193"] },
       phrases: [
         { "id": "mela20#0", "pitches": [7, 5, 3, 2, 0], "durs": [1, 1, 1, 1, 1], "type": "ending", "weight": 0.2, "octaveCertain": true, "source": "S61" },
@@ -1568,7 +1961,23 @@ var VGEngine = (() => {
         { "id": "mela20#2", "pitches": [-2, 0, 2, 3, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.2, "octaveCertain": true, "source": "S61" },
         { "id": "mela20#3", "pitches": [3, 5, 7, 5, 3, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.2, "octaveCertain": true, "source": "S61" },
         { "id": "mela20#4", "pitches": [8, 10, 12], "durs": [1, 1, 1], "type": "ending", "weight": 0.2, "octaveCertain": true, "source": "S61" },
-        { "id": "mela20#5", "pitches": [12, 10, 8, 7], "durs": [1, 1, 1, 1], "type": "ending", "weight": 0.2, "octaveCertain": true, "source": "S61" }
+        { "id": "mela20#5", "pitches": [12, 10, 8, 7], "durs": [1, 1, 1, 1], "type": "ending", "weight": 0.2, "octaveCertain": true, "source": "S61" },
+        { "id": "mela20#6", "pitches": [2, 3, 5], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#7", "pitches": [7, 8, 10, 8, 7, 5, 3, 2], "durs": [2, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#8", "pitches": [2, 3, 5, 3, 3, 2, 2, 0, -2, -4], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#9", "pitches": [-4, -2, 0], "durs": [1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#10", "pitches": [3, 2, 2, 5, 3, 3, 5], "durs": [1, 1, 2, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#11", "pitches": [7, 8, 10, 8, 10, 12], "durs": [1, 1, 2, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#12", "pitches": [8, 10, 12, 14], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#13", "pitches": [12, 14, 15, 17, 15, 14, 12, 10, 8, 10], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#14", "pitches": [8, 10, 12, 10, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#15", "pitches": [7, 8, 5, 7, 3, 2], "durs": [1, 1, 1, 2, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#16", "pitches": [2, 3, 5, 7, 8, 10, 12, 10, 8, 7, 8, 10], "durs": [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#17", "pitches": [10, 12, 14, 15, 14, 12, 10, 8, 10], "durs": [1, 1, 2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#18", "pitches": [12, 10, 15, 14], "durs": [1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#19", "pitches": [15, 14, 12, 10, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#20", "pitches": [7, 8, 10, 8, 7, 5, 8, 7, 5, 3, 2, 0], "durs": [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S216" },
+        { "id": "mela20#21", "pitches": [-4, -2, 0, 2, 3, 2, 0], "durs": [1, 1, 1, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S216" }
       ],
       exceptions: [],
       avoid: []
@@ -1669,9 +2078,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela24#0", "pitches": [5, 3, 2, 3, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#1", "pitches": [10, 11, 12, 12, 12, 11, 12, 14], "durs": [2, 2, 3, 3, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#2", "pitches": [3, 2, 3, 2, 0, -1, 0, 2], "durs": [2, 2, 1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#3", "pitches": [3, 2, 0, -1, 0, 2, -1, 0], "durs": [1, 1, 1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#4", "pitches": [11, 10, 11, 12, 12, 12, 11, 12], "durs": [1, 2, 2, 3, 3, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#5", "pitches": [2, 3, 2, 0, -1, 0, 2, -1], "durs": [2, 1, 1, 1, 1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#6", "pitches": [2, 0, -1, 0, 2, -1, 0, 2], "durs": [1, 1, 1, 2, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#7", "pitches": [12, 12, 12, 11, 10, 11, 12, 12], "durs": [2, 2, 1, 1, 2, 2, 3, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#8", "pitches": [12, 12, 11, 10, 11, 12, 12, 12], "durs": [2, 1, 1, 2, 2, 3, 3, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" },
+        { "id": "mela24#9", "pitches": [12, 11, 10, 11, 12, 12, 12, 11], "durs": [1, 1, 2, 2, 3, 3, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S252" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1735,9 +2155,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela27#0", "pitches": [7, 5, 4, 2, 4], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#1", "pitches": [7, 5, 4, 2, 4, 5], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#2", "pitches": [12, 11, 8, 7, 7, 5, 4, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#3", "pitches": [5, 4, 5, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#4", "pitches": [7, 5, 4, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#5", "pitches": [11, 8, 7, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#6", "pitches": [12, 11, 8, 11], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#7", "pitches": [5, 4, 5, 7, 8], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#8", "pitches": [8, 7, 8, 11], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" },
+        { "id": "mela27#9", "pitches": [11, 8, 11, 12], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S253" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1789,9 +2220,22 @@ var VGEngine = (() => {
       notNyasa: [2, 9, 11],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "heavy", "basis": "text", "maxChain": 4, "rules": { "2": [{ "when": {}, "onset": "none", "body": "kampita", "exit": "none", "lo": -2, "hi": 0, "end": "self", "cycles": [1, 2], "depth": 1, "src": "S76", "basis": "text-vague", "spec": 0 }], "4": [{ "when": {}, "onset": "none", "body": "plain", "exit": "none", "end": "self", "depth": 1, "src": "S76", "basis": "text", "spec": 0 }], "5": [{ "when": {}, "onset": "none", "body": "kampita", "exit": "none", "lo": -1, "hi": 0, "end": "self", "cycles": [1, 2], "depth": 1, "src": "S76", "basis": "text-vague", "spec": 0 }], "9": [{ "when": {}, "onset": "none", "body": "kampita", "exit": "none", "lo": -2, "hi": 0, "end": "self", "cycles": [1, 2], "depth": 1, "src": "S76", "basis": "text-vague", "spec": 0 }], "11": [{ "when": {}, "onset": "jaru", "body": "plain", "exit": "none", "end": "self", "depth": 1, "src": "S76", "basis": "text", "spec": 0 }] }, "sources": ["S76", "S193"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela29#0", "pitches": [14, 12, 11, 9, 7], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#1", "pitches": [16, 14, 12, 11, 9, 7], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#2", "pitches": [9, 7, 5, 4, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S219" },
+        { "id": "mela29#3", "pitches": [9, 7, 7, 5, 4], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#4", "pitches": [0, 2, 4, 2, 0, 0], "durs": [2, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S219" },
+        { "id": "mela29#5", "pitches": [2, 7, 5, 4, 2], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#6", "pitches": [7, 5, 4, 2, 0], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#7", "pitches": [9, 7, 5, 4, 5, 7], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S220" },
+        { "id": "mela29#8", "pitches": [2, 4, 5, 4, 2], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#9", "pitches": [5, 4, 2, 0, 0], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S218" },
+        { "id": "mela29#10", "pitches": [7, 12, 11, 9, 7], "durs": [1, 2, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S221" },
+        { "id": "mela29#11", "pitches": [12, 11, 9, 7, 7, 5], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S221" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1804,9 +2248,25 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "low",
+      confidence: "high",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela3#2", "pitches": [7, 8, 7, 5, 2], "durs": [3, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#3", "pitches": [2, 5, 7, 8, 11, 12, 11, 8, 7, 5, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#4", "pitches": [2, 8, 8, 7, 5, 2], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#5", "pitches": [2, 1, 1], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#6", "pitches": [0, -1, -4, -1, 0], "durs": [1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#7", "pitches": [1, 2, 1, 0, -1], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#8", "pitches": [0, 1, 2, 5, 2, 5, 7], "durs": [1, 1, 2, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#9", "pitches": [7, 8, 11, 8, 7, 5], "durs": [2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#10", "pitches": [7, 8, 11], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#11", "pitches": [12, 11, 14, 13, 12], "durs": [1, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#12", "pitches": [8, 11, 13, 12, 11, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#13", "pitches": [2, 5, 2, 5, 7, 5, 7, 8, 7, 8, 11, 8, 11, 13, 12, 11, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#14", "pitches": [5, 7, 8, 8, 7, 5, 2], "durs": [1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#15", "pitches": [2, 5, 7, 5, 2, 1], "durs": [1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S212" },
+        { "id": "mela3#16", "pitches": [0, -1, -4, -1, -5, -4, -1, 0], "durs": [1, 1, 1, 1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S212" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1819,9 +2279,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela30#0", "pitches": [4, 7, 5, 4], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#1", "pitches": [5, 4, 7, 5, 4], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#2", "pitches": [7, 5, 4, 5], "durs": [1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#3", "pitches": [7, 5, 4, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#4", "pitches": [11, 7, 5, 4, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S255" },
+        { "id": "mela30#5", "pitches": [7, 12, 11, 14], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#6", "pitches": [12, 11, 14, 12], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" },
+        { "id": "mela30#7", "pitches": [-1, 0, 4, 7, 5, 4], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S255" },
+        { "id": "mela30#8", "pitches": [7, 5, 11, 7, 5, 4], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S255" },
+        { "id": "mela30#9", "pitches": [12, 11, 14, 12, 10, 7], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S254" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1881,7 +2352,18 @@ var VGEngine = (() => {
       dattu: "unknown",
       confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela34#8", "pitches": [10, 9, 9, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S256" },
+        { "id": "mela34#9", "pitches": [10, 9, 9, 7, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S256" },
+        { "id": "mela34#10", "pitches": [5, 4, 7, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#11", "pitches": [10, 9, 9, 7, 5, 10], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#12", "pitches": [12, 10, 10, 9, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#13", "pitches": [9, 10, 12, 10, 10, 9, 9], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#14", "pitches": [9, 7, 5, 7], "durs": [1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#15", "pitches": [7, 9, 10, 9], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#16", "pitches": [7, 9, 7, 9, 10], "durs": [2, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" },
+        { "id": "mela34#17", "pitches": [9, 10, 9, 7, 5, 7], "durs": [3, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S257" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1909,9 +2391,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela36#0", "pitches": [11, 10, 11, 12], "durs": [1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#1", "pitches": [11, 12, 11, 10], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#2", "pitches": [10, 11, 10, 11, 12], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#3", "pitches": [10, 5, 10, 7, 10], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#4", "pitches": [12, 11, 12, 11, 10], "durs": [2, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#5", "pitches": [10, 11, 12, 12], "durs": [1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#6", "pitches": [10, 11, 12, 12, 11, 12], "durs": [1, 1, 2, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#7", "pitches": [10, 7, 5, 4, 5, 7], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#8", "pitches": [11, 12, 15, 12], "durs": [1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" },
+        { "id": "mela36#9", "pitches": [5, 4, 5, 7, 10], "durs": [1, 1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S258" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -1969,9 +2462,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela4#0", "pitches": [-2, -3, -2, 0], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#1", "pitches": [10, 9, 9, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#2", "pitches": [0, -2, -3, -2, 0], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#3", "pitches": [10, 9, 10, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#4", "pitches": [7, 9, 10, 9, 7, 5], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S248" },
+        { "id": "mela4#5", "pitches": [0, -2, -3, -2, 0, 0], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#6", "pitches": [12, 10, 9, 10], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#7", "pitches": [12, 10, 10, 9], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" },
+        { "id": "mela4#8", "pitches": [9, 7, 5, 2, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S248" },
+        { "id": "mela4#9", "pitches": [10, 9, 9, 7, 7], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S247" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2044,9 +2548,18 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela44#0", "pitches": [12, 10, 8, 7, 6], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#1", "pitches": [12, 7, 8, 10, 12], "durs": [3, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#2", "pitches": [3, 6, 7, 6, 3], "durs": [2, 2, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#3", "pitches": [7, 7, 6, 7, 8, 10, 12], "durs": [2, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#4", "pitches": [12, 13, 12, 10, 8, 7, 6], "durs": [2, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#5", "pitches": [1, 3, 6, 8, 10], "durs": [1, 1, 2, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#6", "pitches": [6, 7, 6, 3, 1], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" },
+        { "id": "mela44#7", "pitches": [12, 10, 8, 7, 6, 7], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S223" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2059,9 +2572,18 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela45#0", "pitches": [3, 6, 7, 6, 3], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#1", "pitches": [6, 8, 7, 6, 3], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#2", "pitches": [8, 11, 12, 11, 8, 7, 7], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#3", "pitches": [12, 11, 8, 7, 7, 3], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#4", "pitches": [1, 3, 1, 0, 0], "durs": [2, 2, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#5", "pitches": [6, 8, 8, 7, 6, 3], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#6", "pitches": [11, 13, 13, 12, 12, 12, 8], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" },
+        { "id": "mela45#7", "pitches": [0, -1, 1, 0, 0], "durs": [3, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S224" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2097,9 +2619,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela47#0", "pitches": [11, 9, 7, 9], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#1", "pitches": [12, 11, 9, 12, 11, 9, 7, 9], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#2", "pitches": [11, 13, 12, 11, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#3", "pitches": [7, 9, 11, 9, 7, 6], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#4", "pitches": [7, 6, 9, 7, 6, 3], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#5", "pitches": [12, 12, 11, 9], "durs": [2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S259" },
+        { "id": "mela47#6", "pitches": [12, 11, 9, 7, 9, 11], "durs": [1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S260" },
+        { "id": "mela47#7", "pitches": [9, 7, 9, 9, 11], "durs": [1, 1, 3, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S260" },
+        { "id": "mela47#8", "pitches": [12, 12, 11, 9, 7], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S260" },
+        { "id": "mela47#9", "pitches": [6, 7, 9, 7], "durs": [2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S260" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2142,9 +2675,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela5#0", "pitches": [5, 7, 2, 5], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#1", "pitches": [2, 1, 0, 1], "durs": [2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#2", "pitches": [11, 13, 12, 11, 9, 7], "durs": [1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#3", "pitches": [12, 11, 13, 12], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#4", "pitches": [9, 5, 7, 2, 5], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#5", "pitches": [5, 7, 2, 5, 0], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#6", "pitches": [12, 11, 13, 12, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#7", "pitches": [9, 11, 7, 9], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#8", "pitches": [2, 5, 0, 1], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" },
+        { "id": "mela5#9", "pitches": [5, 7, 9, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S249" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2157,9 +2701,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela50#0", "pitches": [16, 13, 12, 12, 13, 12, 10, 8], "durs": [2, 1, 2, 2, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#1", "pitches": [10, 16, 13, 12, 12, 13, 12, 10], "durs": [1, 2, 1, 2, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#2", "pitches": [13, 12, 12, 13, 12, 10, 8, 8], "durs": [1, 2, 2, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#3", "pitches": [12, 13, 12, 10, 8, 8, 10, 12], "durs": [2, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#4", "pitches": [12, 12, 13, 12, 10, 8, 8, 10], "durs": [2, 2, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#5", "pitches": [12, 10, 8, 7, 6, 7, 8], "durs": [2, 1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#6", "pitches": [12, 12, 8, 10, 12, 10, 13], "durs": [1, 2, 2, 1, 3, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#7", "pitches": [10, 8, 7, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#8", "pitches": [10, 12, 13, 12], "durs": [1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" },
+        { "id": "mela50#9", "pitches": [8, 7, 8, 10, 12], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S261" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2205,9 +2760,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela52#0", "pitches": [10, 9, 7], "durs": [1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#1", "pitches": [6, 7, 9, 10, 9, 7, 6, 4, 1, 4], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#2", "pitches": [4, 6, 7, 9, 10, 9], "durs": [1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#3", "pitches": [10, 9, 7, 6, 7, 9, 10], "durs": [2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#4", "pitches": [9, 10, 12, 13, 16, 13, 12], "durs": [1, 1, 1, 1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#5", "pitches": [10, 12, 13, 12, 13, 12, 10, 10, 9], "durs": [1, 1, 1, 2, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#6", "pitches": [9, 10, 12, 13, 10, 12, 9, 10, 7, 9, 10, 12, 10, 9, 7, 6, 4], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#7", "pitches": [4, 10, 10, 9, 7, 6, 4, 1], "durs": [2, 1, 2, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#8", "pitches": [7, 6, 4, 1, 0, -2, -3, -2], "durs": [2, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S214" },
+        { "id": "mela52#9", "pitches": [-2, -3, -5, -3, -2, 0], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S214" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2220,9 +2786,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela53#0", "pitches": [12, 12, 11, 9], "durs": [2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#1", "pitches": [11, 9, 7, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#2", "pitches": [12, 13, 12, 11, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#3", "pitches": [6, 7, 6, 4, 1, 0], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#4", "pitches": [11, 9, 11, 12, 13, 12], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#5", "pitches": [12, 11, 9, 11, 9, 7], "durs": [1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#6", "pitches": [9, 11, 9, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#7", "pitches": [4, 6, 7, 7, 6, 7, 9, 11], "durs": [3, 1, 2, 1, 1, 2, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#8", "pitches": [6, 4, 6, 7, 6, 4, 1, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" },
+        { "id": "mela53#9", "pitches": [6, 7, 7, 6, 7, 9, 11, 9], "durs": [1, 2, 1, 1, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S262" }
+      ],
       exceptions: [],
       avoid: [
         { "pitches": [7, 9, 7, 12], "strength": "soft" },
@@ -2311,13 +2888,30 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "low",
+      confidence: "high",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
       phrases: [
         { "id": "mela57#0", "pitches": [7, 6, 8, 12, 11, 12], "durs": [1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.15, "octaveCertain": false, "source": "S121" },
         { "id": "mela57#1", "pitches": [6, 7, 3, 2, 0], "durs": [1, 1, 1, 1, 1], "type": "ending", "weight": 0.15, "octaveCertain": true, "source": "S121" },
         { "id": "mela57#2", "pitches": [6, 8, 12, 11, 12, 8, 7], "durs": [1, 1, 2, 1, 1, 1, 1], "type": "ending", "weight": 0.15, "octaveCertain": false, "source": "S121" },
-        { "id": "mela57#3", "pitches": [6, 7, 3, 2, 0, 2, 2, 0, -1, 0, 2, 3, 6, 7], "durs": [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.15, "octaveCertain": false, "source": "S121" }
+        { "id": "mela57#3", "pitches": [6, 7, 3, 2, 0, 2, 2, 0, -1, 0, 2, 3, 6, 7], "durs": [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.15, "octaveCertain": false, "source": "S121" },
+        { "id": "mela57#4", "pitches": [7, 6, 8, 7, 6, 3, 2], "durs": [1, 2, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#5", "pitches": [3, 2, 0, -1, -4], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#6", "pitches": [-5, -4, -1, 0, 2, 0], "durs": [1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#7", "pitches": [2, 3, 6], "durs": [2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#8", "pitches": [6, 8, 7, 6, 3, 2, 0, 2, 3, 6], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#9", "pitches": [7, 6, 11, 8, 7], "durs": [1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#10", "pitches": [8, 11, 12, 11, 8, 7, 6], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#11", "pitches": [7, 8, 11, 11, 12], "durs": [1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#12", "pitches": [8, 11, 15, 14, 11, 8, 7, 6], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#13", "pitches": [3, 6, 11, 8, 7, 6, 3, 2], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#14", "pitches": [-4, -1, 2, 3, 2, -1, -4, -5], "durs": [1, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#15", "pitches": [3, 2], "durs": [1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#16", "pitches": [11, 8], "durs": [1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#17", "pitches": [15, 14, 15, 14, 12, 11], "durs": [1, 2, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#18", "pitches": [11, 12, 14, 15, 18, 19, 18, 15, 14, 12, 11], "durs": [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#19", "pitches": [11, 12, 14, 15, 14, 12, 11, 8, 7, 6, 3, 2], "durs": [1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S217" },
+        { "id": "mela57#20", "pitches": [3, 2, 0, -1, 0, 2, 0], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S217" }
       ],
       exceptions: [],
       avoid: []
@@ -2420,9 +3014,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela61#0", "pitches": [9, 12, 16, 14, 12, 14, 16, 14], "durs": [3, 3, 2, 2, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#1", "pitches": [7, 6, 4, 4, 6, 7], "durs": [1, 1, 2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#2", "pitches": [7, 9, 12, 16, 14, 12, 14, 16], "durs": [2, 3, 3, 2, 2, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#3", "pitches": [7, 7, 7, 6, 4, 6, 7], "durs": [3, 1, 1, 1, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#4", "pitches": [9, 12, 14, 12], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#5", "pitches": [7, 6, 4, 2, 4, 6], "durs": [1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#6", "pitches": [4, 8, 7, 6, 4], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#7", "pitches": [9, 12, 14, 12, 9], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#8", "pitches": [7, 9, 12, 14, 12], "durs": [2, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" },
+        { "id": "mela61#9", "pitches": [2, 4, 6, 7, 6], "durs": [1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S263" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2435,9 +3040,17 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela62#0", "pitches": [8, 7, 6, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#1", "pitches": [7, 6, 7, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#2", "pitches": [6, 7, 8, 7, 6], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#3", "pitches": [6, 7, 8, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#4", "pitches": [7, 8, 8, 10], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#5", "pitches": [2, 4, 0, 2], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" },
+        { "id": "mela62#6", "pitches": [14, 16, 14, 12], "durs": [2, 2, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S264" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2586,9 +3199,20 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "low",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela68#0", "pitches": [8, 10, 8, 7, 6], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#1", "pitches": [8, 7, 6, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#2", "pitches": [7, 6, 7, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#3", "pitches": [8, 7, 6, 7, 8], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#4", "pitches": [10, 8, 7, 6, 4, 3, 4], "durs": [1, 1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#5", "pitches": [6, 4, 6, 7], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#6", "pitches": [10, 8, 7, 8], "durs": [1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#7", "pitches": [10, 8, 7, 6, 7], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#8", "pitches": [10, 15, 12, 10, 8], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" },
+        { "id": "mela68#9", "pitches": [7, 8, 10, 8, 7], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.45, "octaveCertain": true, "source": "S265" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2631,9 +3255,17 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela70#0", "pitches": [12, 10, 9, 10, 12], "durs": [1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#1", "pitches": [9, 10, 12, 15, 15, 10, 12], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#2", "pitches": [9, 10, 9, 9, 7, 7], "durs": [2, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#3", "pitches": [9, 10, 12, 10, 12], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#4", "pitches": [10, 12, 15, 15, 12, 10, 9, 7], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#5", "pitches": [12, 10, 9, 10, 12, 15, 15, 12], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" },
+        { "id": "mela70#6", "pitches": [9, 9, 7, 7, 7], "durs": [2, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S225" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2661,9 +3293,18 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "medium",
       gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela72#0", "pitches": [7, 10, 11, 15, 12, 12], "durs": [1, 2, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#1", "pitches": [4, 3, 0, 3, 0], "durs": [1, 1, 2, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#2", "pitches": [10, 7, 7, 6, 4], "durs": [1, 1, 3, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#3", "pitches": [-1, 0, 3, 0, 0, 3], "durs": [1, 1, 1, 1, 2, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#4", "pitches": [11, 7, 7, 6, 4], "durs": [1, 1, 3, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#5", "pitches": [7, 6, 11, 11, 7, 6, 4, 3], "durs": [1, 1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#6", "pitches": [7, 7, 6, 4, 3], "durs": [1, 3, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" },
+        { "id": "mela72#7", "pitches": [4, 6, 7, 6, 6, 4, 4], "durs": [1, 1, 1, 1, 1, 1, 1], "type": "connective", "weight": 0.48, "octaveCertain": false, "source": "S226" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2724,9 +3365,24 @@ var VGEngine = (() => {
       notNyasa: [],
       janta: "unknown",
       dattu: "unknown",
-      confidence: "none",
+      confidence: "high",
       gamaka: { "style": "light", "basis": "text", "maxChain": 4, "rules": { "3": [{ "when": {}, "onset": "none", "body": "plain", "exit": "none", "end": "self", "depth": 1, "src": "S33", "basis": "text", "spec": 0 }] }, "sources": ["S33", "S193"] },
-      phrases: [],
+      phrases: [
+        { "id": "mela9#0", "pitches": [8, 7, 5, 3], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#1", "pitches": [1, 3, 1, 0, -1], "durs": [1, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#2", "pitches": [0, 1, 3, 5], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#3", "pitches": [3, 1, 0, -1, -4], "durs": [2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#4", "pitches": [-4, -1, 0, 1, 3, 1, 0], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#5", "pitches": [1, 3, 5, 7, 8, 11, 8], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#6", "pitches": [8, 11, 12, 13, 12, 13, 12], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#7", "pitches": [13, 13, 12, 11, 8, 11], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#8", "pitches": [15, 15, 13, 13, 12, 11], "durs": [1, 1, 1, 1, 1, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#9", "pitches": [12, 13, 15, 17, 15, 13, 12, 11], "durs": [1, 1, 1, 1, 2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#10", "pitches": [12, 19, 17, 15, 13, 12, 11, 8], "durs": [1, 1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#11", "pitches": [11, 11, 8, 8, 12, 12, 11, 11, 13, 13, 12, 11, 8, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#12", "pitches": [3, 5, 8, 7, 5, 3, 1, 0, -1, -4], "durs": [1, 1, 1, 1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S213" },
+        { "id": "mela9#13", "pitches": [-4, -1, 0, 1, 3, 1, 1, 0, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S213" }
+      ],
       exceptions: [],
       avoid: []
     },
@@ -2760,6 +3416,138 @@ var VGEngine = (() => {
         { "id": "mohanam#15", "pitches": [0, 0, 2, -3, 0], "durs": [2, 1, 2, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S162" }
       ],
       exceptions: [],
+      avoid: []
+    },
+    "mukhari": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "mukhari#0", "pitches": [2, 5, 7], "durs": [1, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#2", "pitches": [0, 2, -2, -3], "durs": [1, 2, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#3", "pitches": [0, 2, 5, 5, 7, 5, 3, 2], "durs": [1, 1, 3, 1, 2, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#4", "pitches": [2, 5, 7, 5, 10, 8, 7], "durs": [1, 1, 2, 1, 2, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#5", "pitches": [7, 10, 8, 7, 5], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#6", "pitches": [7, 10, 9, 12], "durs": [1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#7", "pitches": [7, 9, 12, 14], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#9", "pitches": [9, 12, 14, 17, 15, 14], "durs": [1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#10", "pitches": [14, 17, 19, 19, 17, 15, 14], "durs": [1, 1, 2, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#11", "pitches": [12, 14, 12, 10, 8, 7], "durs": [1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238" },
+        { "id": "mukhari#16", "pitches": [-5, 10, -3, 0], "durs": [1, 2, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238" }
+      ],
+      exceptions: [
+        { "id": "mukhari#1", "pitches": [5, 7, 8, 7, 7, 5, 3, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238", "anya": [] },
+        { "id": "mukhari#8", "pitches": [12, 14, 15, 14, 12, 14, 15, 14, 12], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238", "anya": [] },
+        { "id": "mukhari#12", "pitches": [2, 5, 7, 10, 9, 5, 7, 9, 12, 10, 8, 7], "durs": [1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238", "anya": [] },
+        { "id": "mukhari#13", "pitches": [5, 7, 8, 7, 8, 5, 7, 5, 3, 2], "durs": [1, 1, 1, 2, 1, 1, 2, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S238", "anya": [] },
+        { "id": "mukhari#14", "pitches": [0, 2, 3, 2, 0, 2, 7, 5, 3, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S238", "anya": [] }
+      ],
+      avoid: []
+    },
+    "nayaki": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "nayaki#0", "pitches": [2, 5, 7, 9], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#1", "pitches": [9, 10, 9, 7, 5, 2, 3, 2, 0, 2], "durs": [2, 2, 1, 1, 1, 1, 2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#2", "pitches": [2, 5, 7, 9, 7], "durs": [1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#3", "pitches": [9, 7, 14, 12], "durs": [1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#5", "pitches": [5, 7, 9, 7, 14], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#6", "pitches": [14, 19, 17, 14, 15, 14, 12], "durs": [2, 1, 1, 2, 2, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#9", "pitches": [7, 9, 10, 9, 7, 5, 2, 3, 2, 0, 2], "durs": [1, 2, 2, 1, 1, 1, 2, 2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#10", "pitches": [2, 7, 5, 2], "durs": [2, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S232" },
+        { "id": "nayaki#11", "pitches": [2, 3, 2, 0, 2, 0], "durs": [2, 2, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232" }
+      ],
+      exceptions: [
+        { "id": "nayaki#4", "pitches": [14, 12, 10, 12, 7, 9, 7], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232", "anya": [] },
+        { "id": "nayaki#7", "pitches": [14, 12, 10, 12, 9, 7, 9, 7], "durs": [1, 1, 1, 1, 1, 1, 2, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232", "anya": [] },
+        { "id": "nayaki#8", "pitches": [12, 14, 10, 12, 7], "durs": [2, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232", "anya": [] },
+        { "id": "nayaki#12", "pitches": [2, 0, -2, 0, -5, -3, -5, 0], "durs": [1, 1, 1, 1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S232", "anya": [] }
+      ],
+      avoid: []
+    },
+    "sahana": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "sahana#0", "pitches": [-2, 0, 2, 4, 2], "durs": [1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#1", "pitches": [2, 10, 9, 7], "durs": [1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#2", "pitches": [5, 7, 9, 7, 5, 4, 5, 2], "durs": [2, 1, 2, 1, 2, 4, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#3", "pitches": [2, 4, 5, 7, 5, 9], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#4", "pitches": [5, 9, 10, 12, 9], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#5", "pitches": [9, 14, 12, 14, 12, 10, 9, 7, 5, 9], "durs": [1, 1, 2, 1, 1, 2, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#6", "pitches": [9, 5, 9, 10, 12, 14, 12], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#7", "pitches": [10, 12, 14], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#8", "pitches": [14, 16, 17, 19, 17, 16, 17, 14], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#9", "pitches": [14, 16, 14, 12], "durs": [2, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#10", "pitches": [10, 12, 14, 16, 17, 10], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#11", "pitches": [17, 16, 14, 16, 14, 12, 14, 12, 10, 9, 7, 5, 9], "durs": [1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#12", "pitches": [5, 9, 10, 12, 14, 16, 14, 12, 10, 12, 9], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#13", "pitches": [10, 9, 7, 9, 5, 7, 2], "durs": [1, 1, 2, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#14", "pitches": [2, 10, 9, 7, 5, 4, 5, 2], "durs": [1, 2, 1, 1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#15", "pitches": [2, 4, 4, 2, 0], "durs": [1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#16", "pitches": [2, 0, -2, 0, -3], "durs": [1, 1, 1, 2, 1], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S229" },
+        { "id": "sahana#18", "pitches": [2, 0, -2, 0], "durs": [1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S229" }
+      ],
+      exceptions: [],
+      avoid: []
+    },
+    "sama": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "high",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "sama#0", "pitches": [-3, 0, 2, 5, 5], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#2", "pitches": [0, 2, -3], "durs": [1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#3", "pitches": [0, 2, 5, 7, 9, 12, 9, 7], "durs": [1, 1, 2, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#4", "pitches": [7, 5, 9, 12], "durs": [1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#5", "pitches": [5, 9, 14, 12, 9, 7, 5], "durs": [1, 1, 1, 1, 1, 2, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#6", "pitches": [5, 7, 9, 5, 7, 5, 5, 4, 4, 2, 0, 2, 2], "durs": [2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#7", "pitches": [0, 2, 5, 7, 9], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#8", "pitches": [9, 12, 9, 12, 9, 7, 5, 9, 12], "durs": [1, 1, 1, 1, 1, 1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#9", "pitches": [9, 12, 14, 14], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#11", "pitches": [9, 12, 14, 19, 17], "durs": [1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#13", "pitches": [9, 14, 12, 12, 9, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#14", "pitches": [5, 7, 9, 12, 9, 7, 5], "durs": [1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#15", "pitches": [9, 7, 7, 5, 5, 4, 4, 2, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S243" },
+        { "id": "sama#18", "pitches": [2, -3, 0], "durs": [1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S243" }
+      ],
+      exceptions: [
+        { "id": "sama#1", "pitches": [5, 4, 4, 2, 0, 2, 4, 2, 2], "durs": [1, 1, 1, 1, 2, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243", "anya": [] },
+        { "id": "sama#10", "pitches": [12, 14, 17, 17, 16, 14, 12, 14, 16, 14, 14], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243", "anya": [] },
+        { "id": "sama#12", "pitches": [17, 16, 14, 12, 14, 16, 12, 14], "durs": [1, 1, 1, 2, 1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243", "anya": [] },
+        { "id": "sama#16", "pitches": [2, 4, 2, 2], "durs": [1, 2, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S243", "anya": [] }
+      ],
       avoid: []
     },
     "saveri": {
@@ -2806,6 +3594,33 @@ var VGEngine = (() => {
         { "id": "shuddhasaveri#4", "pitches": [9, 7, 5, 7, 9], "durs": [1, 1, 1, 1, 2], "type": "connective", "weight": 0.8, "octaveCertain": true, "source": "S165" },
         { "id": "shuddhasaveri#5", "pitches": [9, 14, 9, 12], "durs": [1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S165" },
         { "id": "shuddhasaveri#6", "pitches": [9, 12, 9, 9, 7, 9, 7, 7, 5, 7, 5, 5, 2, 5, 2, 2, 0], "durs": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S165" }
+      ],
+      exceptions: [],
+      avoid: []
+    },
+    "sri": {
+      landing: [0, 7],
+      avoidLanding: [],
+      nyasa: [],
+      jiva: [],
+      alpa: [],
+      notNyasa: [],
+      janta: "unknown",
+      dattu: "unknown",
+      confidence: "medium",
+      gamaka: { "style": "light", "basis": "default", "maxChain": 4, "rules": {}, "sources": ["S193", "S198"] },
+      phrases: [
+        { "id": "sri#0", "pitches": [2, 0, 2, 3, 2, 0, -2, -5], "durs": [4, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#1", "pitches": [-5, -2, 0, 2, 3, 2], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#2", "pitches": [2, 5, 7, 10, 12, 10, 7, 5, 2, 3, 2], "durs": [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#3", "pitches": [2, 5, 7, 10], "durs": [1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#4", "pitches": [5, 7, 10, 12, 14, 15, 14, 12], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#5", "pitches": [10, 12, 14, 15, 14, 12, 14, 12, 10, 7], "durs": [1, 1, 2, 1, 1, 2, 1, 1, 1, 1], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#6", "pitches": [7, 10, 12, 10, 7], "durs": [1, 1, 2, 1, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#7", "pitches": [7, 9, 10, 7, 5, 2], "durs": [1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#8", "pitches": [2, 3, 2, 2, 0], "durs": [1, 2, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#9", "pitches": [0, 2, 3, 2, 0, -2, -5, -2], "durs": [1, 1, 1, 1, 1, 1, 1, 2], "type": "signature", "weight": 0.9, "octaveCertain": true, "source": "S230" },
+        { "id": "sri#10", "pitches": [2, 0, -2, 0], "durs": [1, 1, 2, 2], "type": "ending", "weight": 0.8, "octaveCertain": true, "source": "S230" }
       ],
       exceptions: [],
       avoid: []
@@ -2914,7 +3729,60 @@ var VGEngine = (() => {
     S208: { "title": 'T. Nuttall, X. Serra & L. Pearson, "Svara-Forms in Carnatic Music: Contextual Influences on the Performance of Svara", ICASSP 2025 workshops (WIMAGA)', "url": "https://github.com/thomasgnuttall/svara-forms", "reliability": "high" },
     S209: { "title": 'T. M. Krishna & V. Ishwar, "Karnatik Music: Svara, Gamaka, Phraseology and Raga Identity", Proc. 2nd CompMusic Workshop (Istanbul, 2012), pp. 12-18', "url": "http://hdl.handle.net/10230/20494", "reliability": "high" },
     S210: { "title": 'S. K. Subramanian, "Modeling Gamakas of Carnatic Music as a Synthesizer for Sparse Prescriptive Notation", PhD thesis, National University of Singapore (2013)', "url": "https://compmusic.upf.edu/node/130", "reliability": "high" },
-    S211: { "title": 'S. K. Subramanian, L. Wyse & K. McGee, "A two-component representation for modeling gamakas of Carnatic music", Proc. 2nd CompMusic Workshop (Istanbul, 2012)', "url": "https://compmusic.upf.edu/node/130", "reliability": "high" }
+    S211: { "title": 'S. K. Subramanian, L. Wyse & K. McGee, "A two-component representation for modeling gamakas of Carnatic music", Proc. 2nd CompMusic Workshop (Istanbul, 2012)', "url": "https://compmusic.upf.edu/node/130", "reliability": "high" },
+    S212: { "title": "Darbar Raga Explorer: Ganamurti", "url": "https://darbar.org/raga/ganamurti/", "reliability": "high" },
+    S213: { "title": "Darbar Raga Explorer: Dhenuka", "url": "https://darbar.org/raga/dhenuka/", "reliability": "high" },
+    S214: { "title": "Darbar Raga Explorer: Ramapriya", "url": "https://darbar.org/raga/ramapriya/", "reliability": "high" },
+    S215: { "title": "Darbar Raga Explorer: Vakulabharanam", "url": "https://darbar.org/raga/vakulabharana/", "reliability": "high" },
+    S216: { "title": "Darbar Raga Explorer: Natabhairavi", "url": "https://darbar.org/raga/nathabhairavi/", "reliability": "high" },
+    S217: { "title": "Darbar Raga Explorer: Simhendramadhyamam", "url": "https://darbar.org/raga/simhendramadhyama/", "reliability": "high" },
+    S218: { "title": "shivkumar.org: Enduku Peddala - Shankarabharanam - Adi (2 kalai) - Tyagaraja notation", "url": "https://www.shivkumar.org/music/endukupeddala.htm", "reliability": "high" },
+    S219: { "title": "shivkumar.org: Sri Dakshinamurthe notation", "url": "https://www.shivkumar.org/music/dakshinamurthe.htm", "reliability": "high" },
+    S220: { "title": "shivkumar.org: Mahalakshmi Jaganmata - Shankarabharanam - Adi - Papanasam Sivan notation", "url": "https://www.shivkumar.org/music/mahalakshmi-jaganmata.htm", "reliability": "high" },
+    S221: { "title": "shivkumar.org: Eduta Nilachite - Shankarabharanam - Adi (2 kalai) - Tyagaraja notation", "url": "https://www.shivkumar.org/music/edutanilachite.htm", "reliability": "high" },
+    S222: { "title": "shivkumar.org: Geetha Vadya notation", "url": "https://www.shivkumar.org/music/geethavadya.htm", "reliability": "high" },
+    S223: { "title": "shivkumar.org: Sri Kantha NIyeda - Bhavapriya - Adi (Deshadi) - Tyagaraja notation", "url": "https://www.shivkumar.org/music/srikantha.htm", "reliability": "high" },
+    S224: { "title": "shivkumar.org: Shri Satyanarayanam - Shubha Panthuvarali - Rupakam (2 kalai) - Dikshitar notation", "url": "https://www.shivkumar.org/music/shrisatyanarayanam.htm", "reliability": "high" },
+    S225: { "title": "shivkumar.org: Mara Vairi Ramani (Nasikabhushani) notation", "url": "https://www.shivkumar.org/music/maravairi-ramani.htm", "reliability": "high" },
+    S226: { "title": "shivkumar.org: Arul Seyya (Rasikapriya) notation", "url": "https://www.shivkumar.org/music/arul-seyya-rasikapriya.htm", "reliability": "high" },
+    S228: { "title": "Darbar Raga Explorer: Begada", "url": "https://darbar.org/raga/begada/", "reliability": "high" },
+    S229: { "title": "Darbar Raga Explorer: Sahana", "url": "https://darbar.org/raga/sahana/", "reliability": "high" },
+    S230: { "title": "Darbar Raga Explorer: Sri", "url": "https://darbar.org/raga/sri/", "reliability": "high" },
+    S231: { "title": "Darbar Raga Explorer: Darbar", "url": "https://darbar.org/raga/darbar/", "reliability": "high" },
+    S232: { "title": "Darbar Raga Explorer: Nayaki", "url": "https://darbar.org/raga/nayaki/", "reliability": "high" },
+    S233: { "title": "Darbar Raga Explorer: Kanada", "url": "https://darbar.org/raga/kanada/", "reliability": "high" },
+    S234: { "title": "Darbar Raga Explorer: Anandabhairavi", "url": "https://darbar.org/raga/anandabhairavi/", "reliability": "high" },
+    S235: { "title": "shivkumar.org: Balagopala - Bhairavi - Adi (2 kalai) - Dikshitar notation", "url": "https://www.shivkumar.org/music/balagopala.htm", "reliability": "high" },
+    S236: { "title": "shivkumar.org: Janani Maamava notation", "url": "https://www.shivkumar.org/music/jananimaamava.htm", "reliability": "high" },
+    S237: { "title": "shivkumar.org: Chintaya Maa notation", "url": "https://www.shivkumar.org/music/chintayamaam.htm", "reliability": "high" },
+    S238: { "title": "Darbar Raga Explorer: Mukhari", "url": "https://darbar.org/raga/mukhari/", "reliability": "high" },
+    S239: { "title": "Darbar Raga Explorer: Kapi", "url": "https://darbar.org/raga/kapi/", "reliability": "high" },
+    S240: { "title": "Darbar Raga Explorer: Huseni", "url": "https://darbar.org/raga/huseni/", "reliability": "high" },
+    S241: { "title": "Darbar Raga Explorer: Devagandhari", "url": "https://darbar.org/raga/devagandhari/", "reliability": "high" },
+    S242: { "title": "Darbar Raga Explorer: Dhanyasi", "url": "https://darbar.org/raga/dhanyasi/", "reliability": "high" },
+    S243: { "title": "Darbar Raga Explorer: Sama", "url": "https://darbar.org/raga/sama/", "reliability": "high" },
+    S244: { "title": "Carnatic Music Notations: kakAra roopA pAthu mAm shrI", "url": "https://carnaticnotations.blogspot.com/2024/03/kakara-roopa-pathu-mam-shri-kanakangi.html", "reliability": "medium" },
+    S245: { "title": "Carnatic Music Notations: shrI gaNanAtham", "url": "https://carnaticnotations.blogspot.com/2024/03/shri-gananatham-kanakangi-adi-thyagaraja.html", "reliability": "medium" },
+    S246: { "title": "Carnatic Music Notations: kalasha vArdhijAm", "url": "https://carnaticnotations.blogspot.com/2024/05/kalasha-vardhijam-rathnangi-adi.html", "reliability": "medium" },
+    S247: { "title": "Carnatic Music Notations: pariyAchakamA", "url": "https://carnaticnotations.blogspot.com/2023/06/pariyachakama-vanaspathi-roopakam.html", "reliability": "medium" },
+    S248: { "title": "Carnatic Music Notations: vanaspathidhaLEna", "url": "https://carnaticnotations.blogspot.com/2023/06/vanaspathidhalena-vanaspathi-varnam-adi.html", "reliability": "medium" },
+    S249: { "title": "Carnatic Music Notations: mAnavathi", "url": "https://carnaticnotations.blogspot.com/2024/02/jathiswara-manavathi-roopakam-veena.html", "reliability": "medium" },
+    S250: { "title": "Carnatic Music Notations: kAmitha phala", "url": "https://carnaticnotations.blogspot.com/2026/10/kamitha-phala-roopavathi-roopakam-c.html", "reliability": "medium" },
+    S251: { "title": "Carnatic Music Notations: phaNipathi shAyi", "url": "https://carnaticnotations.blogspot.com/2026/02/phanipathi-shayi-jhankaradhwani-adi.html", "reliability": "medium" },
+    S252: { "title": "Carnatic Music Notations: brovarAdha", "url": "https://carnaticnotations.blogspot.com/2026/01/brovaradha-varunapriya-adi.html", "reliability": "medium" },
+    S253: { "title": "Carnatic Music Notations: jaya jaya padhmanAbha murArE", "url": "https://carnaticnotations.blogspot.com/2023/11/jaya-jaya-padhmanabha-murare-sarasangi.html", "reliability": "medium" },
+    S254: { "title": "Carnatic Music Notations: praNathArthiharAya", "url": "https://carnaticnotations.blogspot.com/2024/10/pranatharthiharaya-samantha-adi.html", "reliability": "medium" },
+    S255: { "title": "Carnatic Music Notations: vishwanAthEna rakshithOham", "url": "https://carnaticnotations.blogspot.com/2024/10/vishwanathena-rakshithoham-samantha-adi.html", "reliability": "medium" },
+    S256: { "title": "Carnatic Music Notations: namOsthuthE saraswathI", "url": "https://carnaticnotations.blogspot.com/2022/09/namosthuthe-saraswathi-vagadheeshwari.html", "reliability": "medium" },
+    S257: { "title": "Carnatic Music Notations: paramAthmudu vEligE", "url": "https://carnaticnotations.blogspot.com/2024/02/paramathmudu-velige-vagadheeshwari-adi.html", "reliability": "medium" },
+    S258: { "title": "Carnatic Music Notations: mrthyunjayam bhAvayEham", "url": "https://carnaticnotations.blogspot.com/2024/09/mrthyunjayam-bhavayeham-ragavardhini.html", "reliability": "medium" },
+    S259: { "title": "Carnatic Music Notations: pAlayamAm shrI", "url": "https://carnaticnotations.blogspot.com/2024/06/palayamam-shri-suvarnangi-adi-walajapet.html", "reliability": "medium" },
+    S260: { "title": "Carnatic Music Notations: sAma gAna lOla", "url": "https://carnaticnotations.blogspot.com/2025/07/sama-gana-lola-suvarnangi-tisra-dhruva.html", "reliability": "medium" },
+    S261: { "title": "Carnatic Music Notations: pagasEya", "url": "https://carnaticnotations.blogspot.com/2024/06/pagaseya-namanarayani-adi-walajapet.html", "reliability": "medium" },
+    S262: { "title": "Carnatic Music Notations: shrI gAyathrI dEvi", "url": "https://carnaticnotations.blogspot.com/2024/08/shri-gayathri-devi-gamanashrama.html", "reliability": "medium" },
+    S263: { "title": "Carnatic Music Notations: kalAvathi", "url": "https://carnaticnotations.blogspot.com/2025/11/kalavathi-kanthamani-adi-cuddalore-m.html", "reliability": "medium" },
+    S264: { "title": "Carnatic Music Notations: mAra rathi priyam", "url": "https://carnaticnotations.blogspot.com/2024/02/mara-rathi-priyam-rathipriya-adi.html", "reliability": "medium" },
+    S265: { "title": "Carnatic Music Notations: jyothiswaroopiNi paripooraNi", "url": "https://carnaticnotations.blogspot.com/2023/06/jyothiswaroopini-paripoorani-varnam.html", "reliability": "medium" }
   };
 
   // src/engine/profiles.js
@@ -3063,6 +3931,7 @@ var VGEngine = (() => {
       });
     });
     if (o.exceptions) (profile.exceptions || []).forEach((ph) => {
+      if (o.exceptions === "documented" && ph.weight < 0.4) return;
       const first = ph.pitches[0], last = ph.pitches[ph.pitches.length - 1];
       if (!ix.has(first) || !ix.has(last) || !ph.pitches.every((p) => p >= notes[0] && p <= notes[notes.length - 1])) return;
       const whole = 2 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;
@@ -3086,6 +3955,19 @@ var VGEngine = (() => {
     let lo = find(P.aroExt, P.nA), hi = find(P.avExt, P.nD);
     if (lo != null && !(lo < e && P.valid(lo, e))) lo = null;
     if (hi != null && !(hi > e && P.valid(hi, e))) hi = null;
+    if (raga.krama || raga.deny || raga.oneWay) {
+      const all = [];
+      for (let o = -2; o <= 3; o++) pcs.forEach((pc) => all.push(pc + 12 * o));
+      const near = (list) => list.find((p) => inRange(p) && P.valid(p, e));
+      if (lo == null) {
+        const x = near(all.filter((p) => p < e && p >= e - 12).sort((a, b) => b - a));
+        if (x != null) lo = x;
+      }
+      if (hi == null) {
+        const x = near(all.filter((p) => p > e && p <= e + 12).sort((a, b) => a - b));
+        if (x != null) hi = x;
+      }
+    }
     return { eduppu: e, lo: lo != null && inRange(lo) ? lo : null, hi: hi != null && inRange(hi) ? hi : null, inRange: inRange(e) };
   }
   function approachScore(e, cand, profile) {
@@ -3635,7 +4517,7 @@ var VGEngine = (() => {
       if (attestedMoves.has(moveKey(a, b))) return true;
       return !!loose && s <= 7 && s !== 6;
     };
-    const tables = cachedTables(raga, profile, level + (D.T >= 1 ? "i" : "") + (o.allowExceptions ? "x" : ""), makeTables);
+    const tables = cachedTables(raga, profile, level + (D.T >= 1 ? "i" : "") + (o.allowExceptions === "documented" ? "d" : o.allowExceptions ? "x" : ""), makeTables);
     const { app, appS, phr, G, gen, genS, moraCache, idiom, idiomKey } = tables;
     const moveIdiom = (a, b) => {
       const s = Math.abs(b - a), size = s > 4 && s !== 12 && isLeap(pos(a), pos(b)) ? -0.15 * (s - 4) : 0;
@@ -3675,7 +4557,7 @@ var VGEngine = (() => {
         return row;
       });
       const app2 = cellRows(false), appS2 = cellRows(true);
-      const phr2 = phraseDevices(profile || { phrases: [] }, notes, Pj.valid, { inversions: D.T >= 1, exceptions: !!o.allowExceptions });
+      const phr2 = phraseDevices(profile || { phrases: [] }, notes, Pj.valid, { inversions: D.T >= 1, exceptions: o.allowExceptions === "documented" ? "documented" : !!o.allowExceptions });
       const anch = [];
       phr2.forEach((dv) => {
         const js = dv.pitches.map(pos), n = js.length;
@@ -4367,7 +5249,7 @@ var VGEngine = (() => {
   var TOKEN = /([.'^]*)([SRGMPDN])([123])?([.'^]*)|[,\-]/gi;
   var MAX_PHRASES = 400;
   var MAX_TOKENS = 200;
-  function pitchOf(letter, digit, raga) {
+  function pitchOf2(letter, digit, raga) {
     const L = letter.toUpperCase();
     if (digit && VARIANT[L + digit] != null) return VARIANT[L + digit];
     if (L === "S" || L === "P") return BASE[L];
@@ -4386,7 +5268,7 @@ var VGEngine = (() => {
         return m;
       }
       const marks = (pre || "") + (post || ""), up = (marks.match(/['^]/g) || []).length, down = (marks.match(/\./g) || []).length;
-      const p = pitchOf(letter, digit, raga) + 12 * (up - down);
+      const p = pitchOf2(letter, digit, raga) + 12 * (up - down);
       if (!pcs.has(mod12(p))) outside++;
       out.push(p);
       return m;
@@ -5354,6 +6236,296 @@ var VGEngine = (() => {
     return from + (to - from) * f;
   }
 
+  // src/engine/voice-check.js
+  var PROBE = [
+    { id: "room", title: "The room", seconds: 3, tells: "Stay quiet for a moment, so the room can be measured.", sing: false },
+    { id: "aa1", title: "Sustained \u201Caa\u201D on Sa", seconds: 4, tells: "Sing \u201Caa\u201D on Sa, steady and comfortable, until the count ends.", cue: 0 },
+    { id: "aa2", title: "Sustained \u201Caa\u201D on Sa, again", seconds: 4, tells: "Once more: \u201Caa\u201D on Sa, steady.", cue: 0 },
+    { id: "oo1", title: "Soft \u201Coo\u201D on upper Pa", seconds: 3, tells: "Start as softly as you can: a gentle \u201Coo\u201D on upper Pa.", cue: 19 },
+    { id: "oo2", title: "Soft \u201Coo\u201D on upper Pa", seconds: 3, tells: "Again, a soft start on upper Pa.", cue: 19 },
+    { id: "oo3", title: "Soft \u201Coo\u201D on upper Pa", seconds: 3, tells: "And a third soft start.", cue: 19 },
+    { id: "siren", title: "An \u201Cng\u201D siren", seconds: 8, tells: "Hum \u201Cng\u201D and glide from your lowest comfortable note to your highest, and back." },
+    { id: "messa", title: "Messa di voce on Sa", seconds: 8, tells: "One breath on Sa: start soft, swell, and fade back to soft, keeping the pitch still.", cue: 0 },
+    { id: "sarali", title: "Sarali Varisai 1 in akaram", seconds: 16, tells: "Sing the first sarali on \u201Caa\u201D, up and down in Mayamalavagowla, one swara to each click.", beats: 16 }
+  ];
+  var SARALI_1 = [0, 1, 4, 5, 7, 8, 11, 12, 12, 11, 8, 7, 5, 4, 1, 0];
+  var PROBE_SECONDS = PROBE.reduce((s, p) => s + p.seconds, 0);
+  var FORM = [
+    { id: "tired", text: "My voice got tired as I used it yesterday." },
+    { id: "effort", text: "It took effort to sing or speak." },
+    { id: "recover", text: "My voice felt better after resting it." }
+  ];
+  var FORM_SCALE = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  var log10 = (x) => Math.log(x) / Math.LN10;
+  var median = (a) => {
+    if (!a.length) return null;
+    const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+  var pct = (a, q) => {
+    if (!a.length) return null;
+    const s = a.slice().sort((x, y) => x - y);
+    return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))];
+  };
+  var sd = (a) => {
+    if (a.length < 2) return 0;
+    const m = a.reduce((s, x) => s + x, 0) / a.length;
+    return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / a.length);
+  };
+  var round2 = (x, k) => x == null || !Number.isFinite(x) ? null : Math.round(x * 10 ** k) / 10 ** k;
+  var db = (x) => 20 * log10(Math.max(x, 1e-6));
+  var cents = (f, ref) => 1200 * Math.log2(f / ref);
+  function decimate(x, sr) {
+    const k = Math.max(1, Math.floor(sr / 16e3));
+    if (k === 1) return { x, sr };
+    const n = Math.floor(x.length / k), y = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let j = 0; j < k; j++) s += x[i * k + j];
+      y[i] = s / k;
+    }
+    return { x: y, sr: sr / k };
+  }
+  function voiceFrames(input, inputRate, opts) {
+    const o = opts || {}, { x, sr } = decimate(input, inputRate);
+    const win = Math.round(sr * 0.04), hop = Math.round(sr * 0.02);
+    const minLag = Math.max(2, Math.floor(sr / (o.fmax || 1100))), maxLag = Math.min(win - 1, Math.ceil(sr / (o.fmin || 65)));
+    const out = [], nc = new Float32Array(maxLag + 2);
+    for (let start = 0; start + win + maxLag < x.length; start += hop) {
+      let e0 = 0, mean = 0;
+      for (let i = 0; i < win; i++) mean += x[start + i];
+      mean /= win;
+      for (let i = 0; i < win; i++) {
+        const a = x[start + i] - mean;
+        e0 += a * a;
+      }
+      const rms = Math.sqrt(e0 / win);
+      let best = 0, bestLag = 0;
+      if (rms > 1e-4) {
+        for (let lag = minLag; lag <= maxLag; lag++) {
+          let c = 0, e1 = 0;
+          for (let i = 0; i < win; i++) {
+            const a = x[start + i] - mean, b = x[start + i + lag] - mean;
+            c += a * b;
+            e1 += b * b;
+          }
+          const r = c / Math.sqrt(e0 * e1 + 1e-12);
+          nc[lag] = r;
+          if (r > best) best = r;
+        }
+        for (let lag = minLag + 1; lag < maxLag; lag++) if (nc[lag] >= 0.92 * best && nc[lag] >= nc[lag - 1] && nc[lag] >= nc[lag + 1]) {
+          bestLag = lag;
+          break;
+        }
+      }
+      let f0 = 0;
+      if (bestLag) {
+        const a = nc[bestLag - 1], b = nc[bestLag], c = nc[bestLag + 1], den = a - 2 * b + c, shift = den ? 0.5 * (a - c) / den : 0;
+        f0 = sr / (bestLag + shift);
+      }
+      out.push({ t: start / sr, f0, clarity: Math.max(0, Math.min(1, best)), rms });
+    }
+    return out;
+  }
+  var isVoiced = (fr, floor) => fr.f0 > 0 && fr.clarity >= 0.72 && fr.rms >= floor;
+  var voicedOf = (frames) => {
+    const peak = Math.max(0, ...frames.map((f) => f.rms)), floor = Math.max(peak * 0.06, 1e-3);
+    return frames.filter((f) => isVoiced(f, floor));
+  };
+  function fft(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) {
+        let t = re[i];
+        re[i] = re[j];
+        re[j] = t;
+        t = im[i];
+        im[i] = im[j];
+        im[j] = t;
+      }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let j = 0; j < len / 2; j++) {
+          const ur = re[i + j], ui = im[i + j], vr = re[i + j + len / 2] * cr - im[i + j + len / 2] * ci, vi = re[i + j + len / 2] * ci + im[i + j + len / 2] * cr;
+          re[i + j] = ur + vr;
+          im[i + j] = ui + vi;
+          re[i + j + len / 2] = ur - vr;
+          im[i + j + len / 2] = ui - vi;
+          const t = cr * wr - ci * wi;
+          ci = cr * wi + ci * wr;
+          cr = t;
+        }
+      }
+    }
+  }
+  function spectralMeasures(input, inputRate, voiced) {
+    const { x, sr } = decimate(input, inputRate), N = 1024;
+    if (!voiced.length || x.length < N) return { cpp: null, tilt: null };
+    const hann = new Float32Array(N);
+    for (let i = 0; i < N; i++) hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+    const mean = new Float32Array(N / 2), step = Math.max(1, Math.floor(voiced.length / 40)), cpps = [];
+    let used = 0;
+    for (let v = 0; v < voiced.length; v += step) {
+      const s = Math.floor(voiced[v].t * sr);
+      if (s + N >= x.length) continue;
+      const re = new Float32Array(N), im = new Float32Array(N);
+      for (let i = 0; i < N; i++) re[i] = x[s + i] * hann[i];
+      fft(re, im);
+      const lg = new Float32Array(N);
+      for (let i = 0; i < N / 2; i++) {
+        const p = re[i] * re[i] + im[i] * im[i], d = 10 * log10(p + 1e-12);
+        lg[i] = d;
+        if (i) lg[N - i] = d;
+        mean[i] += d;
+      }
+      lg[N / 2] = lg[N / 2 - 1];
+      used++;
+      const cr = lg.slice(), ci = new Float32Array(N);
+      fft(cr, ci);
+      const lo = Math.floor(sr / 1100), hi = Math.min(N / 2 - 1, Math.ceil(sr / 65));
+      let pk = -Infinity, pkAt = lo, sx2 = 0, sy2 = 0, sxx2 = 0, sxy2 = 0, n2 = 0;
+      for (let q = lo; q <= hi; q++) {
+        const c = 20 * log10(Math.abs(cr[q]) / N + 1e-9);
+        if (c > pk) {
+          pk = c;
+          pkAt = q;
+        }
+        sx2 += q;
+        sy2 += c;
+        sxx2 += q * q;
+        sxy2 += q * c;
+        n2++;
+      }
+      const b = (n2 * sxy2 - sx2 * sy2) / (n2 * sxx2 - sx2 * sx2 || 1), a = (sy2 - b * sx2) / n2;
+      cpps.push(pk - (a + b * pkAt));
+    }
+    if (!used) return { cpp: null, tilt: null };
+    const f0 = median(voiced.map((f) => f.f0)), parts = [];
+    for (let h = 1; h * f0 < Math.min(5e3, sr / 2 - 50); h++) {
+      const at = h * f0 * N / sr, lo = Math.max(1, Math.floor(at - 1)), hi = Math.min(N / 2 - 1, Math.ceil(at + 1));
+      let best = -Infinity;
+      for (let i = lo; i <= hi; i++) best = Math.max(best, mean[i] / used);
+      parts.push([Math.log2(h * f0), best]);
+    }
+    const top = parts.length ? Math.max(...parts.map((b) => b[1])) : 0;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
+    parts.filter((b) => b[1] > top - 45).forEach(([o, d]) => {
+      sx += o;
+      sy += d;
+      sxx += o * o;
+      sxy += o * d;
+      n++;
+    });
+    return { cpp: median(cpps), tilt: n > 2 ? (n * sxy - sx * sy) / (n * sxx - sx * sx) : null };
+  }
+  function breaksOf(frames) {
+    const peak = Math.max(0, ...frames.map((f) => f.rms)), floor = Math.max(peak * 0.06, 1e-3);
+    let breaks = 0, seen = false, gap = 0;
+    frames.forEach((f) => {
+      if (isVoiced(f, floor)) {
+        if (seen && gap >= 4) breaks++;
+        seen = true;
+        gap = 0;
+      } else if (seen) gap++;
+    });
+    return breaks;
+  }
+  var settled = (v) => v.slice(Math.floor(v.length * 0.2), Math.ceil(v.length * 0.8));
+  function measureStep(id, samples, sr, sa) {
+    const frames = voiceFrames(samples, sr), step = PROBE.find((p) => p.id === id);
+    if (!step) throw new RangeError("No step " + id + " in the probe.");
+    if (id === "room") {
+      const r = frames.map((f) => f.rms);
+      return { id, heard: true, voicedSec: 0, roomDb: round2(db(median(r) || 1e-6), 1) };
+    }
+    const v = voicedOf(frames), voicedSec = v.length * 0.02;
+    const out = { id, heard: voicedSec >= Math.min(1, step.seconds * 0.3), voicedSec: round2(voicedSec, 2) };
+    if (!out.heard) return out;
+    const s = spectralMeasures(samples, sr, v);
+    const hnrs = v.map((f) => 10 * log10(Math.max(f.clarity, 1e-3) / Math.max(1 - f.clarity, 1e-3)));
+    out.hnr = round2(median(hnrs), 1);
+    out.cpp = round2(s.cpp, 1);
+    out.tilt = round2(s.tilt, 1);
+    out.levelDb = round2(db(median(v.map((f) => f.rms))), 1);
+    const f0s = v.map((f) => f.f0);
+    if (id === "aa1" || id === "aa2" || id === "oo1" || id === "oo2" || id === "oo3" || id === "messa") {
+      const mid = settled(v), m = median(mid.map((f) => f.f0));
+      out.f0 = round2(m, 1);
+      out.stabilityCents = round2(sd(mid.map((f) => cents(f.f0, m))), 1);
+      if (sa) {
+        const c = cents(m, sa * 2 ** ((step.cue || 0) / 12));
+        out.offCents = round2(c - 1200 * Math.round(c / 1200), 1);
+      }
+      const first = v.findIndex((f, i) => Math.abs(cents(f.f0, m)) <= 50 && v.slice(i, i + 5).every((g) => Math.abs(cents(g.f0, m)) <= 50));
+      out.onsetSec = first >= 0 ? round2(v[first].t - v[0].t, 2) : null;
+      out.breaks = breaksOf(frames);
+    }
+    if (id === "siren") {
+      const lo = pct(f0s, 0.02), hi = pct(f0s, 0.98);
+      out.lowHz = round2(lo, 1);
+      out.highHz = round2(hi, 1);
+      out.rangeSemis = round2(12 * Math.log2(hi / lo), 1);
+      out.breaks = breaksOf(frames);
+    }
+    if (id === "messa") {
+      const lv = v.map((f) => db(f.rms));
+      out.swellDb = round2(pct(lv, 0.95) - pct(lv, 0.05), 1);
+      const third = Math.floor(v.length / 3), part = (a, b) => median(v.slice(a, b).map((f) => f.f0));
+      out.driftCents = third ? round2(Math.max(Math.abs(cents(part(0, third), part(third, 2 * third))), Math.abs(cents(part(2 * third, v.length), part(third, 2 * third)))), 1) : null;
+    }
+    if (id === "sarali" && sa) {
+      const beat = step.seconds / SARALI_1.length, errs = [];
+      SARALI_1.forEach((semi, k) => {
+        const here = v.filter((f) => f.t >= k * beat + beat * 0.25 && f.t < (k + 1) * beat - beat * 0.1);
+        if (here.length < 3) return;
+        const c = cents(median(here.map((f) => f.f0)), sa * 2 ** (semi / 12));
+        errs.push(Math.abs(c - 1200 * Math.round(c / 1200)));
+      });
+      out.notesHeard = errs.length;
+      out.meanOffCents = round2(errs.reduce((a, b) => a + b, 0) / Math.max(1, errs.length), 1);
+    }
+    return out;
+  }
+  function summariseProbe(steps) {
+    const by = (id) => steps.find((s) => s.id === id && s.heard);
+    const held = ["aa1", "aa2"].map(by).filter(Boolean), soft2 = ["oo1", "oo2", "oo3"].map(by).filter(Boolean), sung = steps.filter((s) => s.heard && s.id !== "room");
+    const med = (list, k) => round2(median(list.map((s) => s[k]).filter((x) => x != null)), 1);
+    const room = by("room"), siren = by("siren"), messa = by("messa"), sarali = by("sarali");
+    return {
+      stepsHeard: sung.length,
+      roomDb: room ? room.roomDb : null,
+      stabilityCents: med(held, "stabilityCents"),
+      offCents: med(held, "offCents"),
+      hnr: med(held, "hnr"),
+      cpp: med(held, "cpp"),
+      tilt: med(held, "tilt"),
+      softOnsetSec: med(soft2, "onsetSec"),
+      softBreaks: soft2.reduce((n, s) => n + (s.breaks || 0), 0),
+      softHeard: soft2.length,
+      rangeSemis: siren ? siren.rangeSemis : null,
+      lowHz: siren ? siren.lowHz : null,
+      highHz: siren ? siren.highHz : null,
+      swellDb: messa ? messa.swellDb : null,
+      driftCents: messa ? messa.driftCents : null,
+      saraliOffCents: sarali ? sarali.meanOffCents : null
+    };
+  }
+  var BASELINE_DAYS = 7;
+  function baseline(history, key) {
+    const days = /* @__PURE__ */ new Map();
+    (history || []).forEach((h) => {
+      const v = h.features && h.features[key];
+      if (v != null && !days.has(h.localDate)) days.set(h.localDate, v);
+    });
+    return days.size >= BASELINE_DAYS ? round2(median(Array.from(days.values())), 1) : null;
+  }
+
   // src/engine/gamaka/constants.js
   var constants_exports = {};
   __export(constants_exports, {
@@ -6245,7 +7417,7 @@ var VGEngine = (() => {
   }
   function phraseStarts(notes, slotSec, units) {
     const N = notes.length, starts = /* @__PURE__ */ new Set(), sec = (i) => notes[i].dur * slotSec;
-    const durs = notes.filter((n) => n.p != null).map((n) => n.dur * slotSec).sort((a, b) => a - b), median = durs.length ? durs[durs.length >> 1] : 0;
+    const durs = notes.filter((n) => n.p != null).map((n) => n.dur * slotSec).sort((a, b) => a - b), median2 = durs.length ? durs[durs.length >> 1] : 0;
     const soft2 = /* @__PURE__ */ new Set();
     if (units) {
       let k = 0;
@@ -6260,7 +7432,7 @@ var VGEngine = (() => {
         starts.add(i);
         continue;
       }
-      if (sec(i - 1) >= LONG_NOTE - 1e-9 && sec(i - 1) >= 2 * median - 1e-9) starts.add(i);
+      if (sec(i - 1) >= LONG_NOTE - 1e-9 && sec(i - 1) >= 2 * median2 - 1e-9) starts.add(i);
     }
     const sorted = () => Array.from(starts).sort((a, b) => a - b);
     let changed = true;
@@ -7726,7 +8898,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   var sum2 = (xs) => xs.reduce((s, x) => s + x, 0);
   var gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
   var lcm = (a, b) => a / gcd(a, b) * b;
-  var pct = (x) => Math.round(100 * x);
+  var pct2 = (x) => Math.round(100 * x);
   var plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
   function lengthCondition(C) {
     const g = gcd(C, 3), q = C / g;
@@ -7760,7 +8932,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
       },
       { id: "length", title: "The length condition", math: "S \u2261 0 (mod " + F.C + " / gcd(" + F.C + ", 3)) = 0 (mod " + lc.mod + ")", text: lc.text },
       { id: "purvanga", title: "The purvanga" + (pat ? ": " + pat.name : ""), math: pat ? pat.formula : terms.join(" + ") + " = " + P, text: "Phrases of " + terms.join(", ") + " in every statement: " + P + " pulses." },
-      { id: "uttaranga", title: "The uttaranga", math: "U = S \u2212 P = " + lens.map((x, i) => x + " \u2212 " + P + " = " + Us[i]).join("; "), text: "U/P = " + (Us[0] / P).toFixed(2) + "; P : (P + U) = " + pct(ratio) + " : " + (100 - pct(ratio)) + (ratio >= 0.3 && ratio <= 0.7 ? ", inside 30 : 70 to 70 : 30 (P/U between 3/7 and 7/3)." : ratio > 0.7 ? ": purvanga-heavy (above 70%)." : ": uttaranga-heavy (below 30%).") },
+      { id: "uttaranga", title: "The uttaranga", math: "U = S \u2212 P = " + lens.map((x, i) => x + " \u2212 " + P + " = " + Us[i]).join("; "), text: "U/P = " + (Us[0] / P).toFixed(2) + "; P : (P + U) = " + pct2(ratio) + " : " + (100 - pct2(ratio)) + (ratio >= 0.3 && ratio <= 0.7 ? ", inside 30 : 70 to 70 : 30 (P/U between 3/7 and 7/3)." : ratio > 0.7 ? ": purvanga-heavy (above 70%)." : ": uttaranga-heavy (below 30%).") },
       { id: "land", title: "The landing", math: L.checks[1].text, text: L.ok ? "It lands exactly." : "It does not land." }
     ]);
     let eduppu = null;
@@ -8380,12 +9552,12 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
     const start = mod(land - span, C), cycles = (start + span - land) / C;
     return { start, cycles: Math.max(cycles, 0), span };
   }
-  var FORM = { 3: "a (k) a (k) a", 6: "aa (k) aa (k) aa", 9: "aaa (k) aaa (k) aaa", buildup: "a (k) aa (k) aaa" };
+  var FORM2 = { 3: "a (k) a (k) a", 6: "aa (k) aa (k) aa", 9: "aaa (k) aaa (k) aaa", buildup: "a (k) aa (k) aaa" };
   var SERIES_GROUPS = { 3: [1, 1, 1], 6: [2, 2, 2], 9: [3, 3, 3], buildup: [1, 2, 3] };
   var coefOf = (n) => SERIES_GROUPS[n].reduce((a, b) => a + b, 0);
   function moraSolutions(total, o = {}) {
     const n = o.n || 3, gati = o.gati || 4, minP = o.minP || 1;
-    if (!FORM[n]) throw new Error("A series repeats its phrase 3, 6 or 9 times, or builds up 1, 2, 3.");
+    if (!FORM2[n]) throw new Error("A series repeats its phrase 3, 6 or 9 times, or builds up 1, 2, 3.");
     if (!Number.isInteger(total) || total < 1) return [];
     const c = coefOf(n), out = [];
     for (let G = 0; c * minP + 2 * G <= total && (o.maxG == null || G <= o.maxG); G++) {
@@ -8412,7 +9584,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
         kind: G ? "with karvai" : "no karvai (bedam)",
         beatAligned: step % gati === 0,
         eq: c + " \xD7 " + P + " + 2 \xD7 " + G + " = " + total,
-        form: FORM[n].replace(/a/g, "P").replace(/k/g, "G"),
+        form: FORM2[n].replace(/a/g, "P").replace(/k/g, "G"),
         score: +F.toFixed(2)
       });
     }
@@ -8454,7 +9626,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
       }
       rows.push({ a, cells });
     }
-    return { n, C, form: FORM[n], rows };
+    return { n, C, form: FORM2[n], rows };
   }
   var SHAPES = /* @__PURE__ */ new Map();
   function purvangaShapes(V, gati = 4) {
@@ -9007,7 +10179,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
     }
     return null;
   }
-  function pitchOf2(raga, tok, dir, stats) {
+  function pitchOf3(raga, tok, dir, stats) {
     const L = tok.s;
     let lab;
     if (L === "S" || L === "P") lab = L;
@@ -9032,7 +10204,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
       if (t.s === ",") return Object.assign(t, { p: null });
       const j = sw.indexOf(i), prev = j > 0 ? toks[sw[j - 1]] : null, next = j + 1 < sw.length ? toks[sw[j + 1]] : null;
       const dir = next && rank(next) !== rank(t) ? Math.sign(rank(next) - rank(t)) : prev ? Math.sign(rank(t) - rank(prev)) : 1;
-      return Object.assign(t, { p: pitchOf2(raga, t, dir, stats) });
+      return Object.assign(t, { p: pitchOf3(raga, t, dir, stats) });
     });
   }
   function linePitches(raga, cells, stats) {
@@ -9600,6 +10772,6 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   var REPERTOIRE_NOTE = "Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.";
 
   // src/engine/index.js
-  var VERSION = "0.10.0";
+  var VERSION = "0.11.0";
   return __toCommonJS(engine_exports);
 })();

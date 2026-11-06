@@ -4,6 +4,7 @@
    stored. A log is one finished session: when, for how long, each item's planned and spent time, a rating and
    notes. The day of a log is the singer's own calendar day (sent by the page), so streaks follow the singer's
    time zone. A log carries a client id, so a session saved twice (an offline retry) is stored once. */
+import { randomBytes } from 'node:crypto';
 import { getDb, now } from './db.js';
 import { Invalid } from './auth.js';
 
@@ -48,6 +49,44 @@ function cleanItems(items) {
   });
 }
 const rowRoutine = r => ({ id: r.id, name: r.name, items: JSON.parse(r.items), builtin: false, updatedAt: r.updated_at });
+
+/* ---- v0.11: a teacher assigns a routine ----
+   A link holds a copy of the routine as it was when it was shared, and shows only that and the teacher's name. A student who adds it
+   gets their own copy to change. The teacher sees how many have added it, and nothing of anyone's practice. */
+const SHARE = /^[a-z0-9]{10}$/;
+const shareCode = () => randomBytes(10).toString('base64').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().padEnd(10, 'x').slice(0, 10);
+export async function shareRoutine(body, ctx) {
+  const db = await getDb(), id = Number(body.id), r = db.prepare('SELECT * FROM routines WHERE id = ? AND user_id = ?').get(id, ctx.user.id);
+  if (!r) bad('That is not one of your routines.');
+  const had = db.prepare('SELECT code, taken FROM routine_shares WHERE user_id = ? AND routine_id = ?').get(ctx.user.id, id);
+  const code = had ? had.code : shareCode();
+  // sharing again sends the routine as it is now, on the same link
+  db.prepare('INSERT INTO routine_shares (code, user_id, routine_id, name, items, taken, created_at) VALUES (?, ?, ?, ?, ?, 0, ?) ON CONFLICT(user_id, routine_id) DO UPDATE SET name = excluded.name, items = excluded.items').run(code, ctx.user.id, id, r.name, r.items, now());
+  return { code, taken: had ? had.taken : 0 };
+}
+function sharedRow(db, code) {
+  if (typeof code !== 'string' || !SHARE.test(code)) bad('That link is not complete. Ask for it again.');
+  const s = db.prepare('SELECT s.*, u.display_name AS teacher FROM routine_shares s JOIN users u ON u.id = s.user_id WHERE s.code = ?').get(code);
+  return s || bad('That routine is no longer shared. Ask for a new link.');
+}
+export async function sharedRoutine(body) {
+  const db = await getDb(), s = sharedRow(db, body.code);
+  return { code: s.code, name: s.name, items: JSON.parse(s.items), from: s.teacher };
+}
+export async function takeRoutine(body, ctx) {
+  const db = await getDb(), s = sharedRow(db, body.code);
+  if (s.user_id === ctx.user.id) bad('This is your own routine.');
+  const name = (s.name + ', from ' + s.teacher).slice(0, 60);
+  const dup = db.prepare('SELECT id FROM routines WHERE user_id = ? AND name = ?').get(ctx.user.id, name);
+  if (dup) return { id: dup.id, added: false };
+  const t = now(), r = db.prepare('INSERT INTO routines (user_id, name, items, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run(ctx.user.id, name, s.items, t, t);
+  db.prepare('UPDATE routine_shares SET taken = taken + 1 WHERE code = ?').run(s.code);
+  return { id: Number(r.lastInsertRowid), added: true };
+}
+export async function myShares(body, ctx) {
+  const db = await getDb();
+  return { shares: db.prepare('SELECT routine_id AS routineId, code, taken FROM routine_shares WHERE user_id = ?').all(ctx.user.id) };
+}
 
 /* ---- routines ---- */
 export async function routines(body, ctx) {

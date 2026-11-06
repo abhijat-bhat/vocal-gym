@@ -44,6 +44,30 @@ export function tick(strong) {
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .15);
 }
 
+/* v0.11: for Voice Check. The context; a drone that holds until stopped, whatever the drone setting (the probe is sung to it);
+   a note to find the pitch by; and clicks for the sarali. */
+export function audioNow() { return { ctx: ctx() }; }
+export function droneFor(seconds) {
+  const ac = ctx(); if (!ac) return () => {};
+  const master = ac.createGain(); master.gain.value = 0.75; master.connect(ac.destination);
+  const was = settings.drone; settings.drone = true; drone(ac, master, ac.currentTime + 0.05, seconds); settings.drone = was;
+  return () => { try { master.gain.setTargetAtTime(0, ac.currentTime, 0.05); setTimeout(() => { try { master.disconnect(); } catch (e) { /* gone */ } }, 400); } catch (e) { /* gone */ } };
+}
+export function cueNote(semitones, seconds) {
+  const ac = ctx(); if (!ac) return;
+  const t = ac.currentTime + 0.02, o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'triangle'; o.frequency.value = saHz() * Math.pow(2, semitones / 12);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.08); g.gain.setValueAtTime(0.16, t + Math.max(0.1, seconds - 0.2)); g.gain.linearRampToValueAtTime(0.0001, t + seconds);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + seconds + 0.05);
+}
+export function clickSoon(after, strong) {
+  const ac = ctx(); if (!ac) return;
+  const t = ac.currentTime + after, o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'sine'; o.frequency.value = strong ? 1650 : 1100;
+  g.gain.setValueAtTime(strong ? 0.16 : 0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.07);
+}
+
 /* ---- voices ---- */
 export function tone(ac, out, f, t, d) {
   const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();

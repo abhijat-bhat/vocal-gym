@@ -19,6 +19,13 @@ function eduppuNeighbours(raga, e) {
   let lo = find(P.aroExt, P.nA), hi = find(P.avExt, P.nD);
   if (lo != null && !(lo < e && P.valid(lo, e))) lo = null;
   if (hi != null && !(hi > e && P.valid(hi, e))) hi = null;
+  // a vakra raga may reach a swara only by its zig-zag (Sri's G from R, going up): the nearest swara that may step into it
+  if (raga.krama || raga.deny || raga.oneWay) {
+    const all = []; for (let o = -2; o <= 3; o++) pcs.forEach(pc => all.push(pc + 12 * o));
+    const near = list => list.find(p => inRange(p) && P.valid(p, e));
+    if (lo == null) { const x = near(all.filter(p => p < e && p >= e - 12).sort((a, b) => b - a)); if (x != null) lo = x; }
+    if (hi == null) { const x = near(all.filter(p => p > e && p <= e + 12).sort((a, b) => a - b)); if (x != null) hi = x; }
+  }
   return { eduppu: e, lo: lo != null && inRange(lo) ? lo : null, hi: hi != null && inRange(hi) ? hi : null, inRange: inRange(e) };
 }
 

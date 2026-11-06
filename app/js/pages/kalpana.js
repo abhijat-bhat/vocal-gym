@@ -7,8 +7,8 @@ const S = { raga: 'mela65', tala: { fam: 'triputa', L: 4 }, cycles: 1, per: 2, s
 const PRESETS = [
   { title: 'Traditional', tag: 'Kalyani · Adi · lands on Pa', raga: 'mela65', fam: 'triputa', L: 4, cycles: 1, per: 2, start: 0, land: 7, T: 0, ending: 'auto' },
   { title: 'Adventurous', tag: 'Kalyani · Adi · creativity 2', raga: 'mela65', fam: 'triputa', L: 4, cycles: 1, per: 2, start: 0, land: 7, T: 2, ending: 'free' },
-  { title: 'Ending with a mora', tag: 'Mohanam · 2 cycles → upper Sa', raga: 'mohanam', fam: 'triputa', L: 4, cycles: 2, per: 2, start: 7, land: 12, T: 0.4, ending: 'mora' },
-  { title: 'Short round', tag: 'Bilahari · Rupaka → Ga', raga: 'bilahari', fam: 'rupaka', L: 4, cycles: 1, per: 2, start: 0, land: 4, T: 1.2, ending: 'free' }
+  { title: 'Ending with a mora', tag: 'Mohanam · 2 cycles, to upper Sa', raga: 'mohanam', fam: 'triputa', L: 4, cycles: 2, per: 2, start: 7, land: 12, T: 0.4, ending: 'mora' },
+  { title: 'Short round', tag: 'Bilahari · Rupaka, to Ga', raga: 'bilahari', fam: 'rupaka', L: 4, cycles: 1, per: 2, start: 0, land: 4, T: 1.2, ending: 'free' }
 ];
 const KIND = { conv: 'Familiar device', nov: 'Unusual device', mora: 'Mora ending', step: 'Single step', start: 'Opening swara' };
 
@@ -150,7 +150,7 @@ export async function mount(root, meta) {
     let last = slots.length - 1; while (last > 0 && (slots[last].t === ',' || slots[last].cls === 'pre')) last--;
     slots[last].cls += ' land'; slots[last].title += ' · the landing swara';
     $('#k-n').innerHTML = notation(slots, r.tala, r.per, { rowLabel: i => ({ text: 'cycle ' + (i + 1) }) }) +
-      '<p class="card-sub" style="margin:10px 0 0 60px">→ then the song line resumes at the eduppu</p>';
+      '<p class="card-sub" style="margin:10px 0 0 60px">Then the song line resumes at the eduppu.</p>';
     $('#k-legend').innerHTML = legend([['conv', '', 'familiar device'], ['nov', '', 'unusual device'], ['mora', '', 'mora ending'], ['', '', 'single step'], ['land', '', 'landing swara'], ['now', '', 'playing now']]) +
       '<p class="card-sub" style="margin-top:10px">A thin bar marks where each device starts. Hover any swara to see which device it belongs to.</p>';
     const starts = new Set(r.tala.angas.map(a => a.start));

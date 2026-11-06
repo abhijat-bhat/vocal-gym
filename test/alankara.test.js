@@ -36,7 +36,7 @@ test('all 35 sheet alankaras are reproduced note for note in Mayamalavagowla', t
   done();
 });
 
-test('every alankara step obeys the direction rules in 86 ragas x 35 talas', t => {
+test('every alankara step obeys the direction rules in 100 ragas x 35 talas', t => {
   const { ok, done } = checker(t);
   let adjusted = 0, lines = 0, notes = 0;
   ALL.forEach(r => FAMS.forEach(f => JATIS.forEach(L => {

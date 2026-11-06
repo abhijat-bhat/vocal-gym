@@ -80,12 +80,15 @@ test('phrase plan: tala-shaped phrases, each ending on a held swara the raga res
 test('repetition and yatis: echoes of the last phrase, sequences a step lower, yatis onto the focus', t => {
   const { ok, done } = checker(t);
   let rounds = 0, withRep = 0, yatis = 0, rhymes = 0, seqs = 0;
+  const by = { phrases: { rounds: 0, rep: 0 }, none: { rounds: 0, rep: 0 } };
   ALL.forEach((r, ri) => {
     const sc = scaleOf(r), pos = p => sc.indexOf(p);
     [1, 2, 3, 4].forEach(s => {
       const res = round(r, { aksharas: 16, T: 0, seed: s + ri * 3 });
       if (res.error || res.stats.plan !== 'phrases') return;
       rounds++;
+      const cls = by[E.getProfile(r).phrases.length ? 'phrases' : 'none'];
+      cls.rounds++;
       let any = false;
       res.units.forEach(u => {
         if (u.base === 'yati') {
@@ -105,11 +108,13 @@ test('repetition and yatis: echoes of the last phrase, sequences a step lower, y
           if (u.base === 'rhyme-end') { rhymes++; const tail = pv.slice(-ps.length), sh = pos(ps[0]) - pos(tail[0]); ok(ps.every((p, k) => pos(p) - pos(tail[k]) === sh), r.name + ': an end rhyme repeats the last phrase\'s tail (moved to the new focus)'); }
         }
       });
-      if (any) withRep++;
+      if (any) { withRep++; cls.rep++; }
     });
   });
-  t.diagnostic(rounds + ' rounds at T 0: ' + withRep + ' with repetition or a yati (' + rhymes + ' rhymes, ' + seqs + ' sequences, ' + yatis + ' yatis)');
-  ok(withRep / rounds > 0.5, 'most rounds repeat or design something');
+  t.diagnostic(rounds + ' rounds at T 0: ' + withRep + ' with repetition or a yati (' + rhymes + ' rhymes, ' + seqs + ' sequences, ' + yatis + ' yatis); with phrases ' + by.phrases.rep + '/' + by.phrases.rounds + ', without ' + by.none.rep + '/' + by.none.rounds);
+  // rounds without phrases lean on these designs; in a raga with phrases, the phrases take their place
+  ok(by.none.rep / by.none.rounds > 0.5, 'most rounds without phrases repeat or design something');
+  ok(by.phrases.rep / by.phrases.rounds >= 0.25, 'a good share of rounds with phrases do too');
   done();
 });
 

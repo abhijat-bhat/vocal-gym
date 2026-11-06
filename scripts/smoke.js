@@ -179,7 +179,7 @@ async function driveDemos(file) {
   const ph = $('k-out').querySelectorAll('.s.ph, .s.frag');
   check(ph.length > 0 && /source S\d+/.test(ph[0].getAttribute('title') || ''), 'attested phrases are coloured and name their source');
   check(/Phrases: \d+% of the slots from attested phrases/.test(text('k-audit')) && /\(S\d+ /.test(text('k-audit')) || /mela65#\d+, S\d+/.test(text('k-audit')), 'the audit lists the phrases used with their sources');
-  $('k-raga').value = 'mela1'; fire($('k-raga'), 'input');
+  $('k-raga').value = 'mela6'; fire($('k-raga'), 'input');
   check(/Phrase data: none for this raga/.test(text('k-audit')), 'ragas without phrase data say so');
   // mora style control: a shift mora in Kalyani, three different statements
   // (two avartanams: a srotovaha mora needs at least 12 of the slots and may take at most 60%)

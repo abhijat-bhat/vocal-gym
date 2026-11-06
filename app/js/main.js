@@ -14,11 +14,13 @@ import { initSession, refreshUser, onUser } from './session.js';
 import * as judge from './pages/judge.js';
 import * as learn from './pages/learn.js';
 import * as repertoire from './pages/repertoire.js';
+import * as voiceCheck from './pages/voice-check.js';
+import * as review from './pages/review.js';
 
-const PAGES = { '': home, alankara, kalpana, korvai, melakarta, judge, learn, practice, account, repertoire };
+const PAGES = { '': home, alankara, kalpana, korvai, melakarta, judge, learn, practice, account, repertoire, voice: voiceCheck, review };
 // v0.8: the jathi studio became the korvai lab
 const MOVED = { jathi: 'korvai' };
-const TITLES = { '': 'Vocal Gym', alankara: 'Alankaras · Vocal Gym', kalpana: 'Kalpana swaras · Vocal Gym', korvai: 'Korvai & tihai lab · Vocal Gym', melakarta: 'Melakartas · Vocal Gym', practice: 'Practice · Vocal Gym', account: 'Account · Vocal Gym', judge: 'Jathi judge · Vocal Gym', learn: 'Learn · Vocal Gym', repertoire: 'Repertoire · Vocal Gym' };
+const TITLES = { '': 'Vocal Gym', alankara: 'Alankaras · Vocal Gym', kalpana: 'Kalpana swaras · Vocal Gym', korvai: 'Korvai & tihai lab · Vocal Gym', melakarta: 'Melakartas · Vocal Gym', practice: 'Practice · Vocal Gym', account: 'Account · Vocal Gym', judge: 'Jathi judge · Vocal Gym', learn: 'Learn · Vocal Gym', repertoire: 'Repertoire · Vocal Gym', voice: 'Voice Check · Vocal Gym', review: 'Phrase review · Vocal Gym' };
 const main = $('#main');
 let unmount = null, meta = null, nav = 0;
 

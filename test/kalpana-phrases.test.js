@@ -42,7 +42,7 @@ test('well-documented ragas sing their attested phrases at T 0 (plan 7)', t => {
 test('phrases make up most of a round at low temperature, variants take over at high (plan 2.5)', t => {
   const { ok, done } = checker(t);
   const HM = ALL.filter(r => ['high', 'medium'].includes(E.getProfile(r).confidence));
-  ok(HM.length === 27, '27 ragas with phrase confidence high or medium');
+  ok(HM.length === 52, '52 ragas with phrase confidence high or medium, found ' + HM.length);
   const acc = {};
   ['free', 'auto'].forEach(ending => [0, 1, 2].forEach(T => {
     const a = acc[ending + T] = { n: 0, phrase: 0, variant: 0, novel: 0, avoid: 0 };
@@ -87,7 +87,7 @@ test('profile coverage, and ragas without phrases fall back to generic devices',
   const bare = E.kalpana(byId('mela65'), { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: 0, seed: 2 });
   ok(bare && bare.stats.profileCoverage === 'none' && !bare.units.some(u => u.phraseId), 'with no profile at all, v0.2-style generic devices');
   E.setProfiles(null);
-  t.diagnostic('coverage over 86 ragas: ' + Object.entries(seen).map(([k, v]) => k + ' ' + v).join(', '));
+  t.diagnostic('coverage over 100 ragas: ' + Object.entries(seen).map(([k, v]) => k + ' ' + v).join(', '));
   done();
 });
 
@@ -172,5 +172,59 @@ test('no erratic jumps: leap sizes capped, and moves follow the raga\'s own phra
     const res = E.kalpana(k, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T, seed: s, ending });
     ok(!(res.notes[0].p === 0 && [11, 23].includes(res.notes[1].p)), 'Kalyani no longer opens S → N (T ' + T + ', seed ' + s + ')');
   }));
+  done();
+});
+
+test('vakra and bhashanga: the krama is walked, denied moves never appear, one-way variants lead on one way', t => {
+  const { ok, done } = checker(t);
+  const VAKRA = ALL.filter(r => r.krama || r.deny || r.oneWay);
+  ok(VAKRA.length === 14, '14 ragas carry a grammar, found ' + VAKRA.length);
+  VAKRA.forEach(r => {
+    const P = E.makeProjector(r);
+    if (r.krama) [r.krama.aro, r.krama.avaro].forEach(l => { for (let i = 1; i < l.length; i++) ok(P.valid(l[i - 1], l[i]), r.name + ': the krama walks ' + l[i - 1] + ' to ' + l[i]); });
+    (r.deny || []).forEach(([a, b]) => ok(!P.valid(a, b) && !P.valid(a + 12, b + 12), r.name + ': ' + a + ' to ' + b + ' is denied in any octave'));
+    const aro = new Set(r.aro.map(E.mod12)), avaro = new Set(r.avaro.map(E.mod12));
+    const walked = new Set(); if (r.krama) [r.krama.aro, r.krama.avaro].forEach(l => { for (let i = 1; i < l.length; i++) walked.add(l[i - 1] + '>' + l[i]); });
+    // every generator is held to it: rounds and alankaras in this raga take only legal steps
+    for (let s = 1; s <= 8; s++) {
+      const x = E.kalpanaRound(r, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: r.aro.map(E.mod12).includes(7) ? 7 : 12, T: s % 3, seed: s * 13 });
+      if (x.error) { ok(false, r.name + ': ' + x.error); continue; }
+      ok(x.notes.reduce((n, y) => n + y.dur, 0) === 16, r.name + ': exact length');
+      for (let i = 1; i < x.notes.length; i++) ok(P.valid(x.notes[i - 1].p, x.notes[i].p), r.name + ': a legal step, ' + x.notes[i - 1].p + ' to ' + x.notes[i].p);
+    }
+    void aro; void avaro;
+  });
+  // Bhairavi by name: D2 only climbs, D1 only falls
+  const bh = ALL.find(r => r.id === 'bhairavi'), B = E.makeProjector(bh);
+  ok(B.valid(7, 9) && B.valid(9, 10), 'Bhairavi: P to D2 to N2');
+  ok(!B.valid(9, 7), 'Bhairavi: D2 does not fall to P');
+  ok(!B.valid(7, 8), 'Bhairavi: P does not climb to D1');
+  ok(B.valid(10, 8) && B.valid(8, 7), 'Bhairavi: N2 to D1 to P');
+  // Begada by name: the ascent turns at D, so D does not climb straight to tara Sa
+  const be = ALL.find(r => r.id === 'begada'), G = E.makeProjector(be);
+  ok(G.valid(0, 4) && G.valid(4, 2), 'Begada: S G R');
+  ok(!G.valid(9, 12), 'Begada: D does not climb straight to tara S');
+  ok(G.valid(7, 12), 'Begada: P to tara S');
+  done();
+});
+
+test('an anya swara enters only inside its sourced phrase, and only with documented exceptions on', t => {
+  const { ok, done } = checker(t);
+  const de = ALL.find(r => r.id === 'devagandhari'), p = E.getProfile(de);
+  const anya = p.exceptions.filter(x => x.anya.length && x.weight >= 0.4);
+  ok(anya.length > 0, 'Devagandhari has sourced anya phrases');
+  const P = E.makeProjector(de);
+  let seen = 0;
+  for (let s = 1; s <= 40; s++) {
+    const off = E.kalpana(de, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: 1, seed: s });
+    ok(off.notes.every(n => de.aro.concat(de.avaro).map(E.mod12).includes(E.mod12(n.p))), 'no anya swara by default');
+    const on = E.kalpana(de, { aksharas: 8, perAkshara: 2, startPitch: 0, eduppuPitch: 7, T: 1, seed: s, allowExceptions: 'documented' });
+    on.units.filter(u => u.exception).forEach(u => { seen++; ok(p.exceptions.some(x => x.id === u.phraseId && x.weight >= 0.4 && x.pitches.join() === u.notes.map(n => n.p).join()), 'a documented exception is sung whole'); });
+    const flat = []; on.units.forEach(u => u.notes.forEach((n, k) => flat.push({ p: n.p, inside: !!u.exception && k > 0 })));
+    for (let i = 1; i < flat.length; i++) if (!flat[i].inside) ok(P.valid(flat[i - 1].p, flat[i].p), 'legal outside the phrase');
+    ok(on.notes.reduce((n, y) => n + y.dur, 0) === 16, 'exact length, with exceptions');
+  }
+  ok(seen > 0, 'documented phrases do appear');
+  t.diagnostic(seen + ' documented phrases in 40 rounds of Devagandhari');
   done();
 });

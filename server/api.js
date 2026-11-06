@@ -55,9 +55,13 @@ function ragaInfo(r) {
     aro: r.aro.map(p => ({ p, t: swara(r, p, true), name: swaraName(r, p) })),
     avaro: r.avaro.map(p => ({ p, t: swara(r, p, true), name: swaraName(r, p) })),
     swaras: pcs.map(pc => ({ pc, t: swara(r, pc, true), short: swara(r, pc, false), name: swaraName(r, pc) })),
+    // v0.11: the raga's walk, where it zig-zags; aro and avaro stay in order of pitch for the keys
+    krama: r.krama ? { aro: r.krama.aro.map(p => swara(r, p, true)), avaro: r.krama.avaro.map(p => swara(r, p, true)) } : null,
     count: pcs.length
   };
 }
+/* what the direction check means for this raga */
+const walkText = r => r.krama || r.deny || r.oneWay ? 'Going up uses the arohana and going down the avarohana, and the raga’s zig-zag steps and forbidden moves are kept.' : 'Going up uses the arohana; going down uses the avarohana.';
 function talaInfo(tl) {
   let pos = 0;
   const angas = tl.angas.map(a => {
@@ -179,7 +183,7 @@ export function alankara(body) {
   const checks = [
     { ok: true, title: 'Every line fills exactly one cycle of ' + tl.name, detail: res.slotsPerLine + ' beats per line, which is one avartanam in first speed.' },
     { ok: true, title: 'Held notes stay inside their section of the tala', detail: 'A held note (written ,) never crosses an anga line.' },
-    { ok: badSteps === 0, title: 'Every step obeys ' + r.name + '’s direction rules', detail: 'Going up, every note is in the arohana; going down, every note is in the avarohana.' },
+    { ok: badSteps === 0, title: 'Every step obeys ' + r.name + '’s direction rules', detail: walkText(r) },
     { ok: true, title: res.adjustedCount ? plural(res.adjustedCount, 'swara') + ' adjusted to fit the raga' : 'No swaras needed adjusting', detail: res.adjustedCount ? 'They are underlined. The engine changed them so the line keeps its shape and stays in the raga.' : 'The pattern fits ' + r.name + ' as it is.' }
   ];
   let summary;
@@ -207,7 +211,7 @@ export function kalpana(body) {
   const start = int(body.start, -12, 24, 0), land = int(body.land, -12, 24, 7);
   const T = num(body.T, 0, 2, 0.8), seed = int(body.seed, 0, 1e9, 3), ending = oneOf(body.ending, ['auto', 'mora', 'free', 'korvai'], 'auto');
   // v0.4: the phrase plan follows the tala's angas (docs/research/kalpana-structure.md)
-  const res = E.kalpana(r, { aksharas, perAkshara: per, startPitch: start, targetPitch: land, T, seed, ending, angas: tl.angas.map(a => a.len) });
+  const res = E.kalpana(r, { aksharas, perAkshara: per, startPitch: start, targetPitch: land, T, seed, ending, angas: tl.angas.map(a => a.len), allowExceptions: 'documented' });
   const base = { raga: ragaInfo(r), tala: talaInfo(tl), aksharas, per, start, land, T, seed };
   if (!res) return Object.assign(base, { impossible: true, message: 'There is not enough room to get from ' + swaraName(r, start) + ' to ' + swaraName(r, land) + ' in ' + aksharas + ' beats while obeying the raga. Make the round longer or choose swaras closer together.' });
   const units = res.units.map(u => ({
@@ -233,7 +237,7 @@ export function kalpana(body) {
     checks: [
       { ok: true, title: 'Exactly ' + slots + ' swaras', detail: aksharas + ' beats at ' + per + ' swara' + (per > 1 ? 's' : '') + ' per beat, so the song resumes on time.' },
       { ok: true, title: 'Starts on ' + swaraName(r, start) + ' and lands on ' + swaraName(r, land), detail: 'The landing is planned from the start, so the round always arrives.' },
-      { ok: true, title: 'Every step obeys ' + r.name + '’s direction rules', detail: 'Going up uses the arohana; going down uses the avarohana.' },
+      { ok: true, title: 'Every step obeys ' + r.name + '’s direction rules', detail: walkText(r) + (res.units.some(u => u.exception) ? ' A sourced phrase that steps outside them is sung whole, as written.' : '') },
       { ok: true, title: res.ending.type === 'mora' ? 'Mora: three identical statements, equal gaps' : 'Free ending', detail: endTxt }
     ]
   });

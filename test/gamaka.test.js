@@ -36,7 +36,7 @@ test('gamakaRender: the transcriptions validate, compile, and bad inputs are rej
     Object.values(g.rules).flat().forEach(x => ['lo', 'hi', 'from'].forEach(k => { if (x[k] != null) ok(typeof x[k] === 'number' && Math.abs(x[k]) <= 7, r.id + ': offsets resolved'); }));
     g.sources.forEach(s => ok(!!E.getSource(s), r.id + ': gamaka source ' + s + ' is exported'));
   });
-  ok(defaults === 63, '63 ragas fall back to the default, got ' + defaults);
+  ok(defaults === 77, '77 ragas fall back to the default, got ' + defaults);
 
   // crafted bad inputs
   const bad = (id, mutate, expect) => {
@@ -373,7 +373,7 @@ test('swara grammar: which swara of a pair carries the gamaka, and where it swin
   ok(straight(khp.notes[1]) && osc(khp.notes[2]), 'Kharaharapriya r g: R straight, G oscillates');
   ok(osc(sk.notes[1]) && straight(sk.notes[2]), 'Sankarabharanam r g: R oscillates, G flat');
   // the same pair a fifth up (Vedavalli): D2 then N2: D2 straight; D2 then N3: D2 oscillates, N3 straight
-  const dn2 = DATALESS.filter(r => has(r, 9, 10)), dn3 = DATALESS.filter(r => has(r, 9, 11) && without(r, 10));
+  const dn2 = DATALESS.filter(r => has(r, 9, 10) && without(r, 11)), dn3 = DATALESS.filter(r => has(r, 9, 11) && without(r, 10));
   dn2.forEach(r => { const g = render(r, [7, [9, 2], [10, 2], 12]); ok(straight(g.notes[1]) && osc(g.notes[2]), r.name + ': D2 N2 → D2 straight, N2 with gamaka'); });
   dn3.forEach(r => { const g = render(r, [7, [9, 2], [11, 2], 12]); ok(osc(g.notes[1]) && straight(g.notes[2]), r.name + ': D2 N3 → D2 with gamaka, N3 straight'); });
   // Kalyani: the gandharam oscillates (its data), so the rishabham beside it is held flat (Vedavalli)

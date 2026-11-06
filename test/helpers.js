@@ -1,6 +1,7 @@
 /* Shared helpers for the test suite. Each test counts its checks and fails with the first
    twenty messages, so one run can verify hundreds of thousands of properties. */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as E from '../src/engine/index.js';
 
 export { E };
@@ -8,6 +9,8 @@ export const R = E.allRagas();
 export const ALL = R.melakartas.concat(R.janyas);
 export const FAMS = Object.keys(E.FAM);
 export const JATIS = [3, 4, 5, 7, 9];
+/* ragas whose phrases come only from the repertoire's notation (scripts/mine-repertoire-phrases.js) */
+export const MINED = new Set(Object.values(JSON.parse(readFileSync(new URL('../data/raga-profiles.json', import.meta.url), 'utf8')).ragas).filter(r => r.phrases.some(p => p.mined)).map(r => r.id));
 
 export function checker(t) {
   const st = { checks: 0, fails: [] };

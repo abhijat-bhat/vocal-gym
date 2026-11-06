@@ -19,7 +19,7 @@ const json = async res => ({ status: res.status, body: await res.json() });
 test('meta lists ragas, talas, the sheet and the examples', async () => {
   const { status, body } = await json(await get('/api/meta'));
   assert.equal(status, 200);
-  assert.equal(body.ragas.length, 86);
+  assert.equal(body.ragas.length, 100);
   assert.equal(body.talas.length, 38);
   assert.equal(body.sheet.flat().length, 35);
   assert.deepEqual(body.examples.map(e => e.id), ['adi', 'short', 'chapu', 'speed']);

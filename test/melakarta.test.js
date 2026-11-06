@@ -69,6 +69,6 @@ test('every number gives its swaras, its chakra and its twin; the builder invert
   assert.equal(ok, 72); assert.equal(refused, 90);
   // the chakra names stand for their numbers; the janyas are listed under their parents
   assert.match(E.melakartaInfo(1).chakra.meaning, /moon/);
-  assert.equal(E.melakartaInfo(28).janyas.map(j => j.id).sort().join(), 'kambhoji,kedaragowla,mohanam');
+  assert.equal(E.melakartaInfo(28).janyas.map(j => j.id).sort().join(), 'begada,kambhoji,kedaragowla,mohanam,sahana,sama');
   assert.ok(E.melakartaInfo(80).error);
 });
