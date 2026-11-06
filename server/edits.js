@@ -55,10 +55,27 @@ function checkExpected(body, cur) {
   if (Number(body.expect || 0) !== (cur.row ? cur.row.id : 0)) bad('This line was changed somewhere else since this page loaded it. Reload the page, then try again.');
 }
 
+/* ---- octave questions settled (v0.9.5) ----
+   A singer can say a line flagged by the octave checks is correct as written. It is remembered by the line's text and the
+   fix it answers, so a line reading the same is settled too, a change to the line asks again, and it outlasts a re-import. */
+const okRows = (db, user, comp) => db.prepare('SELECT line, fix FROM octave_ok WHERE user_id = ? AND comp = ? ORDER BY created_at, line').all(user, comp).map(r => ({ line: r.line, fix: r.fix }));
+const textOf = cells => { const r = cleanLine({ cells }); if (r.errors.length) bad(r.errors[0]); return lineText(r.line.cells); };
+export async function octaveOk(body, ctx) {
+  const c = loadComp(body.comp), db = await getDb(), user = ctx.user.id;
+  if (db.prepare('SELECT COUNT(*) AS n FROM octave_ok WHERE user_id = ?').get(user).n >= MAX_EDITS) bad('Your list of settled octaves is full (' + MAX_EDITS + ').');
+  db.prepare('INSERT OR IGNORE INTO octave_ok (user_id, comp, line, fix, created_at) VALUES (?, ?, ?, ?, ?)').run(user, c.id, textOf(body.line), textOf(body.fix), now());
+  return { octaveOk: okRows(db, user, c.id) };
+}
+export async function octaveAsk(body, ctx) {
+  const c = loadComp(body.comp), db = await getDb(), user = ctx.user.id;
+  db.prepare('DELETE FROM octave_ok WHERE user_id = ? AND comp = ? AND line = ? AND fix = ?').run(user, c.id, textOf(body.line), textOf(body.fix));
+  return { octaveOk: okRows(db, user, c.id) };
+}
+
 /* ---- the routes ---- */
 export async function edits(body, ctx) {
   const c = loadComp(body.comp), db = await getDb();
-  return { edits: listRows(db, ctx.user.id, c.id, c) };
+  return { edits: listRows(db, ctx.user.id, c.id, c), octaveOk: okRows(db, ctx.user.id, c.id) };
 }
 /* body { comp, action: 'edit' | 'add' | 'remove', key?, section?, anchor?, line?, note?, expect? } */
 export async function save(body, ctx) {
@@ -70,10 +87,17 @@ export async function save(body, ctx) {
     if (r.errors.length) bad(r.errors[0]);
     line = r.line;
   }
+  // a swara must be one its raga has; one the line already has may stay, so the rest of the line can be corrected
+  const inRaga = (si, keep) => {
+    const s = c.sections[si], scale = s ? c.ragas[s.raga != null && c.ragas[s.raga] ? s.raga : 0] : null;
+    const r = cleanLine(body.line, { scale, keep });
+    if (r.errors.length) bad(r.errors[0]);
+  };
   let id;
   if (action === 'add') {
     const section = Number(body.section);
     if (!(Number.isInteger(section) && c.sections[section])) bad('That section is not in this composition.');
+    inRaga(section);
     const anchor = body.anchor == null ? 's' : String(body.anchor);
     let base = null;
     if (anchor !== 's') {
@@ -86,6 +110,7 @@ export async function save(body, ctx) {
     checkExpected(body, cur);
     if (!cur.line) bad('That line has been removed. Restore it from the log of changes first.');
     if (action === 'edit' && sameLine(line, cur.line)) bad('Nothing has changed.');
+    if (action === 'edit') inRaga(cur.row ? cur.row.section : cur.section, cur.line.cells);
     const r = cur.row;
     id = insert(db, user, c.id, { key, action, section: r ? r.section : cur.section, line: r ? r.line : cur.index, anchor: r ? r.anchor : null, base: r ? r.base : cur.base, before: cur.line, after: line, note });
   }

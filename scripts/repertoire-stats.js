@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { talaOf, offCycle } from '../src/engine/repertoire.js';
 import { measure } from './lessons.js';
+import { allFlags, summary as octaveSummary } from './octave-review.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = join(ROOT, 'data', 'repertoire', 'c');
@@ -60,6 +61,10 @@ export function statsBlock(comps = loadAll()) {
   const ms = withLines.filter(m => m.checked).map(m => ({ w: m.lines, r: measure(m.c) })), W = ms.reduce((n, x) => n + x.w, 0), avg = k => (ms.reduce((n, x) => n + x.r[k] * x.w, 0) / W).toFixed(3);
   o.push('The measures of `scripts/lessons.js`, weighted by lines: tala fit ' + avg('fit') + ', swaras in the raga ' + avg('raga') + ', no unexplained octave leap ' + avg('octave') + '.', '');
 
+  const flags = allFlags(comps), O = octaveSummary(flags), flagged = new Set(flags.map(f => f.c.id)), bothClean = withLines.filter(m => !m.off && m.checked && !flagged.has(m.c.id)).length;
+  o.push('### Octave checks', '',
+    O.flags + ' suggestions on ' + O.lines + ' lines (' + pct(O.lines, lines) + ') in ' + O.compositions + ' compositions, listed in [`docs/octave-review.md`](octave-review.md). These are questions, not findings, and they do not count against the score above. ' + bothClean + ' compositions (' + pct(bothClean, withLines.length) + ') have neither an off-cycle tag nor an octave question.', '',
+    table(['Group', 'Suggestions'], O.tiers.map(t => [t.title, String(t.n)])), '');
   o.push('### Size', '',
     table(['', 'Count'], [
       ['Compositions', String(comps.length)], ['With swara lines', String(withLines.length)], ['Words only, no swara lines', comps.filter(c => !c.sections.some(s => s.lines.length)).map(c => c.id).join(', ') + ' (' + (comps.length - withLines.length) + ')'],

@@ -11,6 +11,7 @@ import * as api from './api.js';
 import * as auth from './auth.js';
 import * as practice from './practice.js';
 import * as edits from './edits.js';
+import * as signin from './signin.js';
 import { Unavailable as DbUnavailable } from './db.js';
 
 const ROOT = fileURLToPath(new URL('../app/', import.meta.url));
@@ -29,6 +30,7 @@ const TYPES = {
 const ROUTES = {
   'GET /api/meta': () => api.meta(),
   'GET /api/health': () => ({ ok: true }),
+  'GET /api/auth/methods': () => signin.methods(),
   'POST /api/alankara': b => api.alankara(b),
   'POST /api/kalpana': b => api.kalpana(b),
   'POST /api/kalpana/prompt': b => api.kalpanaPrompt(b),
@@ -44,6 +46,8 @@ const ROUTES = {
 const ACCOUNT = {
   'POST /api/auth/register': ['any', auth.register], 'POST /api/auth/login': ['any', auth.login],
   'POST /api/auth/logout': ['any', auth.logout], 'POST /api/auth/me': ['any', auth.me],
+  'POST /api/auth/code': ['any', signin.askCode], 'POST /api/auth/code/check': ['any', signin.checkCode],
+  'POST /api/account/identities': ['user', signin.identities], 'POST /api/account/identities/remove': ['user', signin.removeIdentity],
   'POST /api/account/update': ['user', auth.update], 'POST /api/account/password': ['user', auth.changePassword],
   'POST /api/account/delete': ['user', auth.deleteAccount],
   'POST /api/practice/routines': ['user', practice.routines], 'POST /api/practice/routines/save': ['user', practice.saveRoutine],
@@ -51,7 +55,8 @@ const ACCOUNT = {
   'POST /api/practice/logs': ['user', practice.logs], 'POST /api/practice/logs/delete': ['user', practice.deleteLog],
   'POST /api/practice/summary': ['user', practice.summary],
   'POST /api/repertoire/edits': ['user', edits.edits], 'POST /api/repertoire/edits/save': ['user', edits.save],
-  'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes]
+  'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes],
+  'POST /api/repertoire/octave-ok': ['user', edits.octaveOk], 'POST /api/repertoire/octave-ask': ['user', edits.octaveAsk]
 };
 const MAX_BODY = 256 * 1024;
 
@@ -94,8 +99,23 @@ async function handleApi(req, res, path) {
     if (e instanceof api.BadRequest || e instanceof auth.Invalid) json(res, 400, { error: e.message }, ctx.cookies);
     else if (e instanceof auth.Unauthorized) json(res, 401, { error: e.message, login: true }, ctx.cookies);
     else if (e instanceof auth.TooMany) json(res, 429, { error: e.message });
-    else if (e instanceof api.Unavailable || e instanceof DbUnavailable) json(res, 503, { error: e.message, unavailable: true });
+    else if (e instanceof api.Unavailable || e instanceof DbUnavailable || e instanceof signin.Unavailable) json(res, 503, { error: e.message, unavailable: true });
     else { console.error(e); json(res, 500, { error: 'Something went wrong on the server.' }); }
+  }
+}
+
+/* v0.10: the two Google routes are page visits, not JSON calls: they answer with a redirect */
+async function handleGoogle(req, res, path) {
+  const ctx = { user: null, ip: req.socket.remoteAddress || '', secure: !!req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https', cookies: [] };
+  const go = r => { res.writeHead(302, Object.assign({ Location: r.redirect, 'Cache-Control': 'no-store' }, r.cookies && r.cookies.length ? { 'Set-Cookie': r.cookies } : {})); res.end(); };
+  if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed.' });
+  try {
+    if (path.endsWith('/start')) return go(signin.googleStart(req, ctx));
+    ctx.user = await auth.userOf(req);
+    return go(await signin.googleCallback(req, new URL(req.url, 'http://x'), ctx));
+  } catch (e) {
+    console.error(e);
+    go({ redirect: '/#/account/google-failed/unavailable' });
   }
 }
 
@@ -123,7 +143,8 @@ async function handleStatic(req, res, path) {
 export function createApp() {
   return createServer((req, res) => {
     const path = new URL(req.url, 'http://x').pathname;
-    if (path.startsWith('/api/')) handleApi(req, res, path);
+    if (path === '/api/auth/google/start' || path === '/api/auth/google/callback') handleGoogle(req, res, path);
+    else if (path.startsWith('/api/')) handleApi(req, res, path);
     else handleStatic(req, res, path);
   });
 }

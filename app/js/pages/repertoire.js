@@ -6,12 +6,14 @@
    served at /repertoire/; the notation is read by the engine's repertoire module, in the page.
    v0.9.1: a singer can correct a line for their own account (the editor below, server/edits.js). The app then
    sings their version; each change goes in a log, on the composition's page and at #/repertoire/changes, that
-   can be stepped through and undone. #/repertoire/<id>/change/<n> opens a composition at one change. */
+   can be stepped through and undone. #/repertoire/<id>/change/<n> opens a composition at one change.
+   v0.9.5: a line the octave checks flag carries a "check octave" tag with a suggested fix, one click away. The swaras
+   stay as written until the singer takes it. The editor states the notation's rules and warns about what it may not stop. */
 import { api } from '../api.js';
 import { toggle, pitchedJob, stop, isPlaying } from '../audio.js';
 import { esc, $, $$, pageHead, transport, seg, toast, errorCard, explain, plural } from '../ui.js';
 import { getUser, refreshUser, userKnown, getRun, startRun } from '../session.js';
-import { parseCell, ragaOf, talaOf, playPlan, cleanCell, cleanLine, applyEdits, cycleGap, offCycle, sustainText, sustainLayout } from '/engine/repertoire.js';
+import { parseCell, ragaOf, talaOf, playPlan, cleanCell, cleanLine, applyEdits, cycleGap, offCycle, sustainText, sustainLayout, octaveChecks, notesOutside, allowedNotes, lineText } from '/engine/repertoire.js';
 
 let INDEX = null;
 const CACHE = new Map();
@@ -20,7 +22,8 @@ const RECENT = 'vg-rep-recent';
 const readRecent = () => { try { return JSON.parse(localStorage.getItem(RECENT) || '[]'); } catch (e) { return []; } };
 const remember = id => { try { localStorage.setItem(RECENT, JSON.stringify([id].concat(readRecent().filter(x => x !== id)).slice(0, 8))); } catch (e) { /* not kept */ } };
 const fold = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]+/g, ' ').replace(/h/g, '').replace(/(.)\1+/g, '$1').replace(/\s+/g, ' ').trim();
-const nice = s => String(s || '').replace(/^./, c => c.toUpperCase());
+/* a name the site runs together comes apart here (MuthuswamiDikshithar); transliteration led by a small letter (mOkshamu) is left alone */
+const nice = s => String(s || '').split(' ').map(w => (/^(?:[A-Z][a-z]{2,}){2,}$/.test(w) ? w.replace(/([a-z])([A-Z])/g, '$1 $2') : w)).join(' ').replace(/^./, c => c.toUpperCase());
 
 async function loadIndex() {
   if (INDEX) return INDEX;
@@ -53,7 +56,6 @@ async function showList(root) {
   const ix = await loadIndex();
   const all = ix.compositions, src = ix.source;
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers · repertoire',
     title: 'Repertoire',
     lead: plural(all.length, 'composition') + ' with their swaras and sahitya, from geethams and varnams to krithis and thillanas. Open one to read it on the tala grid, hear any section sung with its raga’s gamaka, loop a line until it sits, and add it to your practice. The notations are from <a href="' + esc(src.url) + '" target="_blank" rel="noopener">' + esc(src.name) + '</a> by ' + esc(src.author) + ', who offers them free to download and use, with the lessons of ' + Object.values(ix.sources || {}).map(x => esc(x.author)).join(', ') + '. Where a lesson is in several sources, the one that holds up best is used.',
     steps: [
@@ -95,7 +97,7 @@ async function showList(root) {
     updated: (a, b) => b.updated.localeCompare(a.updated) || sorters.name(a, b)
   };
   const row = c => '<li><a class="rp-item" href="#/repertoire/' + esc(c.id) + '"><b>' + esc(nice(c.name)) + '</b><span class="rp-meta">' +
-    [c.raga && nice(c.raga) + (c.ragamalika && !/m[aā]lika/i.test(c.raga) ? ' · ragamalika' : ''), c.tala, c.type, c.composer].filter(Boolean).map(esc).join(' · ') + '</span>' +
+    [c.raga && nice(c.raga) + (c.ragamalika && !/m[aā]lika/i.test(c.raga) ? ' · ragamalika' : ''), c.tala, c.type, c.composer && nice(c.composer)].filter(Boolean).map(esc).join(' · ') + '</span>' +
     (c.lines ? '' : '<span class="rp-flag">lyrics only</span>') + '</a></li>';
   const drawList = () => {
     const list = all.filter(c => matches(c)).sort(sorters[S.sort]);
@@ -170,7 +172,7 @@ async function showChanges(root) {
   };
   await load();
   if (location.hash !== here) return;
-  root.innerHTML = '<div class="wrap"><div class="phead rp-head">' + back + '<span class="eyebrow"><span class="dot"></span>For singers · repertoire</span><h1>Your changes to the notation</h1><p class="lead">Every correction you have made, newest first. Open a change to go to its line, or undo it: an undo is a new entry, so nothing here is ever lost. The imported notation itself never changes.</p></div>' +
+  root.innerHTML = '<div class="wrap"><div class="phead rp-head">' + back + '<h1>Your changes to the notation</h1><p class="lead">Every correction you have made, newest first. Open a change to go to its line, or undo it: an undo is a new entry, so nothing here is ever lost. The imported notation itself never changes.</p></div>' +
     '<div class="tool"><aside class="panel" aria-label="Filters"><div class="step"><div class="field" style="margin-top:0"><span class="lab">What</span><div class="chips rp-types" id="rc-what"></div></div></div>' +
     '<div class="step"><span class="lab rp-lablock">Composition</span><div class="rp-secnav" id="rc-comps"></div></div></aside>' +
     '<section class="result" aria-live="polite"><div class="card"><h2 id="rc-count"></h2><div id="rc-list"></div><div class="rp-more" id="rc-more"></div></div></section></div></div>';
@@ -208,13 +210,24 @@ const UP = { S: 'Ṡ', R: 'Ṙ', G: 'Ġ', M: 'Ṁ', P: 'Ṗ', D: 'Ḋ', N: 'Ṅ'
 const DOWN = { S: 'Ṣ', R: 'Ṛ', G: 'G̣', M: 'Ṃ', P: 'P̣', D: 'Ḍ', N: 'Ṇ' };
 const SUBS = { 1: '₁', 2: '₂', 3: '₃' };
 const FULL = { S: 'Sa', R: 'Ri', G: 'Ga', M: 'Ma', P: 'Pa', D: 'Dha', N: 'Ni' };
-const glyph = t => t.s === ',' ? ',' : (t.o > 0 ? UP[t.s] + (t.o > 1 ? '̇' : '') : t.o < 0 ? DOWN[t.s] + (t.o < -1 ? '̣' : '') : t.s) + (t.v ? SUBS[t.v] : '');
+const glyph = t => t.s === ',' ? ',' : (t.o > 0 ? UP[t.s] + '̇'.repeat(t.o - 1) : t.o < 0 ? DOWN[t.s] + '̣'.repeat(-t.o - 1) : t.s) + (t.v ? SUBS[t.v] : '');
 const scaleText = list => list.map(x => { const m = /^([SRGMPDN])([1-3]?)('*)(\.*)$/.exec(x); return m ? glyph({ s: m[1], v: +m[2] || 0, o: m[3].length - m[4].length }) : x; }).join(' ');
 // 1.5 → 1½: a line can be off by half a unit, where a double-speed group is one swara out
 const amount = n => { const w = Math.floor(n + 1e-9), f = { 0.25: '¼', 0.5: '½', 0.75: '¾' }[Math.round((n - w) * 100) / 100]; return f ? (w || '') + f : String(Math.round(n * 1000) / 1000); };
 const gapTag = g => g.over ? amount(g.over) + ' over' : amount(g.short) + ' short';
 const gapNote = (g, talaName) => 'This line has ' + plural(g.units, 'unit').replace(String(g.units), amount(g.units)) + ', and each cycle of ' + talaName + ' here takes ' + g.cycle + ', so it is ' + plural(g.over || g.short, 'unit').replace(String(g.over || g.short), amount(g.over || g.short)) + (g.over ? ' over' : ' short of') + ' whole cycles.' + (g.cell != null ? ' It first goes off at cell ' + (g.cell + 1) + ', and the sam lines after that shift.' : '') + ' This is usually a slip in the notation. The swaras are shown and sung as written, because the right correction is a singer’s call.';
 const COMMON_SCALE = name => ({ name: name || 'Raga', aro: ['S', 'R2', 'G3', 'M1', 'P', 'D2', 'N3', "S'"], avaro: ["S'", 'N3', 'D2', 'P', 'M1', 'G3', 'R2', 'S'], note: '', from: 'common' });
+
+/* v0.9.5 the rules of the notation, as the editor enforces them (cleanCell, cleanLine) */
+let rulesOpen = null;   // open at first where there is room, then as the singer left them
+const rulesHtml = (talaName, cyc, scale) => '<details class="rp-edrules"' + ((rulesOpen === null ? !matchMedia('(max-width:600px)').matches : rulesOpen) ? ' open' : '') + '><summary>Notation rules</summary><dl>' +
+  '<dt>Swaras</dt><dd><code>S R G M P D N</code>, capital or small, with or without spaces. A digit right after the letter picks a variant: <code>R1 R2 R3</code>, <code>G1 G2 G3</code>, <code>M1 M2</code>, <code>D1 D2 D3</code>, <code>N1 N2 N3</code>. <code>S</code> and <code>P</code> have none. With no digit, the swara takes the variant its raga uses.' + (allowedNotes(scale).length ? ' <strong>In ' + esc(scale.name || 'this raga') + ' you can write <code>' + esc(allowedNotes(scale).join(' ')) + '</code>.</strong> That is its scale and the anya swaras it is written with, such as Bhairavi\'s D2. Other swaras are refused, unless the line already has them.' : '') + '</dd>' +
+  '<dt>Octave</dt><dd><code>S\'</code> is the upper octave, <code>S\'\'</code> the one above it, and so on to <code>S\'\'\'\'</code>. <code>N.</code> is the lower octave, <code>N..</code> the one below it, and so on to <code>N....</code>. The mark goes after the swara and its digit: <code>R2\'</code>. A swara has one or the other, not both. The site\'s S’ and ‘N work too.</dd>' +
+  '<dt>Holding</dt><dd><code>,</code> holds for one unit and <code>;</code> for two, so <code>P, ;</code> lasts four. At the start of a line they are rests.</dd>' +
+  '<dt>Speed</dt><dd><code>[P N]</code> is double speed and <code>[[P N S R]]</code> four times. A group closes in the cell that opened it, and cannot be empty or go deeper.</dd>' +
+  '<dt>Cells</dt><dd>Each cell should end on an anga line, and a line should fill whole cycles' + (cyc ? ': one cycle of ' + esc(talaName) + ' takes ' + cyc + ' units here' : '') + '. A line of the same length keeps its place in the piece.</dd>' +
+  '<dt>Syllables</dt><dd>The grid below has a box under each unit, so a syllable can go under any of them. One that falls past the end of a shortened line is dropped.</dd>' +
+  '</dl><p class="hint muted">A mistake in the marks, or a swara the raga does not have, stops the save. A line off the cycle or an unusual octave only gets a warning, because you may mean it.</p></details>';
 
 /* where the notation comes from, and (v0.9.3) how it did against the other sources of the same lesson */
 function creditOf(c) {
@@ -253,8 +266,8 @@ async function showComposition(root, id, jumpTo) {
   id = c.id;
   if (!userKnown()) await refreshUser();
   // the singer's corrections, from the server; the page still opens without them (offline, or logged out)
-  let edits = [], editsOk = true;
-  if (getUser()) { try { edits = (await api.repertoire.edits(id)).edits; } catch (e) { editsOk = false; } }
+  let edits = [], editsOk = true, oks = [];
+  if (getUser()) { try { const r = await api.repertoire.edits(id); edits = r.edits; oks = r.octaveOk || []; } catch (e) { editsOk = false; } }
   if (location.hash !== here) return;
   remember(id);
   document.title = nice(c.name) + ' · Repertoire · Vocal Gym';
@@ -264,11 +277,16 @@ async function showComposition(root, id, jumpTo) {
   const ragaOfSection = s => ragas[s.raga != null && ragas[s.raga] ? s.raga : 0];
   const scaleOfSection = s => scales[s.raga != null && scales[s.raga] ? s.raga : 0];
   const upbOf = s => s.unitsPerBeat || (c.tala ? c.tala.unitsPerBeat : 1);
-  let view = 'mine', editing = false, secs = [], lost = [], logOpen = false, logAt = null, editor = null;
+  let view = 'mine', editing = false, secs = [], lost = [], logOpen = false, logAt = null, editor = null, octs = [], settled = [];
+  const okKey = (cells, fix) => lineText(cells) + '\n' + lineText(fix);
+  const isOk = (cells, x) => oks.some(o => o.line + '\n' + o.fix === okKey(cells, x.cells));
   const compute = () => {
     const a = applyEdits(c, view === 'site' ? [] : edits);
     lost = a.lost;
     secs = a.comp.sections.map((s, i) => Object.assign({ i }, s));
+    const checks = octaveChecks(secs);
+    octs = checks.map((ls, si) => ls.map((found, li) => found.filter(x => !isOk(secs[si].lines[li].cells, x))));
+    settled = checks.map((ls, si) => ls.map((found, li) => found.filter(x => isOk(secs[si].lines[li].cells, x))));
   };
   compute();
   const secName = s => nice(s.title) || (s.i === (secs.find(x => x.lines.length) || {}).i ? 'The composition' : 'Section ' + (s.i + 1));
@@ -281,8 +299,8 @@ async function showComposition(root, id, jumpTo) {
     : scales[0].from === 'engine' ? 'The post prints no scale; this is ' + esc(scales[0].name) + ' as the engine knows it.' : '';
 
   root.innerHTML = '<div class="wrap">' +
-    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><span class="eyebrow"><span class="dot"></span>' + esc(c.type) + (c.ragamalika ? ' · ragamalika' : '') + '</span><h1>' + esc(nice(c.name)) + '</h1>' +
-      '<p class="lead">' + [c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(c.composer), c.language && esc(c.language)].filter(Boolean).join(' · ') +
+    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><h1>' + esc(nice(c.name)) + '</h1>' +
+      '<p class="lead">' + [esc(c.type) + (c.ragamalika ? ', ragamalika' : ''), c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(nice(c.composer)), c.language && esc(c.language)].filter(Boolean).join(' · ') +
       '<br><span class="muted">' + creditOf(c) + '</span></p>' + comparedHtml(c) + '</div>' +
     '<div class="tool"><aside class="panel" aria-label="Settings">' +
       '<div class="step"><div class="step-h"><span class="n">1</span><h3>Sections</h3></div><div class="rp-secnav" id="rp-secnav"></div></div>' +
@@ -301,7 +319,7 @@ async function showComposition(root, id, jumpTo) {
 
   // the raga card(s)
   $('#rp-ragas').innerHTML = scales.map((sc, k) => '<div class="rp-raga"><b>' + esc(nice(k === 0 && c.raga ? c.raga : sc.name)) + '</b>' + (ragas[k] && ragas[k].twin ? '<span class="tag"> · gamaka from its profile</span>' : '') +
-    '<div class="facts"><div><span class="k">Arohana</span><span class="scale">' + esc(scaleText(sc.aro)) + '</span></div><div><span class="k">Avarohana</span><span class="scale">' + esc(scaleText(sc.avaro)) + '</span></div></div>' + (sc.note ? '<p class="hint muted">' + esc(sc.note) + '</p>' : '') + (sc.was ? '<p class="hint muted">Corrected here. The source prints: ' + esc(sc.was) + '</p>' : '') + '</div>').join('') + (scaleNote ? '<p class="hint muted">' + scaleNote + '</p>' : '');
+    '<div class="facts"><div><span class="k">Arohana</span><span class="scale">' + esc(scaleText(sc.aro)) + '</span></div><div><span class="k">Avarohana</span><span class="scale">' + esc(scaleText(sc.avaro)) + '</span></div></div>' + (sc.note ? '<p class="hint muted">' + esc(sc.note) + '</p>' : '') + (sc.was ? '<p class="hint muted">Corrected here. The source prints: ' + esc(sc.was) + '</p>' : '') + (sc.also && sc.also.length ? '<p class="hint muted">Also written in this raga: ' + esc(sc.also.join(' ')) + '.</p>' : '') + '</div>').join('') + (scaleNote ? '<p class="hint muted">' + scaleNote + '</p>' : '');
 
   // the notation: every token gets a data-i; key "section:line:cell:tok" → data-i
   const idOf = new Map();
@@ -311,6 +329,7 @@ async function showComposition(root, id, jumpTo) {
     const angaAt = new Set(); if (tala) { let a = 0; tala.angas.forEach(g => { angaAt.add(a * upb); a += g.len; }); }
     const syl = new Map(); (l.syl || []).forEach(([u, t]) => { const k = Math.floor(u + 1e-6); syl.set(k, (syl.has(k) ? syl.get(k) + ' ' : '') + t); });
     let u = l.at || 0, h = '';
+    const octave = octs[s.i] ? octs[s.i][li] || [] : [], asked = new Set(octave.flatMap(x => x.changes.map(ch => ch.cell + ':' + ch.tok)));
     // a lead-in starts partway through the cycle: empty units show where
     if (l.at) { h += '<span class="rp-cell rp-pad" aria-hidden="true">'; for (let k = 0; k < l.at; k++) h += '<span class="rp-u pad' + (k === 0 ? ' sam' : angaAt.has(k) ? ' a' : k % upb === 0 ? ' b' : '') + '"><span class="rp-sw"></span></span>'; h += '</span>'; }
     l.cells.forEach((cell, ci) => {
@@ -331,7 +350,7 @@ async function showComposition(root, id, jumpTo) {
         h += '<span class="' + cls + '"' + (col.fast === 1 && col.units > 1 ? ' style="--u:' + col.units + '"' : '') + '><span class="rp-sw">' + col.parts.map(p => {
           const t = toks[p.toks[0]], n = nextId++;
           p.toks.forEach(j => idOf.set(s.i + ':' + li + ':' + ci + ':' + j, n));
-          return '<i data-i="' + n + '"' + (t.s === ',' ? ' class="k"' : ' title="' + esc(FULL[t.s] + (t.v ? ' ' + t.v : '') + (t.o > 0 ? ', upper octave' : t.o < 0 ? ', lower octave' : '')) + '"') + '>' + esc(p.text || glyph(t)) + '</i>';
+          return '<i data-i="' + n + '"' + (t.s === ',' ? ' class="k"' : (asked.has(ci + ':' + p.toks[0]) ? ' class="rp-octmark"' : '') + ' title="' + esc(FULL[t.s] + (t.v ? ' ' + t.v : '') + (t.o > 0 ? ', upper octave' : t.o < 0 ? ', lower octave' : '')) + '"') + '>' + esc(p.text || glyph(t)) + '</i>';
         }).join('') + '</span>' +
           (S.sahitya ? '<span class="rp-syl">' + esc(syl.get(Math.floor(pos + 1e-6)) || '') + '</span>' : '') + '</span>';
         u = col.from + col.units;
@@ -340,13 +359,17 @@ async function showComposition(root, id, jumpTo) {
     });
     const flag = l.link ? 'link' : l.at ? 'lead-in' : l.tail ? 'overlap' : '';
     const gap = offCycle(s.lines, li, tala, upb);
-    return '<div class="rp-line nrow" data-s="' + s.i + '" data-l="' + li + '"' + (l.key ? ' data-key="' + esc(l.key) + '"' : '') + '><div class="rp-lh"><button type="button" class="iconbtn rp-loop" data-loop="' + s.i + ':' + li + '" aria-label="Loop this line" title="Loop this line">⟲</button>' +
-      (editing && l.key ? '<button type="button" class="iconbtn rp-pen" data-edit="' + s.i + ':' + li + '" aria-label="Edit this line" title="Edit this line">✎</button>' : '') +
+    return '<div class="rp-line nrow" data-s="' + s.i + '" data-l="' + li + '"' + (l.key ? ' data-key="' + esc(l.key) + '"' : '') + '><div class="rp-lh"><button type="button" class="iconbtn rp-loop" data-loop="' + s.i + ':' + li + '" aria-label="Loop this line" title="Loop this line"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      (editing && l.key ? '<button type="button" class="iconbtn rp-pen" data-edit="' + s.i + ':' + li + '" aria-label="Edit this line" title="Edit this line"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 13l.7-3L10.5 3.2l2.3 2.3L6 12.3zM9.5 4.2l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') +
       (l.edited ? '<button type="button" class="rp-flag rp-mine" data-logid="' + l.edited + '" title="You changed this line. Open the log of changes.">edited</button>' : '') +
       (l.fixed ? '<button type="button" class="rp-flag rp-fixed" data-logfix="' + esc(l.key || s.i + ':' + li) + '" title="' + esc('A typing slip was corrected at import. The site prints: ' + l.fixed.map(x => x.was).join(' | ')) + '">fixed</button>' : '') +
       (l.label ? '<span class="rp-lab">' + esc(l.label) + '</span>' : '') + (flag ? '<span class="rp-flag" title="' + (flag === 'link' ? 'A short phrase that leads back into a line' : flag === 'lead-in' ? 'Starts before sam and ends on it' : 'Its last cell fills the next line’s opening rests') + '">' + flag + '</span>' : '') +
       (gap ? '<button type="button" class="rp-flag rp-off" data-off="' + s.i + ':' + li + '" aria-expanded="false" title="' + esc(gapNote(gap, c.tala.name)) + '">' + esc(gapTag(gap)) + '</button>' : '') + '</div>' +
-      '<div class="rp-cells">' + h + (l.note ? '<span class="rp-linenote">' + esc(l.note) + '</span>' : '') + '</div></div>';
+      '<div class="rp-cells">' + h +
+        // these tags are too long for the margin, so they follow the swaras
+        (octave.length ? '<button type="button" class="rp-flag rp-oct" data-oct="' + s.i + ':' + li + '" aria-expanded="false" title="An octave mark may be missing here. Press to see the suggested fix.">check octave</button>' : '') +
+        (settled[s.i] && settled[s.i][li] && settled[s.i][li].length ? '<button type="button" class="rp-flag rp-octok" data-octok="' + s.i + ':' + li + '" title="You marked this correct as written. Press to be asked again.">octave ok</button>' : '') +
+        (l.note ? '<span class="rp-linenote">' + esc(l.note) + '</span>' : '') + '</div></div>';
   };
   const drawBody = () => {
     idOf.clear(); nextId = 0;
@@ -364,6 +387,8 @@ async function showComposition(root, id, jumpTo) {
     $$('[data-edit]', root).forEach(b => { b.onclick = () => { const [si, li] = b.dataset.edit.split(':').map(Number); openEditor(si, li, 'edit'); }; });
     $$('[data-addend]', root).forEach(b => { b.onclick = () => { const si = +b.dataset.addend, n = secs[si].lines.length; openEditor(si, n - 1, 'add'); }; });
     $$('[data-off]', root).forEach(b => { b.onclick = () => toggleGap(b); });
+    $$('[data-oct]', root).forEach(b => { b.onclick = () => toggleOctave(b); });
+    $$('[data-octok]', root).forEach(b => { b.onclick = () => { const [si, li] = b.dataset.octok.split(':').map(Number); askOctaveAgain(secs[si].lines[li].cells, settled[si][li].map(x => x.cells)); }; });
     $$('[data-logid]', root).forEach(b => { b.onclick = () => showInLog(+b.dataset.logid); });
     $$('[data-logfix]', root).forEach(b => { b.onclick = () => { logOpen = true; drawLog(); const el = root.querySelector('[data-fixof="' + b.dataset.logfix + '"]'); if (el) el.scrollIntoView({ block: 'center', behavior: motion() }); }; });
   };
@@ -374,7 +399,7 @@ async function showComposition(root, id, jumpTo) {
   const select = x => {
     stop(); sel = x;
     const s = secs[x.s];
-    $('#rp-now').innerHTML = x.l == null ? '<b>' + esc(nice(s.title) || 'Section ' + (x.s + 1)) + '</b> · ' + plural(s.lines.length, 'line') + '<span class="muted"> · Play sings it once (or loops with Loop on). ⟲ beside a line loops that line.</span>'
+    $('#rp-now').innerHTML = x.l == null ? '<b>' + esc(nice(s.title) || 'Section ' + (x.s + 1)) + '</b> · ' + plural(s.lines.length, 'line') + '<span class="muted"> · Play sings it once (or loops with Loop on). The arrow beside a line loops that line.</span>'
       : '<b>Line ' + (x.l + 1) + (s.lines[x.l].label ? ' (' + esc(s.lines[x.l].label) + ')' : '') + '</b> of ' + esc(nice(s.title) || 'section ' + (x.s + 1)) + ', looped <button type="button" class="btn small ghost" id="rp-whole">Back to the whole section</button>';
     const w = $('#rp-whole'); if (w) w.onclick = () => select({ s: x.s, l: null });
     $$('.rp-line.sel', root).forEach(el => el.classList.remove('sel'));
@@ -438,16 +463,16 @@ async function showComposition(root, id, jumpTo) {
   };
   const syncEditBtn = () => { const b = $('#rp-edit'); b.setAttribute('aria-pressed', String(editing)); b.textContent = editing ? 'Stop editing' : 'Edit the notation'; };
   $('#rp-edit').onclick = async () => {
-    if (await needLogin()) return;
+    if (await needLogin('Log in first: your corrections belong to your account.')) return;
     if (!editsOk) {
-      try { edits = (await api.repertoire.edits(id)).edits; editsOk = true; }
+      try { const r = await api.repertoire.edits(id); edits = r.edits; oks = r.octaveOk || []; editsOk = true; }
       catch (e) { toast('Your changes could not be loaded, so editing is off: ' + e.message); return; }
     }
     editing = !editing;
     if (editing && view !== 'mine') view = 'mine';
     syncEditBtn();
     redraw();
-    if (editing) toast('Press ✎ beside a line to change it.');
+    if (editing) toast('Press the pen beside a line to change it.');
   };
 
   // the tag on a line off the cycle opens a note under it, since a tooltip never appears on a phone
@@ -462,10 +487,68 @@ async function showComposition(root, id, jumpTo) {
     el.after(note);
     b.setAttribute('aria-expanded', 'true');
   };
-  const correct = async key => {
-    if (await needLogin()) return;
+  // v0.9.5 the "check octave" tag opens the suggested fixes under its line. Nothing changes until one is taken.
+  const octaveWhy = x => {
+    const ch = x.changes[0], one = x.changes.length === 1, up = /'/.test(ch.now) && !/'/.test(ch.was) || /\./.test(ch.was) && !/\./.test(ch.now), said = [];
+    if (x.checks.includes('spike')) said.push('The ' + ch.was + ' sits far from the swaras on both sides of it, and an octave ' + (up ? 'up' : 'down') + ' it would sit next to them.');
+    if (x.checks.includes('piece')) said.push('Elsewhere in this piece the same swaras read <code>' + esc(x.usually) + '</code>' + (x.times > 1 ? ' (' + x.times + ' times)' : '') + (one ? '.' : ', which these ' + x.changes.length + ' changes match.'));
+    return said.join(' ');
+  };
+  const toggleOctave = b => {
+    const el = b.closest('.rp-line'), open = root.querySelector('.rp-octnote[data-for="' + b.dataset.oct + '"]');
+    if (open) { open.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+    const [si, li] = b.dataset.oct.split(':').map(Number), s = secs[si], l = s.lines[li], found = octs[si][li];
+    const note = document.createElement('div');
+    note.className = 'rp-offnote rp-octnote'; note.setAttribute('role', 'note'); note.dataset.for = b.dataset.oct;
+    note.innerHTML = '<p>This line fills its tala either way, so only a singer can say which is right. Its swaras stay as written unless you take a fix.</p>' +
+      found.map((x, k) => '<div class="rp-octfix"><p class="rp-octswap">' + Array.from(new Set(x.changes.map(ch => ch.cell))).map(ci => 'Cell ' + (ci + 1) + ': <code>' + esc(sustainText(l.cells[ci])) + '</code> → <code>' + esc(sustainText(x.cells[ci])) + '</code>').join('<br>') + '</p><p class="hint muted">' + octaveWhy(x) + '</p>' +
+        '<div class="rp-acts">' + (view === 'mine' ? '<button type="button" class="btn small" data-usefix="' + k + '">Use ' + esc(x.changes.map(ch => ch.now).join(' ')) + '</button>' : '') + '<button type="button" class="btn small ghost" data-okfix="' + k + '">Correct as written</button></div></div>').join('') +
+      (view === 'mine' ? '<p class="hint muted">A fix changes your copy, and goes in your log of changes, where you can undo it. “Correct as written” changes nothing and stops asking about this reading, for you, unless the line changes.</p><button type="button" class="btn small ghost rp-octedit">Correct this line myself</button>' : '<p class="hint muted">Switch to My version to take a fix.</p>');
+    note.querySelectorAll('[data-usefix]').forEach(u => { u.onclick = () => useOctaveFix(si, li, found[+u.dataset.usefix]); });
+    note.querySelectorAll('[data-okfix]').forEach(u => { u.onclick = () => markOctaveOk(si, li, found[+u.dataset.okfix]); });
+    const own = note.querySelector('.rp-octedit');
+    if (own) own.onclick = () => correct(l.key);
+    el.after(note);
+    b.setAttribute('aria-expanded', 'true');
+  };
+  // "correct as written": nothing in the notation changes; this singer is not asked again about this reading of this line
+  const markOctaveOk = async (si, li, x) => {
+    if (await needLogin('Log in first: what you mark belongs to your account.')) return;
+    const l = secs[si].lines[li];
+    try {
+      oks = (await api.repertoire.octaveOk({ comp: id, line: l.cells, fix: x.cells })).octaveOk;
+      redraw();
+      toast('Marked correct as written. You can ask again from the line or the log.');
+      flash(l.key);
+    } catch (e) { toast(e.message); }
+  };
+  const askOctaveAgain = async (cells, fixes) => {
+    if (await needLogin('Log in first: what you mark belongs to your account.')) return;
+    try {
+      for (const fix of fixes) oks = (await api.repertoire.octaveAsk({ comp: id, line: cells, fix })).octaveOk;
+      redraw();
+      toast('The octave question is back on the line.');
+    } catch (e) { toast(e.message); }
+  };
+  const useOctaveFix = async (si, li, x) => {
+    if (await needLogin('Log in first: your corrections belong to your account.')) return;
     if (!editsOk) {
-      try { edits = (await api.repertoire.edits(id)).edits; editsOk = true; }
+      try { const r = await api.repertoire.edits(id); edits = r.edits; oks = r.octaveOk || []; editsOk = true; }
+      catch (e) { toast('Your changes could not be loaded, so editing is off: ' + e.message); return; }
+    }
+    const l = secs[si].lines[li];
+    try {
+      const r = await api.repertoire.save({ comp: id, action: 'edit', key: l.key, line: { cells: x.cells, syl: l.syl || [], label: l.label || '' }, note: 'Octave check: ' + x.changes.map(ch => ch.was + ' to ' + ch.now).join(', '), expect: lastIdOf(l.key) });
+      edits = r.edits;
+      redraw();
+      toast('Fixed in your copy. You can undo it in the log of changes.');
+      flash(l.key);
+    } catch (e) { toast(e.message); }
+  };
+  const correct = async key => {
+    if (await needLogin('Log in first: your corrections belong to your account.')) return;
+    if (!editsOk) {
+      try { const r = await api.repertoire.edits(id); edits = r.edits; oks = r.octaveOk || []; editsOk = true; }
       catch (e) { toast('Your changes could not be loaded, so editing is off: ' + e.message); return; }
     }
     if (view !== 'mine') { view = 'mine'; redraw(); }
@@ -487,6 +570,7 @@ async function showComposition(root, id, jumpTo) {
     if (!adding) (l.syl || []).forEach(x => { const k = Math.floor(x[0] + 1e-6); if (!orig.has(k)) orig.set(k, []); orig.get(k).push(x); });
     const typed = new Map(Array.from(orig.entries()).map(([k, v]) => [k, v.map(x => x[1]).join(' ')]));
     const blank = adding ? Math.max(1, l ? l.cells.length : 1) : 0;
+    const rules = { scale: c.ragas.length ? scaleOfSection(s) : null, keep: !adding && l ? l.cells : [] };
     const startCells = adding ? Array.from({ length: blank }, () => '') : l.cells.map(sustainText);
     const where = esc(nice(s.title) || 'Section ' + (si + 1));
     const form = document.createElement('form');
@@ -494,9 +578,9 @@ async function showComposition(root, id, jumpTo) {
     form.setAttribute('aria-label', adding ? 'Add a line' : 'Edit line ' + (li + 1));
     form.innerHTML = '<div class="rp-edh"><b>' + (adding ? 'A new line' + (l ? ' after line ' + (li + 1) : '') : 'Line ' + (li + 1)) + '</b><span class="muted"> · ' + where + '</span></div>' +
       '<div class="rp-edcells"></div><button type="button" class="btn small ghost rp-edmore">Add a cell</button>' +
-      '<p class="hint muted">S R G M P D N, with a digit for a variant (R2). <code>S\'</code> is the upper octave and <code>N.</code> the lower (the site’s S’ and ‘N work too). <code>,</code> holds for one unit and <code>;</code> for two, so <code>P, ;</code> lasts four. <code>[P N]</code> is double speed and <code>[[P N S R]]</code> four times. The grid below shows every unit, so a syllable can go under any of them.</p>' +
+      rulesHtml(c.tala ? c.tala.name : '', cyc, rules.scale) +
       '<div class="rp-edgrid" aria-label="The line on the tala grid, with a box for each syllable"></div>' +
-      '<div class="rp-edstat" role="status"></div>' +
+      '<div class="rp-edstat" role="status"></div><div class="rp-edwarn" aria-live="polite"></div>' +
       '<div class="rp-edmeta"><div class="field"><label class="lab" for="rp-edlab">Label</label><input type="text" id="rp-edlab" maxlength="80" autocomplete="off" value="' + esc(l && !adding ? l.label || '' : '') + '"></div>' +
         '<div class="field"><label class="lab" for="rp-ednote">Why (for the log; optional)</label><input type="text" id="rp-ednote" maxlength="300" autocomplete="off" placeholder="My teacher sings R here"></div></div>' +
       '<div class="rp-acts"><button type="submit" class="btn small primary rp-edsave">Save</button><button type="button" class="btn small ghost rp-edno">Cancel</button>' +
@@ -521,7 +605,9 @@ async function showComposition(root, id, jumpTo) {
       const seen = new Set();
       inputs().forEach(inp => {
         const r = cleanCell(inp.value);
-        inp.classList.toggle('bad', !!r.errors.length);
+        const wrong = r.errors.length || (rules.scale && notesOutside([r.text], rules.scale, rules.keep).length);
+        inp.classList.toggle('bad', !!wrong);
+        if (wrong) inp.setAttribute('aria-invalid', 'true'); else inp.removeAttribute('aria-invalid');
         if (!r.text || r.errors.length) { u += r.units; return; }
         const toks = parseCell(r.text);
         h += '<span class="rp-cell">';
@@ -540,13 +626,30 @@ async function showComposition(root, id, jumpTo) {
       });
       shownUnits = seen;
       q('.rp-edgrid').innerHTML = h || '<span class="muted">The line appears here as you type.</span>';
-      const res = cleanLine({ cells: inputs().map(i => i.value) });
+      const res = cleanLine({ cells: inputs().map(i => i.value) }, rules);
       const status = q('.rp-edstat');
       const gap = tala && res.units ? cycleGap(res.line ? res.line.cells : [], tala, upb) : null;
       status.className = 'rp-edstat' + (res.errors.length ? ' bad' : '');
-      status.textContent = res.errors.length && inputs().some(i => i.value.trim()) ? res.errors[0]
+      const samePlace = !adding && (l.link || l.at || l.tail || l.join) && Math.abs(res.units - l.cells.reduce((n, x) => n + cleanCell(x).units, 0)) < 1e-9;
+      status.textContent = res.errors.length && inputs().some(i => i.value.trim()) ? res.errors.join(' ')
         : !res.units ? ''
+        : samePlace ? amount(res.units) + ' units: the same length as before, so it keeps its place in the piece.'
         : amount(res.units) + (res.units === 1 ? ' unit' : ' units') + (!cyc ? '.' : gap ? ': ' + gapTag(gap) + ' whole cycles of ' + cyc + (gap.cell != null ? ', first off at cell ' + (gap.cell + 1) : '') + '. You can still save it; the next line waits for sam.' : ': ' + plural(res.units / cyc, 'whole cycle') + ' of ' + c.tala.name + '.');
+      drawWarnings(res);
+    };
+    // what a singer may mean, so it warns and does not stop: an unusual octave, a syllable past the end
+    const drawWarnings = res => {
+      const box = q('.rp-edwarn');
+      if (res.errors.length || !res.line) { box.innerHTML = ''; return; }
+      const say = [];
+      const past = adding ? [] : (l.syl || []).filter(x => x[0] >= res.units);
+      if (past.length) say.push('<li>The ' + (past.length > 1 ? past.length + ' syllables' : 'syllable') + ' past the new end (' + esc(past.map(x => x[1]).join(' ')) + ') will be dropped.</li>');
+      const at = adding ? li + 1 : li, lines = s.lines.slice();
+      lines.splice(at, adding ? 0 : 1, { cells: res.line.cells });
+      const found = octaveChecks(secs.map(x => (x.i === si ? Object.assign({}, x, { lines }) : x)))[si][at].filter(x => !isOk(res.line.cells, x));
+      found.forEach((x, k) => say.push('<li>Check the octave: ' + esc(x.changes.map(ch => ch.was + ' may be ' + ch.now).join(', ')) + '. <button type="button" class="btn small ghost" data-edfix="' + k + '">Use ' + esc(x.changes.map(ch => ch.now).join(' ')) + '</button></li>'));
+      box.innerHTML = say.length ? '<ul>' + say.join('') + '</ul>' : '';
+      box.querySelectorAll('[data-edfix]').forEach(b => { b.onclick = () => { const filled = inputs().filter(i => i.value.trim()); found[+b.dataset.edfix].cells.forEach((cell, k) => { if (filled[k]) filled[k].value = sustainText(cell); }); drawGrid(); }; });
     };
     const sylOf = () => {
       const out = [];
@@ -558,7 +661,9 @@ async function showComposition(root, id, jumpTo) {
       });
       // syllables on a unit the grid has no box for stay, while they are still inside the line
       orig.forEach((was, at) => { if (!shownUnits.has(at)) out.push(...was); });
-      return out;
+      // and a line made shorter drops those past its new end (the editor says so), rather than refusing to save
+      const end = cleanLine({ cells: inputs().map(i => i.value) }).units;
+      return out.filter(x => x[0] < end);
     };
     const finish = async (promise, done, key) => {
       form.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -577,6 +682,7 @@ async function showComposition(root, id, jumpTo) {
     };
     const note = () => q('#rp-ednote').value;
     cellsBox.oninput = drawGrid;
+    q('.rp-edrules').ontoggle = e => { rulesOpen = e.target.open; };
     q('.rp-edgrid').oninput = e => { if (e.target.dataset.u != null) typed.set(+e.target.dataset.u, e.target.value); };
     q('.rp-edmore').onclick = () => { if (inputs().length >= 32) return toast('A line has at most 32 cells.'); addCellInput(''); inputs().slice(-1)[0].focus(); drawGrid(); };
     q('.rp-edno').onclick = () => { editor = null; drawBody(); if (sel) select(sel); };
@@ -586,8 +692,8 @@ async function showComposition(root, id, jumpTo) {
     if (q('.rp-edsite')) q('.rp-edsite').onclick = () => finish(api.repertoire.restore({ comp: id, id: lastIdOf(l.key), to: 'site', note: note(), expect: lastIdOf(l.key) }), 'Back to the imported line.', l.key);
     form.onsubmit = e => {
       e.preventDefault();
-      const res = cleanLine({ cells: inputs().map(i => i.value), syl: sylOf(), label: q('#rp-edlab').value });
-      if (res.errors.length) { const st = q('.rp-edstat'); st.className = 'rp-edstat bad'; st.textContent = res.errors[0]; const badIn = form.querySelector('.rp-edin.bad'); if (badIn) badIn.focus(); return; }
+      const res = cleanLine({ cells: inputs().map(i => i.value), syl: sylOf(), label: q('#rp-edlab').value }, rules);
+      if (res.errors.length) { const st = q('.rp-edstat'); st.className = 'rp-edstat bad'; st.textContent = res.errors.join(' '); const badIn = form.querySelector('.rp-edin.bad'); if (badIn) badIn.focus(); return; }
       if (adding) return finish(api.repertoire.save({ comp: id, action: 'add', section: si, anchor: l ? l.key : 's', line: res.line, note: note() }), 'Line added. It is in your log of changes.', null);
       finish(api.repertoire.save({ comp: id, action: 'edit', key: l.key, line: res.line, note: note(), expect: lastIdOf(l.key) }), 'Saved. It is in your log of changes.', l.key);
     };
@@ -624,15 +730,17 @@ async function showComposition(root, id, jumpTo) {
     const fixes = [];
     c.sections.forEach((s, si) => s.lines.forEach((l, li) => (l.fixed || []).forEach(x => fixes.push({ si, li, x, l }))));
     const box = $('#rp-log');
-    if (!edits.length && !fixes.length) { box.innerHTML = ''; return; }
+    if (!edits.length && !fixes.length && !oks.length) { box.innerHTML = ''; return; }
     const latest = new Map(); edits.forEach(e => latest.set(e.key, e.id));
     const n = edits.length, at = logAt == null ? n - 1 : Math.min(logAt, n - 1);
-    box.innerHTML = '<details class="card rp-log"' + (logOpen ? ' open' : '') + '><summary><b>Changes to this composition</b><span class="muted"> · ' + [n ? plural(n, 'change') + ' by you' : '', fixes.length ? plural(fixes.length, 'slip') + ' corrected at import' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
+    box.innerHTML = '<details class="card rp-log"' + (logOpen ? ' open' : '') + '><summary><b>Changes to this composition</b><span class="muted"> · ' + [n ? plural(n, 'change') + ' by you' : '', fixes.length ? plural(fixes.length, 'slip') + ' corrected at import' : '', oks.length ? oks.length + ' marked correct as written' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
       (n ? '<div class="rp-stepper"><button type="button" class="btn small ghost" id="rp-older"' + (at <= 0 ? ' disabled' : '') + '>‹ Earlier</button><span class="rp-stepnow" role="status">Change ' + (at + 1) + ' of ' + n + '</span><button type="button" class="btn small ghost" id="rp-newer"' + (at >= n - 1 ? ' disabled' : '') + '>Later ›</button><a class="rp-all" href="#/repertoire/changes">All my changes</a></div>' +
         '<ol class="rp-chgs">' + edits.map((e, k) => ({ e, k })).reverse().map(({ e, k }) => changeHtml(e, { latest: latest.get(e.key) === e.id, current: k === at, lost: lost.some(x => x.key === e.key) })).join('') + '</ol>' : '') +
       (fixes.length ? '<h3 class="rp-loghead">Corrected at import</h3><p class="hint muted">Typing slips on the site, read as they were clearly meant. Your own changes come on top of these.</p><ul class="rp-chgs">' +
         fixes.map(f => '<li class="rp-chg" data-fixof="b:' + f.si + ':' + f.li + '"><div class="rp-chgh"><b>' + esc(nice(c.sections[f.si].title) || 'Section ' + (f.si + 1)) + ', line ' + (f.li + 1) + '</b><span class="rp-acts"><button type="button" class="btn small ghost" data-gofix="b:' + f.si + ':' + f.li + '">Go to the line</button></span></div>' +
-          '<div class="rp-chgrow"><span class="k">Site</span><code>' + esc(f.x.was) + '</code></div><div class="rp-chgrow"><span class="k">Read as</span><code>' + esc(sustainText(f.l.cells[f.x.cell])) + '</code></div></li>').join('') + '</ul>' : '') + '</details>';
+          '<div class="rp-chgrow"><span class="k">Site</span><code>' + esc(f.x.was) + '</code></div><div class="rp-chgrow"><span class="k">Read as</span><code>' + esc(sustainText(f.l.cells[f.x.cell])) + '</code></div></li>').join('') + '</ul>' : '') +
+      (oks.length ? '<h3 class="rp-loghead">Marked correct as written</h3><p class="hint muted">Octave questions you have settled. The notation is unchanged, and a change to the line asks again.</p><ul class="rp-chgs">' +
+        oks.map((o, k) => '<li class="rp-chg"><div class="rp-chgrow"><span class="k">Line</span><code>' + esc(o.line.split(' | ').map(sustainText).join(' | ')) + '</code></div><div class="rp-chgrow"><span class="k">Not</span><code>' + esc(o.fix.split(' | ').map(sustainText).join(' | ')) + '</code></div><span class="rp-acts"><button type="button" class="btn small ghost" data-askok="' + k + '">Ask again</button></span></li>').join('') + '</ul>' : '') + '</details>';
     const d = box.querySelector('details');
     d.ontoggle = () => { logOpen = d.open; };
     const step = k => { logAt = k; logOpen = true; drawLog(); goTo(edits[k]); };
@@ -641,6 +749,7 @@ async function showComposition(root, id, jumpTo) {
     if (newer) newer.onclick = () => step(at + 1);
     box.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => { const k = edits.findIndex(e => e.id === +b.dataset.go); logAt = k; drawLog(); goTo(edits[k]); }; });
     box.querySelectorAll('[data-undo]').forEach(b => { b.onclick = () => undo(edits.find(e => e.id === +b.dataset.undo), b.dataset.to); });
+    box.querySelectorAll('[data-askok]').forEach(b => { b.onclick = () => { const o = oks[+b.dataset.askok]; askOctaveAgain(o.line.split(' | '), [o.fix.split(' | ')]); }; });
     box.querySelectorAll('[data-gofix]').forEach(b => { b.onclick = () => { if (!flash(b.dataset.gofix)) toast('You have changed or removed that line.'); }; });
   };
   drawLog(); drawView();
@@ -648,7 +757,7 @@ async function showComposition(root, id, jumpTo) {
 
   // practice: a session of this piece, or an item in a routine
   const item = minutes => ({ kind: 'repertoire', title: nice(c.name).slice(0, 80), minutes, ref: c.id });
-  const needLogin = async () => { if (!userKnown()) await refreshUser(); if (getUser()) return false; toast('Log in first: sessions and routines belong to an account.'); location.hash = '#/account'; return true; };
+  const needLogin = async (why) => { if (!userKnown()) await refreshUser(); if (getUser()) return false; toast(why || 'Log in first: sessions and routines belong to an account.'); location.hash = '#/account'; return true; };
   $('#rp-session').onclick = async () => {
     if (await needLogin()) return;
     const cur = getRun();

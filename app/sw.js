@@ -4,15 +4,16 @@
    GET /api/meta (the lists of ragas and talas the shell needs to start); accounts and logs always go to the
    server, and a log made offline waits in the page (app/js/session.js) until the server is back. v0.9: the
    repertoire's list is cached with the shell, and each composition (/repertoire/c/) once it has been opened. */
-const CACHE = 'vg-shell-0.9.4';
+const CACHE = 'vg-shell-0.10.2';
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png',
   '/css/app.css', '/shared/korvai-lab.css', '/shared/mela-explorer.css',
-  '/js/main.js', '/js/api.js', '/js/audio.js', '/js/ui.js', '/js/glossary.js', '/js/session.js', '/js/fx.js',
+  '/js/main.js', '/js/api.js', '/js/audio.js', '/js/ui.js', '/js/glossary.js', '/js/session.js', '/js/kolam-view.js', '/js/threshold3d.js', '/js/mela-wheel.js',
+  '/fonts/arima-400-700-latin.woff2', '/fonts/arima-400-700-latin-ext.woff2', '/fonts/hind-madurai-400-latin.woff2', '/fonts/hind-madurai-400-latin-ext.woff2', '/fonts/hind-madurai-500-latin.woff2', '/fonts/hind-madurai-500-latin-ext.woff2', '/fonts/hind-madurai-600-latin.woff2', '/fonts/hind-madurai-600-latin-ext.woff2', '/fonts/hind-madurai-700-latin.woff2', '/fonts/hind-madurai-700-latin-ext.woff2',
   '/js/pages/home.js', '/js/pages/alankara.js', '/js/pages/kalpana.js', '/js/pages/korvai.js', '/js/pages/melakarta.js',
   '/js/pages/judge.js', '/js/pages/learn.js', '/js/pages/practice.js', '/js/pages/account.js', '/js/pages/repertoire.js',
   '/shared/voice.js', '/shared/mridangam.js', '/shared/solkattu.js', '/shared/solkattu-bank.js', '/shared/korvai-lab.js', '/shared/mela-explorer.js',
-  '/engine/melakarta.js', '/engine/ragas.js', '/engine/repertoire.js', '/engine/talas.js', '/repertoire/index.json'
+  '/engine/kolam.js', '/engine/random.js', '/engine/melakarta.js', '/engine/ragas.js', '/engine/repertoire.js', '/engine/talas.js', '/repertoire/index.json'
 ];
 
 self.addEventListener('install', e => {

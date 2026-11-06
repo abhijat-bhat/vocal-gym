@@ -5,8 +5,12 @@
    page (app/js/session.js), so the singer can move between the tools while its timer runs. */
 import { api } from '../api.js';
 import { esc, $, toast, errorCard, pageHead } from '../ui.js';
-import { getUser, refreshUser, userKnown, onUser, getRun, startRun, discard, saveFinished, elapsed, clock, localDate, KIND, pending } from '../session.js';
+import { getUser, refreshUser, userKnown, onUser, getRun, startRun, discard, saveFinished, elapsed, clock, localDate, KIND, pending, routeOf, keepGoing, setSpent } from '../session.js';
+import { dayKolam } from '../kolam-view.js';
 
+/* a rating as dots; and a tool's name, unless the title says it already */
+const dots = (n, of) => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat((of || n) - n);
+const kindOf = it => { const l = (KIND[it.kind] || KIND.free).label; return it.title && it.title.toLowerCase().startsWith(l.toLowerCase()) ? '' : '<span class="pr-kind">' + esc(l) + '</span> '; };
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const minutes = r => r.items.reduce((s, it) => s + it.minutes, 0);
 const dayLabel = d => DAY[new Date(d + 'T12:00:00').getDay()];
@@ -24,15 +28,15 @@ export async function mount(root, meta, parts) {
 }
 
 function loggedOut(root) {
-  root.innerHTML = '<div class="wrap">' + pageHead({ eyebrow: 'Your practice', title: 'Practice with a plan', lead: 'Make an account to keep routines, time each part of a session as you move between the tools, and keep a log with your daily goal and your streak. Everything is stored in this computer’s Vocal Gym database.' }) +
-    '<div class="card pr-cta"><p>Practice sessions belong to an account, so your log and streak are there next time.</p><div class="pr-row"><a class="btn primary" href="#/account">Log in or create an account</a></div></div></div>';
+  root.innerHTML = '<div class="wrap">' + pageHead({ title: 'Practice with a plan', lead: 'Sign in to keep routines, time each part of a session as you move between the tools, and keep a log with your daily goal and your streak.' }) +
+    '<div class="card pr-cta"><p>Practice sessions belong to an account, so your log and streak are there next time.</p><div class="pr-row"><a class="btn primary" href="#/account">Sign in or create an account</a></div></div></div>';
 }
 
 async function drawMain(root) {
   const user = getUser();
   if (!user) return loggedOut(root);
-  root.innerHTML = '<div class="wrap">' + pageHead({ eyebrow: 'Your practice', title: 'Practice', lead: 'Hello, ' + esc(user.displayName) + '. Pick a routine and press Start: its first tool opens and the timer runs in the bar at the bottom while you practise. Move on with Next, and finish to log the session.' }) +
-    '<div id="pr-run"></div><div class="pr-stats" id="pr-stats"><div class="card"><p class="muted">Loading…</p></div></div>' +
+  root.innerHTML = '<div class="wrap"><div class="phead pr-head"><h1>Your floor, ' + esc(user.displayName) + '</h1></div>' +
+    '<div id="pr-run"></div><div class="slab-card pr-next" id="pr-next"><p class="muted">Loading…</p></div><div class="pr-stats" id="pr-stats"></div>' +
     '<section class="pr-sec"><div class="pr-h"><h2>Routines</h2><button type="button" class="btn small" id="pr-new">New routine</button></div><div id="pr-edit"></div><div class="pr-routines" id="pr-routines"></div></section>' +
     '<section class="pr-sec"><div class="pr-h"><h2>History</h2><span class="muted" id="pr-pend"></span></div><div id="pr-logs"></div></section></div>';
   drawRun(root);
@@ -40,35 +44,46 @@ async function drawMain(root) {
   try {
     const [S, R, L] = await Promise.all([api.practice.summary(localDate()), api.practice.routines(), api.practice.logs({ limit: 15 })]);
     if (!$('#pr-stats', root)) return;
-    drawStats(root, S); drawRoutines(root, R); drawLogs(root, L.logs, true);
-  } catch (e) { if (e.status === 401) return refreshUser(); const s = $('#pr-stats', root); if (s) s.innerHTML = errorCard(e.message); }
+    drawNext(root, S, R, L.logs); drawStats(root, S); drawRoutines(root, R); drawLogs(root, L.logs, true);
+  } catch (e) { if (e.status === 401) return refreshUser(); const s = $('#pr-next', root); if (s) s.innerHTML = errorCard(e.message); }
   $('#pr-new', root).onclick = () => editor(root, null);
 }
 
 function drawRun(root) {
   const r = getRun(), el = $('#pr-run', root); if (!el) return;
   if (!r) { el.innerHTML = ''; return; }
+  const to = routeOf(r.items[r.index]);
   el.innerHTML = '<div class="card pr-live"><div><b>' + (r.finished ? 'Finished, not yet saved: ' : 'In progress: ') + esc(r.routineName) + '</b><span class="muted"> · item ' + (r.index + 1) + ' of ' + r.items.length + ', ' + esc(r.items[r.index].title) + '</span></div>' +
-    '<div class="pr-row">' + (r.finished ? '<a class="btn small primary" href="#/practice/finish">Save it</a>' : '') + '<button type="button" class="btn small ghost" id="pr-discard">Discard</button></div></div>';
+    '<div class="pr-row">' + (r.finished ? '<a class="btn small primary" href="#/practice/finish">Save it</a>' : to ? '<a class="btn small primary" href="' + to + '">Back to ' + esc((KIND[r.items[r.index].kind] || KIND.free).label) + '</a>' : '') + '<button type="button" class="btn small ghost" id="pr-discard">Discard</button></div></div>';
   $('#pr-discard', root).onclick = () => { if (confirm('Discard this session? Its time will not be logged.')) { discard(); drawRun(root); } };
 }
 
+/* the next practice: the routine used last, what was said about it, and one Start */
+function drawNext(root, S, R, logs) {
+  const el = $('#pr-next', root); if (!el) return;
+  const all = R.routines.concat(R.starters), last = logs[0], next = (last && all.find(r => r.id === last.routineId || r.name === last.routineName)) || all[0];
+  const running = !!getRun();
+  el.innerHTML = '<div class="pr-next-in">' + dayKolam(localDate(), S.todayMinutes, S.goal) + '<div class="pr-next-say"><h2>' + esc(next.name) + '</h2>' +
+    '<p class="muted">' + minutes(next) + ' min · ' + next.items.map(it => esc(it.title)).join(' · ') + '</p>' +
+    (last && last.notes ? '<p class="pr-lastnote">Your note from ' + esc(nice(last.localDate)) + ': ' + esc(last.notes) + '</p>' : logs.length ? '' : '<p class="muted">Press Start: the first tool opens and the timer runs in the bar at the foot of the page. Next moves on, and Finish logs the session.</p>') +
+    '</div><button type="button" class="btn big ' + (running ? '' : 'primary') + '" data-start="' + esc(next.id) + '">Start</button></div>';
+  const b = el.querySelector('[data-start]');
+  b.onclick = () => { const cur = getRun(); if (cur && !confirm(cur.finished ? 'A finished session is not saved yet. Start a new one and discard it?' : 'A session is in progress. Discard it and start this one?')) return; startRun(next); };
+}
 function drawStats(root, S) {
-  const pct = Math.min(100, Math.round(100 * S.todayMinutes / Math.max(1, S.goal))), mx = Math.max(S.goal, ...S.week.map(d => d.minutes));
   const st = S.streak;
-  $('#pr-stats', root).innerHTML =
-    '<div class="card pr-stat"><span class="pr-k">Streak</span><b class="pr-big">' + st.current + '</b><span>' + (st.current === 1 ? 'day' : 'days') + (st.today ? ', today included' : st.alive ? '; practise today to keep it' : '') + '</span><span class="muted">Best: ' + st.best + (st.best === 1 ? ' day' : ' days') + '</span></div>' +
-    '<div class="card pr-stat"><span class="pr-k">Today</span><b class="pr-big">' + S.todayMinutes + '<small> / ' + S.goal + ' min</small></b><div class="pr-bar" role="progressbar" aria-valuenow="' + S.todayMinutes + '" aria-valuemin="0" aria-valuemax="' + S.goal + '"><i style="width:' + pct + '%"></i></div><span class="muted">' + (S.goalMet ? 'Daily goal met.' : (S.goal - S.todayMinutes) + ' minutes to your daily goal') + ' · <a href="#/account">change the goal</a></span></div>' +
-    '<div class="card pr-stat"><span class="pr-k">The last seven days</span><div class="pr-week">' + S.week.map(d => '<div title="' + esc(nice(d.date) + ': ' + d.minutes + ' min, ' + d.sessions + (d.sessions === 1 ? ' session' : ' sessions')) + '"><i class="' + (d.minutes >= S.goal ? 'met' : '') + '" style="height:' + Math.max(d.minutes ? 6 : 2, Math.round(70 * d.minutes / Math.max(1, mx))) + 'px"></i><span>' + dayLabel(d.date) + '</span></div>').join('') + '</div>' +
-    '<span class="muted">' + S.totals.sessions + (S.totals.sessions === 1 ? ' session' : ' sessions') + ', ' + S.totals.minutes + ' minutes, on ' + S.totals.days + (S.totals.days === 1 ? ' day' : ' days') + ' in all</span></div>';
+  $('#pr-stats', root).innerHTML = '<div class="pr-line"><span class="pr-stat"><b class="pr-big">' + st.current + '</b> ' + (st.current === 1 ? 'day' : 'days') + (st.today ? ', today included' : st.alive ? '; practise today to keep it' : '') + '<span class="muted"> · best ' + st.best + '</span></span>' +
+    '<span class="pr-stat"><b class="pr-big">' + S.todayMinutes + '</b> of ' + S.goal + ' min today <span class="muted">· ' + (S.goalMet ? 'daily goal met' : (S.goal - S.todayMinutes) + ' to your goal') + ' · <a href="#/account">change the goal</a></span></span></div>' +
+    '<ol class="pr-week" aria-label="The last seven days">' + S.week.map(d => '<li class="' + (d.minutes ? '' : 'none') + '">' + dayKolam(d.date, d.minutes, S.goal) + '<b>' + dayLabel(d.date) + '</b><span>' + (d.minutes ? d.minutes + ' min' : 'none') + '</span></li>').join('') + '</ol>' +
+    '<p class="muted pr-totals">' + S.totals.sessions + (S.totals.sessions === 1 ? ' session' : ' sessions') + ', ' + S.totals.minutes + ' minutes, on ' + S.totals.days + (S.totals.days === 1 ? ' day' : ' days') + ' in all. Any logged practice keeps a streak going.</p>';
 }
 
 let lastRoutines = null;
 function drawRoutines(root, R) {
   lastRoutines = R;
-  const card = (r, own) => '<article class="card pr-rt"><div class="pr-h"><h3>' + esc(r.name) + '</h3><span class="muted">' + minutes(r) + ' min' + (own ? '' : ' · starter') + '</span></div>' +
-    '<ol>' + r.items.map(it => '<li><span class="pr-kind">' + esc((KIND[it.kind] || KIND.free).label) + '</span> ' + (it.ref ? '<a href="#/repertoire/' + esc(it.ref) + '">' + esc(it.title) + '</a>' : esc(it.title)) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
-    '<div class="pr-row"><button type="button" class="btn small primary" data-start="' + esc(r.id) + '">Start</button>' +
+  const card = (r, own) => '<article class="pr-rt"><div class="pr-h"><h3>' + esc(r.name) + '</h3><span class="muted">' + minutes(r) + ' min' + (own ? '' : ' · starter') + '</span></div>' +
+    '<ol>' + r.items.map(it => '<li>' + kindOf(it) + (it.ref ? '<a href="#/repertoire/' + esc(it.ref) + '">' + esc(it.title) + '</a>' : esc(it.title)) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
+    '<div class="pr-row"><button type="button" class="btn small" data-start="' + esc(r.id) + '">Start</button>' +
     (own ? '<button type="button" class="btn small ghost" data-edit="' + r.id + '">Edit</button><button type="button" class="btn small ghost" data-del="' + r.id + '">Delete</button>' : '<button type="button" class="btn small ghost" data-copy="' + esc(r.id) + '">Copy and edit</button>') + '</div></article>';
   $('#pr-routines', root).innerHTML = R.routines.map(r => card(r, true)).join('') + R.starters.map(r => card(r, false)).join('');
   const find = id => R.routines.concat(R.starters).find(r => String(r.id) === String(id));
@@ -96,9 +111,9 @@ function editor(root, r) {
     '<button type="button" class="iconbtn" data-rm aria-label="Remove"' + (items.length > 1 ? '' : ' disabled') + '>✕</button></div>';
   const read = () => { el.querySelectorAll('.pr-item').forEach(x => { const it = items[+x.dataset.k]; it.kind = x.querySelector('[data-f="kind"]').value; it.title = x.querySelector('[data-f="title"]').value; it.minutes = Math.round(+x.querySelector('[data-f="minutes"]').value) || 1; }); };
   const draw = () => {
-    el.innerHTML = '<div class="card pr-editor"><h3>' + (r && r.id ? 'Edit routine' : 'New routine') + '</h3><div class="field"><label class="lab" for="pr-name">Name</label><input type="text" id="pr-name" maxlength="60" value="' + esc(r ? r.name : '') + '" placeholder="Morning riyaz"></div>' +
+    el.innerHTML = '<div class="card pr-editor"><h3>' + (r && r.id ? 'Edit routine' : 'New routine') + '</h3><div class="field"><label class="lab" for="pr-name">Name</label><input type="text" id="pr-name" maxlength="60" value="' + esc(r ? r.name : '') + '" placeholder="Before class"></div>' +
       '<div class="field"><span class="lab">Items</span>' + items.map(row).join('') + '</div><p class="muted" id="pr-total"></p><p class="pr-err" id="pr-err" role="alert"></p>' +
-      '<div class="pr-row"><button type="button" class="btn small" id="pr-add"' + (items.length >= 30 ? ' disabled' : '') + '>Add an item</button><span style="flex:1"></span><button type="button" class="btn small ghost" id="pr-cancel">Cancel</button><button type="button" class="btn small primary" id="pr-save">Save routine</button></div></div>';
+      '<div class="pr-row"><button type="button" class="btn small" id="pr-add"' + (items.length >= 30 ? ' disabled' : '') + '>Add an item</button><span class="pr-grow"></span><button type="button" class="btn small ghost" id="pr-cancel">Cancel</button><button type="button" class="btn small primary" id="pr-save">Save routine</button></div></div>';
     $('#pr-total', el).textContent = 'Total: ' + items.reduce((s, it) => s + (+it.minutes || 0), 0) + ' minutes';
     el.querySelectorAll('[data-mv]').forEach(b => { b.onclick = () => { read(); const k = +b.closest('.pr-item').dataset.k, j = k + +b.dataset.mv; [items[k], items[j]] = [items[j], items[k]]; draw(); }; });
     el.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => { read(); items.splice(+b.closest('.pr-item').dataset.k, 1); draw(); }; });
@@ -121,7 +136,7 @@ function editor(root, r) {
 function drawLogs(root, logs, first) {
   const el = $('#pr-logs', root); if (!el) return;
   const html = logs.map(l => '<article class="pr-log" data-id="' + l.id + '"><div class="pr-log-h"><b>' + esc(nice(l.localDate)) + '</b><span>' + esc(l.routineName) + '</span><span class="muted">' + dur(l.seconds) + '</span>' +
-    (l.rating ? '<span class="pr-stars" aria-label="' + l.rating + ' of 5">' + '★'.repeat(l.rating) + '<i>' + '★'.repeat(5 - l.rating) + '</i></span>' : '') + '<button type="button" class="iconbtn" data-dl="' + l.id + '" aria-label="Delete this session">✕</button></div>' +
+    (l.rating ? '<span class="pr-stars" aria-label="' + l.rating + ' of 5">' + dots(l.rating, 5) + '</span>' : '') + '<button type="button" class="iconbtn" data-dl="' + l.id + '" aria-label="Delete this session">✕</button></div>' +
     '<div class="pr-log-items">' + l.items.map(it => '<span class="' + (it.done ? 'done' : '') + '">' + esc(it.title || (KIND[it.kind] || KIND.free).label) + ' · ' + dur(it.spentSec) + '</span>').join('') + '</div>' +
     (l.notes ? '<p class="pr-notes">' + esc(l.notes) + '</p>' : '') + '</article>').join('');
   if (first) el.innerHTML = logs.length ? html : '<p class="muted">No sessions yet. Start a routine above; when you finish, it is logged here.</p>';
@@ -141,20 +156,22 @@ function drawFinish(root) {
   if (!r.finished) { root.innerHTML = '<div class="wrap" style="padding-top:40px"><div class="card"><p>This session is still running. Use Finish in the bar at the bottom when you are done.</p><a class="btn" href="#/practice">Back to practice</a></div></div>'; return; }
   const total = r.spent.reduce((a, b) => a + b, 0);
   let rating = 0;
-  root.innerHTML = '<div class="wrap">' + pageHead({ eyebrow: 'Session finished', title: esc(r.routineName), lead: 'You practised for ' + clock(total) + '. Check what you did, add a note for next time, and save it to your log.' }) +
+  root.innerHTML = '<div class="wrap">' + pageHead({ title: esc(r.routineName), lead: 'You practised for ' + clock(total) + '. Put the time right if it is off, add a note for tomorrow, and it goes on your floor.' }) +
     '<div class="card pr-finish"><table class="pr-table"><thead><tr><th>Item</th><th>Planned</th><th>Spent</th><th>Done</th></tr></thead><tbody>' +
-    r.items.map((it, k) => '<tr><td><span class="pr-kind">' + esc((KIND[it.kind] || KIND.free).label) + '</span> ' + esc(it.title) + '</td><td>' + it.minutes + ':00</td><td>' + clock(elapsed(r, k)) + '</td><td><input type="checkbox" data-done="' + k + '"' + (r.done[k] ? ' checked' : '') + ' aria-label="Done"></td></tr>').join('') +
-    '</tbody></table><div class="field"><span class="lab">How did it go?</span><div class="seg pr-rate" role="group" aria-label="Rating">' + [1, 2, 3, 4, 5].map(n => '<button type="button" data-r="' + n + '" aria-pressed="false">' + '★'.repeat(n) + '</button>').join('') + '</div></div>' +
+    r.items.map((it, k) => '<tr><td>' + kindOf(it) + esc(it.title) + '</td><td>' + it.minutes + ' min</td><td><label class="pr-min"><input type="number" data-spent="' + k + '" min="0" max="360" step="1" value="' + Math.round(elapsed(r, k) / 60) + '" aria-label="Minutes spent"> min</label></td><td><input type="checkbox" data-done="' + k + '"' + (r.done[k] ? ' checked' : '') + ' aria-label="Done"></td></tr>').join('') +
+    '</tbody></table><div class="field"><span class="lab">How did it go?</span><div class="seg pr-rate" role="group" aria-label="Rating">' + [1, 2, 3, 4, 5].map(n => '<button type="button" data-r="' + n + '" aria-pressed="false" aria-label="' + n + ' of 5"><span class="pr-stars">' + dots(n) + '</span></button>').join('') + '</div></div>' +
     '<div class="field"><label class="lab" for="pr-notes">Notes for next time</label><textarea id="pr-notes" rows="3" maxlength="1000" placeholder="What went well, what to work on"></textarea></div>' +
-    '<p class="pr-err" id="pr-err" role="alert"></p><div class="pr-row"><button type="button" class="btn ghost" id="pr-drop">Discard</button><span style="flex:1"></span><button type="button" class="btn primary" id="pr-keep">Save to my log</button></div></div></div>';
+    '<p class="pr-err" id="pr-err" role="alert"></p><div class="pr-row"><button type="button" class="btn ghost" id="pr-drop">Discard</button><button type="button" class="btn ghost" id="pr-on">Keep going</button><span class="pr-grow"></span><button type="button" class="btn primary" id="pr-keep">Save to my log</button></div></div></div>';
   root.querySelectorAll('[data-r]').forEach(b => { b.onclick = () => { rating = +b.dataset.r; root.querySelectorAll('[data-r]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.r === rating))); }; });
   root.querySelectorAll('[data-done]').forEach(c => { c.onchange = () => { const x = getRun(); if (x) { x.done[+c.dataset.done] = c.checked; localStorage.setItem('vg-run', JSON.stringify(x)); } }; });
+  root.querySelectorAll('[data-spent]').forEach(c => { const was = +c.value; c.onchange = () => { const m = Math.max(0, Math.min(360, Math.round(+c.value) || 0)); c.value = m; if (m !== was) setSpent(+c.dataset.spent, m * 60); }; });
+  $('#pr-on', root).onclick = () => keepGoing();
   $('#pr-drop', root).onclick = () => { if (confirm('Discard this session? It will not be logged.')) { discard(); location.hash = '#/practice'; } };
   $('#pr-keep', root).onclick = async () => {
     const b = $('#pr-keep', root); b.disabled = true;
     try {
       const res = await saveFinished(rating, $('#pr-notes', root).value);
-      toast(res.queued ? 'You are offline: the session is kept and will be saved when the connection returns.' : 'Saved to your log.');
+      toast(res.queued ? 'You are offline: the session is kept and will be saved when the connection returns.' : 'On your floor. See you tomorrow.');
       location.hash = '#/practice';
     } catch (e) { b.disabled = false; $('#pr-err', root).textContent = e.message; }
   };

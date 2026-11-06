@@ -1,58 +1,125 @@
-/* Home: what Vocal Gym is, a live sample, the tools, and what is and is not built yet. v0.8.8: the hero stands on
-   a live 3D sound field (fx.js), the sample floats beside it, and the tools are cards that lean to the pointer. */
+/* Home (v0.10): the threshold. A tala's beats are the dots of a kolam and the music draws the line, so the first thing here
+   is the product's real promise, working: press Play and watch the line close on sam. A student who is logged in finds
+   today's practice on the stone at the foot of the floor instead, with one Start. Below: what a day looks like, the
+   rooms of the app, and plainly what is and is not built. */
 import { api } from '../api.js';
 import { toggle, pitchedJob, stop, initPlayButton } from '../audio.js';
 import { esc, term, notation, $ } from '../ui.js';
-import { soundField } from '../fx.js';
+import { liveKolam, kolamSvg, bleedKolam, dayDots, daySeed } from '../kolam-view.js';
+import { getUser, refreshUser, userKnown, onUser, getRun, startRun, localDate, routeOf, KIND } from '../session.js';
 
-const bars = hs => hs.map(h => '<i style="height:' + h + '%"></i>').join('');
+const ROOMS = [
+  ['#/alankara', 'Alankaras', 'The classic patterns in all 35 talas and 86 ragas, starting from the traditional sheet.'],
+  ['#/kalpana', 'Kalpana swaras', 'Model improvised rounds that fit the beat and land where you choose, from recognisable to adventurous.'],
+  ['#/repertoire', 'Repertoire', 'Over 1,500 compositions on the tala grid, each sung with its gamaka. Correct a line, and your copy keeps it.'],
+  ['#/korvai', 'Korvai lab', 'How moras, tihais and korvais are counted to land, in fifteen short lessons, then a builder.'],
+  ['#/melakarta', 'Melakartas', 'The 72 parent ragas as a system, and how the katapayadi rule hides the number in the name.'],
+  ['#/judge', 'Jathi judge', 'Write a jathi and have its arithmetic checked exactly, with the fix for any line that fails.']
+];
+const minutes = r => r.items.reduce((s, it) => s + it.minutes, 0);
 
 export async function mount(root) {
-  root.innerHTML = '<section class="hero-stage"><canvas class="hero-field" aria-hidden="true"></canvas><div class="hero-veil" aria-hidden="true"></div><div class="wrap">' +
-    '<div class="hero">' +
-      '<div class="hero-copy">' +
-        '<span class="eyebrow"><span class="dot"></span>Carnatic practice, for singers</span>' +
-        '<h1 style="margin-top:10px">Practise with exercises that <em>never break the rules</em>.</h1>' +
-        '<p class="lead">Vocal Gym writes fresh practice material in any ' + term('raga') + ' and any ' + term('tala') + ': warm-up patterns, improvised ' + term('kalpana', 'kalpana swara') + ' rounds, and the arithmetic of ' + term('korvai', 'korvais') + ' and tihais. Every note is checked against the raga’s rules and every phrase adds up to the beat. Listen, sing along, and ask for a new one whenever you like.</p>' +
-        '<div class="hero-ctas"><a class="btn primary big" href="#/alankara">Start with an alankara</a><a class="btn big" href="#/practice">Plan a practice session</a></div><a class="hero-learn" href="#/learn">New to Carnatic music? Start with the primer <span aria-hidden="true">→</span></a>' +
-        '<dl class="hero-facts"><div><dt>86</dt><dd>ragas</dd></div><div><dt>38</dt><dd>talas</dd></div><div><dt>72</dt><dd>melakartas, decoded</dd></div><div><dt>0</dt><dd>rules broken</dd></div></dl>' +
-      '</div>' +
-      '<div class="hero-demo" id="hd"><div class="hd-top"><div><b>Try it: press Play</b><div class="card-sub">The first alankara in Adi tala, Mayamalavagowla</div></div><button class="btn primary play" id="hd-play"></button></div><div class="notation-wrap" id="hd-n"><p class="muted">Loading a sample…</p></div><p class="card-sub" style="margin-top:10px">Each box is one section of the tala; the saffron outline is beat 1. The lit cell follows the music.</p></div>' +
-    '</div></div></section><div class="wrap">' +
+  root.innerHTML = '<section class="th"><div class="th-kolam" id="th-kolam"></div><div class="th-floor"><div class="th-copy">' +
+      '<h1 id="th-h">The daily practice room for Carnatic singers.</h1>' +
+      '<p class="th-lead" id="th-p">The dots are the beats of the ' + term('tala') + '. The music draws one line around them, and when a phrase lands, the line closes on ' + term('sam') + '.<span class="th-more"> Practise ' + term('alankara', 'alankaras') + ', ' + term('kalpana', 'kalpana swaras') + ' and your ' + term('raga') + ' repertoire here, and keep a log of each day.</span></p>' +
+    '</div></div><div class="slab th-slab" id="th-slab"></div></section>' +
+    '<div class="tiles" aria-hidden="true"></div>' +
 
-    '<section class="section"><span class="kicker">The tools</span><h2>Four things you can do today</h2><p class="lead">Each tool is a page with a few clear choices, a result you can hear, and a plain explanation of what you are looking at.</p><div class="features">' +
-      '<article class="feature f-ala"><div class="art">' + bars([20, 35, 50, 65, 50, 35, 50, 65, 80, 65, 50, 65, 80, 95]) + '</div><span class="who">For singers · warm-up</span><h3>Alankaras</h3><p>The classic exercise patterns, in all 35 talas and 86 ragas. Start from the traditional pattern, then ask for new ones you have never sung.</p><ul><li>Pick a raga and a tala</li><li>Hear it with a drone and beat clicks</li><li>Get endless new patterns, from traditional to adventurous</li></ul><a class="btn primary" href="#/alankara">Open alankaras</a></article>' +
-      '<article class="feature f-kal"><div class="art">' + bars([40, 55, 70, 55, 85, 30, 60, 75, 45, 90, 65, 50, 50, 50]) + '</div><span class="who">For singers · improvisation</span><h3>Kalpana swaras</h3><p>Model improvisations that fit the beat exactly and land where you choose. Turn the creativity dial to hear how a round changes.</p><ul><li>Choose where to start and where to land</li><li>See which melodic devices were used</li><li>End with a mora, or freely</li></ul><a class="btn primary" href="#/kalpana">Open kalpana swaras</a></article>' +
-      '<article class="feature f-jat"><div class="art">' + bars([50, 50, 50, 50, 70, 60, 50, 95, 20, 95, 20, 95]) + '</div><span class="who">For singers, drummers and teachers</span><h3>Korvai &amp; tihai lab</h3><p>Learn how moras, tihais and korvais are counted to land on sam, in any of the 35 talas, then build your own and see every way it can be done.</p><ul><li>Learn: nine short lessons, live for your tala</li><li>Build: any form, span, start and eduppu</li><li>Check: the judge reads it and scores the craft</li></ul><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto"><a class="btn primary" href="#/korvai">Open the lab</a><a class="btn" href="#/judge">Judge</a></div></article>' +
-      '<article class="feature f-mel"><div class="art">' + bars([30, 30, 45, 45, 60, 60, 75, 75, 60, 60, 45, 45, 30, 30]) + '</div><span class="who">For singers, students and teachers</span><h3>Melakartas</h3><p>The 72 parent ragas as a system: how each number gives the swaras, and how the katapayadi rule hides the number in the name.</p><ul><li>All 72, in their twelve chakras</li><li>Decode any name, step by step</li><li>Build a scale and find its mela</li></ul><a class="btn primary" href="#/melakarta">Open melakartas</a></article>' +
-    '</div></section>' +
+    '<div class="wrap"><section class="day-way"><h2>What a day of practice looks like</h2><ol class="day-steps">' +
+      '<li><b>Pick a routine</b><span>Start from a ready one, or write your own around what your teacher gave you this week.</span></li>' +
+      '<li><b>Sing with the tools</b><span>The timer runs across every tool. A drone holds Sa, clicks keep the tala, and the line follows the music.</span></li>' +
+      '<li><b>Move on, then finish</b><span>Next takes you to the following item. Finish lets you note what to work on tomorrow.</span></li>' +
+      '<li><b>Leave a kolam</b><span>Each day you log leaves a kolam on your floor, larger the longer you sang.</span></li>' +
+    '</ol></section>' +
 
-    '<section class="section"><span class="kicker">The method</span><h2>How a practice session goes</h2><div class="flow" style="margin-top:18px">' +
-      '<div><b>Pick a raga and tala</b><span>Use a quick-start preset, or choose your own from 86 ragas and 38 talas.</span></div>' +
-      '<div><b>Set the creativity</b><span>Low is traditional and recognisable. High is unusual but still correct.</span></div>' +
-      '<div><b>Listen and read</b><span>Press Play. A drone holds Sa, clicks keep the tala, and the notation lights up as it plays.</span></div>' +
-      '<div><b>Sing, then ask for more</b><span>Loop it until it sits, then generate a new one. Nothing repeats.</span></div>' +
-    '</div></section>' +
+    '<section class="rooms"><h2>The rooms</h2><div class="reg">' + ROOMS.map(([href, name, text]) => '<a class="reg-row" href="' + href + '"><b>' + esc(name) + '</b><span>' + esc(text) + '</span></a>').join('') + '</div></section>' +
 
-    '<section class="section split">' +
-      '<div class="card"><h3>Working now</h3><ul class="list-ok"><li>Alankaras in all 35 talas, with new patterns that never repeat</li><li>Kalpana swara rounds that land exactly, with a creativity dial</li><li>A korvai and tihai lab: lessons and a builder for all 35 talas, any gati and eduppu</li><li>A jathi judge with exact fixes and a craft score</li><li>A melakarta and katapayadi explorer for all 72 scales</li><li>Accounts, practice routines with timers, a session log, a daily goal and streaks</li><li>Install it as an app (it works offline once installed)</li><li>Playback with drone, tala clicks and a moving cursor</li></ul></div>' +
-      '<div class="card"><h3>Coming next</h3><ul class="list-soon"><li>Listening to your voice through the microphone</li><li>Pitch tracking, and spotting where you leave the raga</li><li>A daily voice check and a personal warm-up plan</li><li>A kalpana tutor that responds to what you sing</li></ul><p class="muted" style="font-size:.88rem;margin-top:12px">These are designed in the research plan but not built yet. Today, Vocal Gym plays to you; it does not listen.</p></div>' +
-    '</section>' +
-  '</div>';
+    '<section class="truth"><div><h2>Working today</h2><ul>' +
+      '<li>Every generated exercise keeps the raga’s direction rules and fills its tala exactly. Phrase grammar and gamaka are not checked yet.</li>' +
+      '<li>86 ragas: all 72 melakartas and 14 janyas. 35 talas, and the chapu talas in the jathi tools.</li>' +
+      '<li>New patterns avoid what you have already seen on this visit.</li>' +
+      '<li>Routines with timers, a session log, a daily goal and a streak.</li>' +
+      '<li>Install it as an app. The repertoire and your log work offline; new exercises need a connection.</li>' +
+    '</ul></div><div><h2>Not built yet</h2><ul>' +
+      '<li>Listening to your voice through the microphone.</li><li>Pitch tracking, and spotting where you leave the raga.</li><li>A daily voice check and a personal warm-up plan.</li><li>A kalpana tutor that responds to what you sing.</li>' +
+    '</ul><p>Today, Vocal Gym plays to you; it does not listen.</p></div></section></div>';
 
-  const fieldEarly = soundField(root.querySelector('.hero-field'));
-  try {
-    const r = await api.alankara({ raga: 'mela15', fam: 'triputa', L: 4 });
-    const lines = r.lines.slice(0, 3);
-    const slots = [], notes = [];
-    lines.forEach(l => l.notes.forEach(n => { slots.push({ t: n.t, title: n.name }); for (let i = 1; i < n.dur; i++) slots.push({ t: ',', cls: 'hold' }); notes.push({ p: n.p, slots: n.dur }); }));
-    $('#hd-n').innerHTML = notation(slots, r.tala, 1, { rowLabel: i => ({ text: '↑ ' + (i + 1), cls: 'up' }) });
-    const btn = $('#hd-play'); initPlayButton(btn);
-    const starts = new Set(r.tala.angas.map(a => a.start));
-    const job = pitchedJob($('#hd-n'), notes, 1, r.tala.total, starts, { raga: r.raga.id, gamaka: 0 });   // plain swaras, no gamaka
-    btn.onclick = () => toggle(btn, job);
-  } catch (e) {
-    $('#hd-n').innerHTML = '<p class="muted">' + esc(e.message) + '</p>';
-  }
-  return () => { stop(); fieldEarly(); };
+  const stage = $('#th-kolam', root), th = $('.th', root);
+  // the floor in three dimensions, over the drawn figure, which stays beneath for anyone it cannot reach
+  let scene = null, figure = [8, 3, { mode: 'live' }];
+  const lay = (n, seed, o) => { figure = [n, seed, o]; if (scene) scene.show(n, seed, o); };
+  let offKolam = () => {};
+  const liveHero = () => { offKolam(); offKolam = liveKolam(stage, 8, { seed: 3, label: 'A kolam of eight dots, one for each beat of Adi tala. The line closes on the first beat.', cls: 'th-k' }); fit(); };
+  const fit = () => { if (stage.firstElementChild) bleedKolam(stage.firstElementChild); };
+  import('../threshold3d.js').then(m => {
+    if (!alive) return;
+    scene = m.mountThreshold({ th, stage, slab, copy: $('.th-copy', root), onFail: () => { scene = null; } });
+    if (scene) scene.show(...figure);
+  }).catch(() => { /* the drawn figure stays */ });
+  const wider = matchMedia('(min-width:981px)');
+  wider.addEventListener('change', fit);
+  liveHero();
+  let alive = true;
+  const slab = $('#th-slab', root);
+
+  // anyone: the sample, working
+  const sample = async () => {
+    $('#th-h', root).innerHTML = pitch.h; $('#th-p', root).innerHTML = pitch.p;
+    th.classList.remove('today'); liveHero(); lay(8, 3, { mode: 'live' });
+    slab.innerHTML = '<div class="slab-in th-sample"><div class="th-say"><b>Press Play and watch the line</b><span>The first alankara in Adi tala, Mayamalavagowla</span></div>' +
+      '<button class="btn primary big play" id="hd-play"></button><div class="notation-wrap" id="hd-n"><p class="muted">Loading a sample…</p></div>' +
+      '<a class="btn th-next" href="#/account">Sign in to keep a log</a></div>';
+    initPlayButton($('#hd-play', slab));
+    try {
+      const r = await api.alankara({ raga: 'mela15', fam: 'triputa', L: 4 });
+      if (!alive || !$('#hd-n', slab)) return;
+      const lines = r.lines.slice(0, 1), slots = [], notes = [];
+      lines.forEach(l => l.notes.forEach(n => { slots.push({ t: n.t, title: n.name }); for (let i = 1; i < n.dur; i++) slots.push({ t: ',', cls: 'hold' }); notes.push({ p: n.p, slots: n.dur }); }));
+      $('#hd-n', slab).innerHTML = notation(slots, r.tala, 1, { rowLabel: i => ({ text: '↑ ' + (i + 1), cls: 'up' }) });
+      const starts = new Set(r.tala.angas.map(a => a.start));
+      const job = pitchedJob($('#hd-n', slab), notes, 1, r.tala.total, starts, { raga: r.raga.id, gamaka: 0 });
+      $('#hd-play', slab).onclick = () => toggle($('#hd-play', slab), job);
+    } catch (e) { const n = $('#hd-n', slab); if (n) n.innerHTML = '<p class="muted">' + esc(e.message) + '</p>'; }
+  };
+
+  const pitch = { h: $('#th-h', root).innerHTML, p: $('#th-p', root).innerHTML };
+  // a student who has come back: today, on the stone, and no pitch to read first
+  const today = async () => {
+    const u = getUser(), run = getRun();
+    th.classList.add('today');
+    $('#th-h', root).textContent = 'Your floor is ready, ' + u.displayName + '.';
+    $('#th-p', root).textContent = '';
+    slab.innerHTML = '<div class="slab-in"><p class="muted">Finding today’s practice…</p></div>';
+    try {
+      const [S, R, L] = await Promise.all([api.practice.summary(localDate()), api.practice.routines(), api.practice.logs({ limit: 1 })]);
+      if (!alive) return;
+      const all = R.routines.concat(R.starters), last = L.logs[0];
+      const next = (last && all.find(r => r.id === last.routineId || r.name === last.routineName)) || all[0];
+      const st = S.streak, streak = st.current ? st.current + '-day streak' + (st.today ? '' : ', practise today to keep it') : 'A new floor today';
+      let action;
+      if (run && !run.finished) { const to = routeOf(run.items[run.index]); action = '<a class="btn primary big" href="' + (to || '#/practice') + '">Back to ' + esc(run.items[run.index].title) + '</a>'; }
+      else if (run) action = '<a class="btn primary big" href="#/practice/finish">Save your session</a>';
+      else action = '<button class="btn primary big" id="th-start">Start ' + esc(next.name) + '</button>';
+      // today's kolam: the dots are waiting until you sing; then the line grows with the minutes
+      offKolam(); offKolam = () => {};
+      stage.innerHTML = S.todayMinutes
+        ? kolamSvg(dayDots(S.todayMinutes), { seed: daySeed(localDate()), cls: 'today-k' + (S.goalMet ? ' met' : ''), label: 'Today’s kolam, from ' + S.todayMinutes + ' minutes of practice' })
+        : kolamSvg(8, { seed: daySeed(localDate()), cls: 'today-k undrawn', label: 'Eight dots on the floor, waiting for today’s line' });
+      fit();
+      lay(S.todayMinutes ? dayDots(S.todayMinutes) : 8, daySeed(localDate()), { mode: S.todayMinutes ? 'laid' : 'dots', met: S.goalMet });
+      $('#th-p', root).textContent = last && last.notes ? 'Your note from last time: ' + last.notes : S.todayMinutes ? 'Today’s line grows as you sing.' : 'The floor is swept. Today’s line starts when you sing.';
+      slab.innerHTML = '<div class="slab-in th-today">' +
+        '<div class="th-say"><b>Today, ' + esc(u.displayName) + ': ' + S.todayMinutes + ' of ' + S.goal + ' minutes</b><span>' + esc(streak) + (S.goalMet ? '. Daily goal met.' : '') + '</span>' +
+        '<span>' + esc(next.name) + ' · ' + minutes(next) + ' min · ' + next.items.map(it => esc((KIND[it.kind] || KIND.free).label)).join(', ') + '</span></div>' +
+        '<div class="th-acts">' + action + '<a class="btn" href="#/practice">All routines</a></div></div>';
+      const go = $('#th-start', slab);
+      if (go) go.onclick = () => startRun(next);
+    } catch (e) { if (e.status === 401) return refreshUser(); sample(); }
+  };
+
+  const draw = () => { if (alive) { stop(); (getUser() ? today : sample)(); } };
+  if (!userKnown()) await refreshUser();
+  const offUser = onUser(draw);
+  draw();
+  return () => { alive = false; stop(); offKolam(); offUser(); wider.removeEventListener('change', fit); if (scene) scene.dispose(); };
 }

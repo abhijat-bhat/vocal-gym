@@ -9,3 +9,6 @@ research/*.pdf
 
 # v0.8.7: the accounts database (server/db.js)
 var/
+
+# v0.10: server secrets (see .env.example)
+.env

@@ -7,6 +7,7 @@ import { existsSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server/app.js';
+process.env.VG_AUTH_DEV = '1';   // v0.10: the page can read the confirmation code; never in production
 
 const CANDIDATES = [
   process.env.CHROME,
@@ -75,8 +76,11 @@ try {
 
   console.log('home');
   await step('sample plays and the cursor moves', async () => {
-    await click('#hd-play'); await until('document.querySelector("#hd-n .cell.now")', 'a lit cell', 4000); await click('#hd-play');
-    await until('!document.querySelector("#hd-play[data-playing]")', 'playback to stop');
+    await click('#hd-play'); await until('document.querySelector("#hd-n .cell.now")', 'a lit cell', 4000);
+    // the line draws itself in time, and only while the music plays
+    await until('!document.querySelector(".th-kolam .kolam.idle") && parseFloat(document.querySelector(".th-kolam .k-line").style.strokeDasharray) > 0', 'the kolam following the music', 6000);
+    await click('#hd-play');
+    await until('!document.querySelector("#hd-play[data-playing]") && document.querySelector(".th-kolam .kolam.idle")', 'playback to stop, and the kolam at rest');
   });
   await step('glossary pop-up opens from a term', async () => { await click('.term[data-term="raga"]'); await until('!document.getElementById("pop").hidden', 'the pop-up'); await js('document.body.click()'); });
 
@@ -164,7 +168,7 @@ try {
   });
   await step('a korvai opens in the judge and passes', async () => {
     await click('#kl-app [data-ck="form"] [data-v="korvai"]'); await click('#kl-app .kl-check');
-    await until('document.querySelector("#g-res .ring") && document.getElementById("g-src").value.includes("Korvai lab")', 'the judge verdict');
+    await until('document.querySelector("#g-res .score-k") && document.getElementById("g-src").value.includes("Korvai lab")', 'the judge verdict');
   });
 
   console.log('melakartas');
@@ -176,13 +180,14 @@ try {
     await until('document.querySelector("#mx-app .mx-findout .mx-go[data-n=\\"29\\"]")', 'the decoder finds 29');
     await click('#mx-app .mx-findout .mx-go[data-n="29"]'); await until('/29 · Dheerasankarabharanam/.test(document.querySelector("#mx-app .mx-detail").textContent)', 'mela 29');
     await click('#mx-app .mx-play'); await until('document.querySelector("#mx-app .mx-play[data-playing]")', 'the scale plays', 6000); await click('#mx-app .mx-play');
+    await until('document.querySelector(".mw-bar") || getComputedStyle(document.querySelector(".mx-half")).display !== "none"', 'a wheel to turn, or the table');
   });
 
   console.log('jathi judge');
   await step('every example is judged; the short one shows fixes', async () => {
     await go('#/judge'); await until('document.querySelector("[data-ex=\\"adi\\"]")', 'the judge page');
     for (const ex of ['adi', 'short', 'chapu', 'speed']) {
-      await click('[data-ex="' + ex + '"]'); await sleep(250); await until('document.querySelector("#g-res .ring")', 'example ' + ex);
+      await click('[data-ex="' + ex + '"]'); await sleep(250); await until('document.querySelector("#g-res .score-k")', 'example ' + ex);
       if (ex === 'short') await until('document.querySelector("#g-res .fixes li")', 'the fixes');
     }
   });
@@ -207,9 +212,38 @@ try {
     await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the session in the log');
     await until('document.querySelector(".pr-stat .pr-big") && document.querySelector(".pr-stat .pr-big").textContent.trim() === "1"', 'a one-day streak');
   });
-  await step('log out, log back in, and the log is still there', async () => {
+  await step('today is on the threshold: the streak, the note, and one Start', async () => {
+    await go('#/'); await until('document.querySelector("#th-start")', 'the Start on the stone', 10000);
+    await until('/steady gamakas/.test(document.querySelector(".th").textContent) && /streak/.test(document.querySelector("#th-slab").textContent) && !document.querySelector("#hd-play")', 'today, in place of the sample');
+  });
+  await step('sign in with a code by email: confirmed, and the same account after', async () => {
     await go('#/account'); await until('document.getElementById("ac-out")', 'the account page, logged in');
     await click('#ac-out'); await until('document.getElementById("acctbtn").textContent === "Log in"', 'logged out');
+    await go('#/account'); await until('document.getElementById("ac-send")', 'the code form');
+    if (await js('return !!document.querySelector(".ac-google");')) throw new Error('Google is offered with no client id');
+    // a mistake is named, and nothing is sent
+    await js('document.getElementById("ac-to").value = "not an address"; document.getElementById("ac-ask").requestSubmit();');
+    await until('/does not look like an email/.test(document.getElementById("ac-aske").textContent)', 'the address refused');
+    await js('document.getElementById("ac-to").value = "Asha.E2E@example.com"; document.getElementById("ac-ask").requestSubmit();');
+    await until('document.getElementById("ac-check") && /as•••@example.com/.test(document.querySelector(".ac-sent").textContent)', 'the code step, with the address masked');
+    await until('/Send again in/.test(document.getElementById("ac-again").textContent)', 'the wait before resending');
+    const code = await js('return document.getElementById("ac-devcode").value;');
+    await js('document.getElementById("ac-code").value = "' + (code === '000000' ? '000001' : '000000') + '"; document.getElementById("ac-check").requestSubmit();');
+    await until('/wrong or has expired/.test(document.getElementById("ac-checke").textContent) && !document.getElementById("ac-confirm").disabled', 'the wrong code refused');
+    await js('document.getElementById("ac-code").value = "' + code + '"; document.getElementById("ac-check").requestSubmit();');
+    await until('location.hash === "#/practice" && document.getElementById("acctbtn").textContent !== "Log in"', 'signed in, on the practice page', 10000);
+    // the account page lists the ways in, and another email can be added by confirming it
+    await go('#/account'); await until('document.querySelector(".ac-ways li") && /asha.e2e@example.com/.test(document.querySelector(".ac-ways").textContent)', 'the ways in', 10000);
+    await js('document.querySelector(".ac-add").open = true;');
+    await js('const i = document.querySelector(".ac-add #ac-to"); i.value = "second.e2e@example.com"; document.querySelector(".ac-add #ac-ask").requestSubmit();');
+    await until('document.querySelector(".ac-add #ac-devcode")', 'the second code', 10000);
+    const c2 = await js('return document.querySelector(".ac-add #ac-devcode").value;');
+    await js('document.querySelector(".ac-add #ac-code").value = "' + c2 + '"; document.querySelector(".ac-add #ac-check").requestSubmit();');
+    await until('/second.e2e@example.com/.test(document.querySelector(".ac-ways").textContent)', 'the second email added', 10000);
+    // no password yet: deleting asks for the username; here, set one and log out
+    await click('#ac-out'); await until('document.getElementById("acctbtn").textContent === "Log in"', 'logged out again');
+  });
+  await step('log out, log back in, and the log is still there', async () => {
     await go('#/account'); await until('document.getElementById("ac-login")', 'the login form');
     await js('document.getElementById("ac-lu").value = "e2e_singer"; document.getElementById("ac-lp").value = "pa da ni sa 123"; document.getElementById("ac-login").requestSubmit();');
     await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the log after logging back in');
@@ -334,6 +368,64 @@ try {
     // the imported version still shows it
     await js('Array.from(document.querySelectorAll("#rp-view button")).find(b => /imported/i.test(b.textContent)).click();');
     await until('document.querySelector(".rp-off")', 'the tag in the imported version');
+  });
+
+  await step('a confirmed slip is corrected; check octave offers a fix or correct as written; the editor states its rules and the raga\'s swaras', async () => {
+    await go('#/repertoire/2021-08-mahaganapathim-nattai-adi');
+    await until('document.querySelector(".rp-line[data-key=\\"b:1:2\\"] .rp-fixed")', 'the confirmed slip behind its fixed tag', 10000);
+    if (await js('return !!document.querySelector(".rp-line[data-key=\\"b:1:2\\"] .rp-oct");')) throw new Error('the corrected line still asks about its octave');
+    const tag = '.rp-line[data-key="b:0:3"]', before = await js('return document.querySelector(' + JSON.stringify(tag) + ').textContent;');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && document.querySelector(' + JSON.stringify(tag + ' .rp-octmark') + ')', 'the tag, and the swara it asks about');
+    await click(tag + ' .rp-oct');
+    await until('/stay as written/.test(document.querySelector(".rp-octnote").textContent) && document.querySelector(".rp-octnote [data-usefix]") && /far from the swaras/.test(document.querySelector(".rp-octnote").textContent)', 'the suggested fix and why');
+    if (await js('return document.querySelector(' + JSON.stringify(tag) + ').textContent;') !== before) throw new Error('opening the note changed the line');
+    await click(tag + ' .rp-oct'); await until('!document.querySelector(".rp-octnote")', 'the note to close');
+    await click(tag + ' .rp-oct'); await until('document.querySelector(".rp-octnote [data-usefix]")', 'the note again');
+    await click('.rp-octnote [data-usefix]');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-mine') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && /1 change by you/.test(document.querySelector(".rp-log summary").textContent)', 'the fix taken, marked and logged', 10000);
+    await js('document.querySelector(".rp-log").open = true;');
+    await until('/Octave check: S to S/.test(document.querySelector(".rp-log").textContent)', 'the log saying what it was');
+    // undone, the tag comes back
+    await click('.rp-log [data-undo]');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ')', 'the tag back after undoing', 10000);
+    // correct as written: the tag goes, the notation does not change, it survives a reload, and it can be asked again
+    await click(tag + ' .rp-oct'); await until('document.querySelector(".rp-octnote [data-okfix]")', 'the choice to keep it');
+    const swaras = 'return Array.from(document.querySelectorAll(' + JSON.stringify(tag + ' .rp-sw') + ')).map(x => x.textContent).join(" ");', asWritten = await js(swaras);
+    await click('.rp-octnote [data-okfix]');
+    await until('!document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ')', 'the tag settled', 10000);
+    if (await js(swaras) !== asWritten) throw new Error('marking it correct changed the notation');
+    await js('location.reload();');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ')', 'still settled after a reload', 15000);
+    await js('document.querySelector(".rp-log").open = true;');
+    await until('/marked correct as written/.test(document.querySelector(".rp-log summary").textContent) && document.querySelector("[data-askok]")', 'in the log, with a way back');
+    await click(tag + ' .rp-octok');
+    await until('document.querySelector(' + JSON.stringify(tag + ' .rp-oct') + ') && !document.querySelector(' + JSON.stringify(tag + ' .rp-octok') + ')', 'asked again', 10000);
+    // the editor: its rules in view, every mistake named, warnings that do not stop a save
+    await click('#rp-edit'); await until('document.querySelector(".rp-pen")', 'the pens');
+    await click('.rp-line[data-key="b:0:0"] .rp-pen'); await until('document.querySelector(".rp-edrules[open]") && /no digit/i.test(document.querySelector(".rp-edrules").textContent) && /you can write S R3 G3 M1 P D3 N3/.test(document.querySelector(".rp-edrules").textContent)', 'the notation rules, with this raga\'s swaras');
+    const type = v => js('const i = document.querySelector(".rp-edin"); i.value = ' + JSON.stringify(v) + '; i.dispatchEvent(new Event("input", { bubbles: true }));');
+    await type('S2 M3'); await until('/S has no variants/.test(document.querySelector(".rp-edstat").textContent) && /M1, M2/.test(document.querySelector(".rp-edstat").textContent) && document.querySelector(".rp-edin[aria-invalid]")', 'both mistakes named');
+    await js('document.querySelector(".rp-edsave").click();'); await until('document.querySelector(".rp-edstat.bad")', 'the save refused');
+    // a variant the raga does not have is refused; the raga's own go through, and notes beyond three octaves
+    await type('R1 D1'); await until('/R1, D1 are not in/.test(document.querySelector(".rp-edstat").textContent) && document.querySelector(".rp-edin[aria-invalid]")', 'variants outside the raga refused');
+    await type("R3''' N3.... G3 D3"); await until('!document.querySelector(".rp-edstat.bad") && !document.querySelector(".rp-edin[aria-invalid]") && document.querySelector(".rp-edgrid").textContent.includes("₃")', 'the raga\'s variants, and octaves past three, taken and drawn');
+    await type("R' S S' D1"); await until('/D1 is not in/.test(document.querySelector(".rp-edstat").textContent)', 'one wrong variant among good swaras');
+    await type("R' S S' D"); await until('/Check the octave/.test(document.querySelector(".rp-edwarn").textContent) && !document.querySelector(".rp-edstat.bad")', 'an octave warning, with no refusal');
+    await click('[data-edfix]'); await until('document.querySelector(".rp-edin").value === "R\' S\' S\' D"', 'the suggestion in the box');
+    // a line made shorter loses the syllables past its end, says so, and saves
+    await js('const a = Array.from(document.querySelectorAll(".rp-edin")); a.slice(1).forEach(i => { i.value = ""; }); a[0].value = "S R"; a[0].dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('/will be dropped/.test(document.querySelector(".rp-edwarn").textContent)', 'the warning about syllables');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('!document.querySelector(".rp-edit") && document.querySelector(".rp-line[data-key=\\"b:0:0\\"] .rp-mine")', 'a shorter line saved', 10000);
+    // notes past three octaves save, and are sung
+    await click('.rp-line[data-key="b:0:1"] .rp-pen'); await until('document.querySelector(".rp-edit .rp-edin")', 'the editor again');
+    await js('const a = Array.from(document.querySelectorAll(".rp-edin")); a.slice(1).forEach(i => { i.value = ""; }); a[0].value = "S S\'\' S\'\'\' S\'\'\'\' S.. S... S.... R3\'"; a[0].dispatchEvent(new Event("input", { bubbles: true }));');
+    await until('!document.querySelector(".rp-edstat.bad")', 'far octaves accepted');
+    await js('document.querySelector(".rp-edsave").click();');
+    await until('!document.querySelector(".rp-edit") && document.querySelector(".rp-line[data-key=\\"b:0:1\\"] .rp-mine")', 'far octaves saved', 10000);
+    await click('.rp-line[data-key="b:0:1"] .rp-loop');
+    await until('document.querySelector(".rp-line[data-key=\\"b:0:1\\"] .rp-sw i.now")', 'far octaves sung', 20000);
+    await click('#rp-tr .play'); await until('!document.querySelector("#rp-tr .play[data-playing]")', 'the loop to stop');
   });
 
   await step('a lesson from a book: its source, why this notation was chosen, and a post that gave way', async () => {

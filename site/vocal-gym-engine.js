@@ -1,4 +1,4 @@
-/* Vocal Gym engine 0.9.4: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.10.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -58,6 +58,7 @@ var VGEngine = (() => {
     alankara: () => alankara,
     alankaraSeries: () => alankaraSeries,
     allRagas: () => allRagas,
+    allowedNotes: () => allowedNotes,
     angaStarts: () => angaStarts,
     applyEdits: () => applyEdits,
     bestUnits: () => bestUnits,
@@ -71,6 +72,7 @@ var VGEngine = (() => {
     cycleGap: () => cycleGap,
     defineRaga: () => defineRaga,
     dial: () => dial,
+    dotRows: () => dotRows,
     eduppuNeighbours: () => eduppuNeighbours,
     enumerateMotifs: () => enumerateMotifs,
     fmtTicks: () => fmtTicks,
@@ -89,9 +91,11 @@ var VGEngine = (() => {
     kalpanaSession: () => kalpanaSession,
     katapayadi: () => katapayadi,
     katapayadiLetters: () => katapayadiLetters,
+    kolam: () => kolam,
     korvai: () => korvai_exports,
     korvaiFrame: () => korvaiFrame,
     korvaiPlans: () => korvaiPlans,
+    lineAt: () => lineAt,
     linePitches: () => linePitches,
     lineText: () => lineText,
     lineTokens: () => lineTokens,
@@ -116,6 +120,8 @@ var VGEngine = (() => {
     moveScore: () => moveScore,
     newMotif: () => newMotif,
     norm: () => norm,
+    notesOutside: () => notesOutside,
+    octaveChecks: () => octaveChecks,
     offCycle: () => offCycle,
     parseCell: () => parseCell,
     parseInspiration: () => parseInspiration,
@@ -150,6 +156,7 @@ var VGEngine = (() => {
     tokenizeLine: () => tokenizeLine,
     trikaala: () => trikaala,
     unitsPerBeat: () => unitsPerBeat,
+    withOctave: () => withOctave,
     yatiBlocks: () => yatiBlocks
   });
 
@@ -4141,7 +4148,7 @@ var VGEngine = (() => {
       }
       const order = cand.map((x, k) => k);
       if (hi - lo > 15 * D.tau) order.sort((a, b) => ub[b] - ub[a] || a - b);
-      const memo = /* @__PURE__ */ new Map();
+      const memo2 = /* @__PURE__ */ new Map();
       const pickIx = [], scores = [];
       let best = -Infinity, avoided = [];
       for (const k of order) {
@@ -4152,10 +4159,10 @@ var VGEngine = (() => {
         else {
           const i1 = cn.length > 1 ? cn[1].i + 1 : 0, i2 = cn.length > 2 ? cn[2].i + 1 : 0;
           const key = (((cn[0].i + 1) * 64 + i1) * 64 + i2) * 64 + Math.min(cn[0].dur, 15) * 4 + (cn[0].phrase ? 2 : 0) + (cn[0].arp ? 1 : 0);
-          bt = memo.get(key);
+          bt = memo2.get(key);
           if (!bt) {
             bt = boundaryTerms(LX, tail, cn, [], false);
-            memo.set(key, bt);
+            memo2.set(key, bt);
           }
         }
         x.L = { unl: x.int.unl + bt.unl, dbl: x.int.dbl + bt.dbl, unres: x.int.unres + bt.unres };
@@ -4444,14 +4451,14 @@ var VGEngine = (() => {
     if (!s.length) return true;
     const key = s.join(" ");
     if (LIB.set.has(key) || LIB.suf.has(key)) return true;
-    const memo = {};
+    const memo2 = {};
     const seg = (i, k) => {
       if (i === s.length) return true;
       if (k === 0) return false;
       const id = i + ":" + k;
-      if (id in memo) return memo[id];
-      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo[id] = true;
-      return memo[id] = false;
+      if (id in memo2) return memo2[id];
+      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo2[id] = true;
+      return memo2[id] = false;
     };
     return seg(0, 3);
   }
@@ -5169,6 +5176,182 @@ var VGEngine = (() => {
     L.push('Answer with JSON only: {"idea": "the musical idea in a sentence", "phrases": [{"phrase": 1, "swaras": "S , R G"}, ...]} with every phrase from 1 to ' + ph.length + ".");
     const system = "You are an experienced Carnatic musician who sings kalpana swaras. You suggest swara lines for a rhythm that is already fixed, keeping strictly to the raga's grammar. Your lines are taken as inspiration by a rule-based engine that checks every rule, so be idiomatic and musical rather than exhaustive.";
     return { system, prompt: L.join("\n"), schema: INSPIRATION_SCHEMA, phrases: ph.length };
+  }
+
+  // src/engine/kolam.js
+  var MAX_DOTS = 64;
+  var rowsMemo = /* @__PURE__ */ new Map();
+  function dotRows(n) {
+    if (!Number.isInteger(n) || n < 1 || n > MAX_DOTS) throw new RangeError("A kolam has 1 to " + MAX_DOTS + " dots.");
+    if (rowsMemo.has(n)) return rowsMemo.get(n);
+    let best = null, bestScore = Infinity;
+    const consider = (half) => {
+      const middle = half.middle ? [half.middle] : [], rows = half.side.slice().reverse().concat(middle, half.side);
+      const widest = Math.max(...rows), squareness = Math.abs(rows.length - widest);
+      const flat = rows.slice(1).filter((w, i) => w === rows[i]).length;
+      const jumps = rows.slice(1).reduce((s, w, i) => s + Math.max(0, Math.abs(w - rows[i]) - 2), 0);
+      const score = squareness * 2 + flat * 0.5 + jumps + (rows.length > 1 && widest === rows[0] && flat ? 0.25 : 0);
+      if (score < bestScore - 1e-9) {
+        bestScore = score;
+        best = rows;
+      }
+    };
+    const walk = (left, limit, side, middle) => {
+      if (left === 0) {
+        consider({ middle, side });
+        return;
+      }
+      for (let w = Math.min(limit, left); w >= 1; w--) {
+        if ((w - limit) % 2 !== 0) continue;
+        walk(left - w, w, side.concat(w), middle);
+      }
+    };
+    for (let m = n; m >= 1; m--) {
+      if ((n - m) % 2 !== 0) continue;
+      walk((n - m) / 2, m, [], m);
+    }
+    if (n % 2 === 0) for (let w = n / 2; w >= 1; w--) walk(n / 2 - w, w, [w], 0);
+    rowsMemo.set(n, best);
+    return best;
+  }
+  var sideKey = (x, y) => x + "," + y;
+  var stateKey = (x, y, dx, dy) => x + "," + y + "," + dx + "," + dy;
+  function figure(rows) {
+    const widest = Math.max(...rows), cells = /* @__PURE__ */ new Set(), centres = [];
+    rows.forEach((w, r) => {
+      const from = (widest - w) / 2;
+      for (let c = 0; c < w; c++) {
+        const x = 2 * (from + c) + 1, y = 2 * r + 1;
+        cells.add(sideKey(x, y));
+        centres.push([x, y]);
+      }
+    });
+    const sides = /* @__PURE__ */ new Map();
+    centres.forEach(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => {
+      const px = x + a, py = y + b;
+      const shared = cells.has(sideKey(x + 2 * a, y + 2 * b));
+      sides.set(sideKey(px, py), shared);
+    }));
+    return { widest, cells, centres, sides, height: rows.length };
+  }
+  function onward(f, walls, x, y, dx, dy) {
+    const k = sideKey(x, y), through = f.sides.get(k) && !walls.has(k);
+    if (through) return [dx, dy];
+    return x % 2 === 0 ? [-dx, dy] : [dx, -dy];
+  }
+  var startsOf = (f, x, y) => {
+    const out = [];
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([dx, dy]) => {
+      const cell = x % 2 === 0 ? sideKey(x + dx, y) : sideKey(x, y + dy);
+      if (f.cells.has(cell)) out.push([dx, dy]);
+    });
+    return out;
+  };
+  function trace(f, walls) {
+    const seen = /* @__PURE__ */ new Map(), loops = [];
+    f.sides.forEach((_, k) => {
+      const [x, y] = k.split(",").map(Number);
+      startsOf(f, x, y).forEach(([dx, dy]) => {
+        if (seen.has(stateKey(x, y, dx, dy))) return;
+        const id = loops.length, loop = [];
+        let px = x, py = y, ax = dx, ay = dy;
+        do {
+          seen.set(stateKey(px, py, ax, ay), id);
+          loop.push({ x: px, y: py, dx: ax, dy: ay });
+          const qx = px + ax, qy = py + ay;
+          seen.set(stateKey(qx, qy, -ax, -ay), id);
+          const [bx, by] = onward(f, walls, qx, qy, ax, ay);
+          px = qx;
+          py = qy;
+          ax = bx;
+          ay = by;
+        } while (!(px === x && py === y && ax === dx && ay === dy));
+        loops.push(loop);
+      });
+    });
+    return { loops, seen };
+  }
+  function singleLine(f, seed) {
+    const walls = /* @__PURE__ */ new Set(), rand = rng(seed);
+    const mirror = (k) => {
+      const [x, y] = k.split(",").map(Number), W = f.widest * 2, H = f.height * 2;
+      return [[W - x, y], [x, H - y], [W - x, H - y]].map(([a, b]) => sideKey(a, b));
+    };
+    const shared = Array.from(f.sides.keys()).filter((k) => f.sides.get(k));
+    const cx = f.widest, cy = f.height;
+    const order = shared.map((k) => {
+      const [x, y] = k.split(",").map(Number);
+      return { k, d: Math.abs(x - cx) + Math.abs(y - cy) + rand() * 1.5 };
+    }).sort((a, b) => a.d - b.d).map((o) => o.k);
+    let t = trace(f, walls);
+    while (t.loops.length > 1) {
+      let joined = false;
+      for (const k of order) {
+        if (walls.has(k)) continue;
+        const [x, y] = k.split(",").map(Number);
+        const ids = new Set(startsOf(f, x, y).map(([dx, dy]) => t.seen.get(stateKey(x, y, dx, dy))));
+        if (ids.size < 2) continue;
+        const group = [k].concat(mirror(k).filter((m) => f.sides.get(m) && !walls.has(m)));
+        group.forEach((g) => walls.add(g));
+        let next = trace(f, walls);
+        if (next.loops.length >= t.loops.length) {
+          group.forEach((g) => walls.delete(g));
+          walls.add(k);
+          next = trace(f, walls);
+        }
+        if (next.loops.length < t.loops.length) {
+          t = next;
+          joined = true;
+          break;
+        }
+        walls.delete(k);
+      }
+      if (!joined) throw new Error("The loops of a kolam could not be joined.");
+    }
+    return t.loops[0];
+  }
+  var round = (v) => Math.round(v * 1e3) / 1e3;
+  var memo = /* @__PURE__ */ new Map();
+  function kolam(n, opts) {
+    const seed = opts && opts.seed || 1, key = n + "|" + seed;
+    if (memo.has(key)) return memo.get(key);
+    const f = figure(dotRows(n));
+    let loop = singleLine(f, seed);
+    const first = loop.reduce((best, p, i) => p.y < loop[best].y || p.y === loop[best].y && p.x < loop[best].x ? i : best, 0);
+    loop = loop.slice(first).concat(loop.slice(0, first));
+    const pts = loop.map((p) => [p.x, p.y]), N = pts.length;
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    let d = "M" + mid(pts[N - 1], pts[0]).map(round).join(" "), total = 0;
+    const along = [];
+    for (let i = 0; i < N; i++) {
+      const a = mid(pts[(i + N - 1) % N], pts[i]), c = pts[i], b = mid(pts[i], pts[(i + 1) % N]);
+      d += "Q" + c.join(" ") + " " + b.map(round).join(" ");
+      along.push(total);
+      let len = 0, last = a;
+      for (let s = 1; s <= 8; s++) {
+        const u = s / 8, v = 1 - u, p = [v * v * a[0] + 2 * v * u * c[0] + u * u * b[0], v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]];
+        len += Math.hypot(p[0] - last[0], p[1] - last[1]);
+        last = p;
+      }
+      total += len;
+    }
+    const order = [], reached = /* @__PURE__ */ new Map();
+    const cellOf = (p, q) => p[0] % 2 === 0 ? sideKey(p[0] + (q[0] - p[0]), p[1]) : sideKey(p[0], p[1] + (q[1] - p[1]));
+    for (let i = 0; i < N; i++) {
+      const cell = cellOf(pts[i], pts[(i + 1) % N]);
+      if (!reached.has(cell)) {
+        reached.set(cell, along[i] / total);
+        order.push(cell);
+      }
+    }
+    const dots = f.centres.map(([x, y]) => ({ x, y, beat: order.indexOf(sideKey(x, y)) })).sort((a, b) => a.beat - b.beat);
+    const out = { n, width: f.widest * 2, height: f.height * 2, dots, d, length: round(total), closed: true, beats: dots.map((p) => reached.get(sideKey(p.x, p.y))) };
+    memo.set(key, out);
+    return out;
+  }
+  function lineAt(k, beat) {
+    const n = k.n, b = (beat % n + n) % n, i = Math.floor(b), f = b - i, from = k.beats[i], to = i + 1 < n ? k.beats[i + 1] : 1;
+    return from + (to - from) * f;
   }
 
   // src/engine/gamaka/constants.js
@@ -9024,6 +9207,8 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   }
   var MARK_LOW = /[‘`“]/;
   var MARK_UP = /[’'”]/;
+  var VARIANTS = { S: 0, R: 3, G: 3, M: 2, P: 0, D: 3, N: 3 };
+  var MOST_MARKS = 4;
   function cleanCell(typed) {
     const s = String(typed == null ? "" : typed), errors = [];
     let text = "", depth = 0, units = 0, k = 0, low = 0;
@@ -9074,7 +9259,11 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
       if (LETTERS.includes(L)) {
         let v = "", up = 0, down = low;
         k++;
-        if (/[1-3]/.test(s[k] || "")) v = s[k++];
+        if (/\d/.test(s[k] || "")) {
+          const d = +s[k++];
+          if (d >= 1 && d <= VARIANTS[L]) v = String(d);
+          else errors.push(VARIANTS[L] ? L + " has the variants " + Array.from({ length: VARIANTS[L] }, (_, n) => L + (n + 1)).join(", ") + ", so " + L + d + " is not a swara." : L + " has no variants, so write " + L + ", not " + L + d + ".");
+        }
         while (MARK_UP.test(s[k] || "")) {
           up++;
           k++;
@@ -9083,13 +9272,20 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
           down++;
           k++;
         }
+        if (/\d/.test(s[k] || "") && (up || down)) {
+          errors.push("The variant goes before the octave mark: " + L + s[k] + (up ? "'" : ".") + ", not " + L + (up ? "'" : ".") + s[k] + ".");
+          k++;
+        }
         if (up && down) errors.push(L + " cannot be in both the upper and the lower octave.");
+        if (up > MOST_MARKS || down > MOST_MARKS) errors.push("An octave mark goes " + MOST_MARKS + " octaves at most, which is past any instrument: " + L + "'".repeat(MOST_MARKS) + " or " + L + ".".repeat(MOST_MARKS) + ".");
         put(L + v + "'".repeat(up) + ".".repeat(up ? 0 : down));
         units += 1 / 2 ** Math.min(depth, 2);
         low = 0;
         continue;
       }
-      errors.push("\u201C" + c + "\u201D is not part of the notation.");
+      if (c === ".") errors.push("A lower-octave mark goes after its swara: N. not .N");
+      else if (MARK_UP.test(c)) errors.push("An upper-octave mark goes after its swara: S' not 'S");
+      else errors.push("\u201C" + c + "\u201D is not part of the notation.");
       k++;
     }
     if (low) errors.push("A lower-octave mark needs a swara after it.");
@@ -9097,7 +9293,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
     return { text, units, errors: Array.from(new Set(errors)) };
   }
   var lineText = (cells) => (cells || []).join(" | ");
-  function cleanLine(raw) {
+  function cleanLine(raw, opts) {
     const r = raw && typeof raw === "object" ? raw : {}, errors = [];
     if (!Array.isArray(r.cells)) return { line: null, units: 0, errors: ["A line needs its swaras."] };
     if (r.cells.length > 32) errors.push("A line has at most 32 cells.");
@@ -9114,6 +9310,10 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
       }
       const c = cleanCell(typed);
       c.errors.forEach((e) => errors.push("Cell " + (i + 1) + ": " + e));
+      if (opts && opts.scale && c.text && !c.errors.length) {
+        const out = notesOutside([c.text], opts.scale, opts.keep);
+        if (out.length) errors.push("Cell " + (i + 1) + ": " + out.join(", ") + (out.length > 1 ? " are" : " is") + " not in " + (opts.scale.name || "this raga") + ", which has " + allowedNotes(opts.scale).join(" ") + ".");
+      }
       if (c.text) {
         cells.push(c.text);
         units += c.units;
@@ -9231,9 +9431,175 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
     });
     return { comp: Object.assign({}, comp, { sections }), lost };
   }
+  var PLACE = { S: 0, R: 1, G: 2, M: 3, P: 4, D: 5, N: 6 };
+  var OCT = 7;
+  var SPIKE_LEAP = 5;
+  var SPIKE_NEAR = 2;
+  var RUN = 6;
+  var MOST_MOVED = 3;
+  var octaveMarks = (o) => o > 0 ? "'".repeat(o) : ".".repeat(-o);
+  var noteText = (n, o) => n.s + (n.v || "") + octaveMarks(o);
+  function withOctave(cell, tok, o) {
+    const s = String(cell || "");
+    let k = 0, n = 0;
+    while (k < s.length) {
+      const c = s[k];
+      if (c === ",") {
+        n++;
+        k++;
+        continue;
+      }
+      if (LETTERS.includes(c.toUpperCase())) {
+        k++;
+        if (/[1-3]/.test(s[k] || "")) k++;
+        const from = k;
+        while (s[k] === "'" || s[k] === ".") k++;
+        if (n === tok) return s.slice(0, from) + octaveMarks(o) + s.slice(k);
+        n++;
+        continue;
+      }
+      k++;
+    }
+    return s;
+  }
+  var notesOf = (l) => (l.cells || []).flatMap((cell, ci) => parseCell(cell).map((t, tok) => ({ cell: ci, tok, s: t.s, v: t.v, o: t.o, p: PLACE[t.s] + OCT * t.o })).filter((n) => n.s !== ","));
+  var pathAround = (q, from, to, at) => {
+    let n = 0;
+    for (let i = Math.max(1, from); i <= Math.min(q.length - 1, to + 1); i++) n += Math.abs(at(i) - at(i - 1));
+    return n;
+  };
+  function octaveChecks(sections) {
+    const lines = sections.map((s) => s.lines.map(notesOf));
+    const out = sections.map((s) => s.lines.map(() => []));
+    let lo = Infinity, hi = -Infinity;
+    lines.forEach((ls) => ls.forEach((q) => q.forEach((n) => {
+      if (n.p < lo) lo = n.p;
+      if (n.p > hi) hi = n.p;
+    })));
+    const inRange = (n, o) => {
+      const p = PLACE[n.s] + OCT * o;
+      return p >= lo && p <= hi;
+    };
+    const shapes = /* @__PURE__ */ new Map();
+    lines.forEach((ls, si) => ls.forEach((q, li) => {
+      for (let i = 0; i + RUN <= q.length; i++) {
+        const w = q.slice(i, i + RUN), letters = w.map((n) => n.s).join(""), rel = w.map((n) => n.o - w[0].o);
+        if (!shapes.has(letters)) shapes.set(letters, /* @__PURE__ */ new Map());
+        const m = shapes.get(letters), k = rel.join();
+        if (!m.has(k)) m.set(k, { rel, text: w.map((n) => noteText(n, n.o)).join(" "), hits: [] });
+        m.get(k).hits.push({ si, li, i });
+      }
+    }));
+    const votes = /* @__PURE__ */ new Map();
+    shapes.forEach((m) => {
+      if (m.size < 2) return;
+      const r = Array.from(m.values()).sort((a, b) => b.hits.length - a.hits.length), top = r[0];
+      if (top.hits.length < 2 || r.slice(1).some((x) => x.hits.length > top.hits.length / 2)) return;
+      r.slice(1).forEach((x) => x.hits.forEach((h) => {
+        const q = lines[h.si][h.li];
+        let best = null;
+        [0, 1, -1].forEach((sh) => {
+          const want = top.rel.map((d) => q[h.i].o + sh + d), moved = want.reduce((n, o, k) => n + (o !== q[h.i + k].o ? 1 : 0), 0);
+          if (!best || moved < best.moved) best = { want, moved };
+        });
+        if (!best.moved || best.moved > MOST_MOVED) return;
+        const key = h.si + ":" + h.li;
+        if (!votes.has(key)) votes.set(key, /* @__PURE__ */ new Map());
+        best.want.forEach((o, k) => {
+          const n = q[h.i + k];
+          if (o === n.o || !inRange(n, o)) return;
+          const v = votes.get(key);
+          if (!v.has(h.i + k)) v.set(h.i + k, /* @__PURE__ */ new Map());
+          const at = v.get(h.i + k), was = at.get(o) || { n: 0, usually: top.text, times: top.hits.length };
+          was.n += top.hits.length;
+          at.set(o, was);
+        });
+      }));
+    });
+    const suggest = (si, li, ids, target, checks, extra) => {
+      const q = lines[si][li], cells = sections[si].lines[li].cells.slice();
+      const changes = ids.map((i) => {
+        cells[q[i].cell] = withOctave(cells[q[i].cell], q[i].tok, target(i));
+        return { cell: q[i].cell, tok: q[i].tok, was: noteText(q[i], q[i].o), now: noteText(q[i], target(i)) };
+      });
+      return Object.assign({ first: ids[0], ids, changes, checks, cells }, extra);
+    };
+    lines.forEach((ls, si) => ls.forEach((q, li) => {
+      const found = [], v = votes.get(si + ":" + li);
+      if (v) {
+        const ids = Array.from(v.keys()).sort((a, b) => a - b), choice = /* @__PURE__ */ new Map();
+        ids.forEach((i) => {
+          let bestO = null, bestN = -1;
+          v.get(i).forEach((x, o) => {
+            if (x.n > bestN || x.n === bestN && Math.abs(o - q[i].o) < Math.abs(bestO - q[i].o)) {
+              bestO = o;
+              bestN = x.n;
+            }
+          });
+          choice.set(i, bestO);
+        });
+        let g = [];
+        const close = () => {
+          if (!g.length) return;
+          const f = g[0], t = g[g.length - 1], moved = (i) => PLACE[q[i].s] + OCT * choice.get(i);
+          const whole = pathAround(q, f, t, (i) => i >= f && i <= t && choice.has(i) ? moved(i) : q[i].p);
+          if (whole <= pathAround(q, f, t, (i) => q[i].p)) {
+            let one = null, least = whole;
+            g.forEach((j) => {
+              const n = pathAround(q, f, t, (i) => i === j ? moved(i) : q[i].p);
+              if (n <= least) {
+                one = j;
+                least = n;
+              }
+            });
+            const ids2 = g.length > 1 && one != null ? [one] : g, x = v.get(ids2[0]).get(choice.get(ids2[0]));
+            if (ids2.length <= MOST_MOVED) found.push(suggest(si, li, ids2, (i) => choice.get(i), ["piece"], { usually: x.usually, times: x.times }));
+          }
+          g = [];
+        };
+        ids.forEach((i) => {
+          if (g.length && i !== g[g.length - 1] + 1) close();
+          g.push(i);
+        });
+        close();
+      }
+      for (let i = 1; i + 1 < q.length; i++) {
+        const a = q[i - 1].p, b = q[i].p, e = q[i + 1].p;
+        if (Math.abs(a - b) < SPIKE_LEAP || Math.abs(b - e) < SPIKE_LEAP) continue;
+        if (q[i - 1].s === q[i].s && q[i + 1].s === q[i].s) continue;
+        [1, -1].forEach((d) => {
+          const n = b + d * OCT, o = q[i].o + d;
+          if (Math.abs(a - n) > SPIKE_NEAR || Math.abs(n - e) > SPIKE_NEAR || !inRange(q[i], o)) return;
+          const same = found.find((x) => x.ids.includes(i) && x.changes[x.ids.indexOf(i)].now === noteText(q[i], o));
+          if (same) same.checks = ["spike", "piece"];
+          else found.push(suggest(si, li, [i], () => o, ["spike"]));
+        });
+      }
+      out[si][li] = found.sort((x, y) => x.first - y.first).map(({ first, ids, ...x }) => x);
+    }));
+    return out;
+  }
+  function allowedNotes(scale) {
+    const names = [].concat(scale && scale.aro || [], scale && scale.avaro || [], scale && scale.also || []).map((n) => /^([SRGMPDN])(\d?)/.exec(n)).filter(Boolean).map((m) => m[1] + m[2]);
+    if (!names.length) return [];
+    return Array.from(new Set(["S"].concat(names))).sort((a, b) => PLACE[a[0]] - PLACE[b[0]] || a.localeCompare(b));
+  }
+  function notesOutside(cells, scale, keep) {
+    const names = allowedNotes(scale);
+    if (!names.length) return [];
+    const kept = new Set((keep || []).flatMap((c) => parseCell(c).map((t) => t.s + (t.v || ""))));
+    const out = /* @__PURE__ */ new Set();
+    (cells || []).forEach((c) => parseCell(c).forEach((t) => {
+      if (t.s === ",") return;
+      const n = t.s + (t.v || ""), same = names.filter((x) => x[0] === t.s);
+      if (kept.has(n)) return;
+      if (!same.length || t.v && !same.some((x) => x.length === 1 || +x[1] === t.v)) out.add(n);
+    }));
+    return Array.from(out);
+  }
   var REPERTOIRE_NOTE = "Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.";
 
   // src/engine/index.js
-  var VERSION = "0.9.4";
+  var VERSION = "0.10.0";
   return __toCommonJS(engine_exports);
 })();

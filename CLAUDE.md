@@ -11,6 +11,7 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 - `node scripts/make-icons.js`: redraws the app's install icons from the logo.
 - `node scripts/import-repertoire.js`: re-imports the repertoire from carnaticnotations.blogspot.com into `data/repertoire/` (`--save-feed f.json`, then `--cache f.json` to re-run offline; `--report` lists the lines off the cycle). Edit the importer, never the generated JSON.
 - `node scripts/lessons.js --report`: how each lesson from the book in `data/lessons/` compares with the other version, and which notation is used. `python scripts/lessons-extract.py <folder with the PDF> [--lib dir]` re-reads the book (needs pymupdf and numpy; nothing else does).
+- `node scripts/octave-review.js`: rewrites `docs/octave-review.md`, every suggestion of the octave checks, strongest first (`--check` to compare).
 - `node scripts/repertoire-stats.js`: rewrites the numbers in `docs/repertoire-status.md`, the repertoire's stats and working notes (`--check` to compare). Read that file before changing the repertoire.
 - `node scripts/check-raga-profiles.js`: validates `data/raga-profiles.json`. Add `--fix` to recompute its checked fields.
 - `node scripts/solkattu-bank.js`: builds `web/shared/solkattu-bank.js`, the recorded syllables for jathi playback, from WAV recordings (`docs/solkattu-recording.md`). `--clear` empties it.
@@ -27,6 +28,6 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 - **Update the docs with the code:** README sections, CHANGELOG, tests, and Module C of `web/research-plan/index.html` when the generator changes.
 
 ## Current work
-The plans in `docs/plans/` (kalpana v0.3 and v0.4, gamaka audio) are implemented; see `CHANGELOG.md` (0.9.4 now: the repertoire, with the lesson books, corrections at import and a singer's own edits). Gamaka stays a rendering layer only: it must never change the generated notes, and raga-specific gamaka rules go in `gamakaRender` in `data/raga-profiles.json`, each with a source.
+The plans in `docs/plans/` (kalpana v0.3 and v0.4, gamaka audio) are implemented; see `CHANGELOG.md` (0.10.0 now: the Kolam Threshold look and sign-in with Google or email; before it, the repertoire, with the lesson books, corrections at import and a singer's own edits). Gamaka stays a rendering layer only: it must never change the generated notes, and raga-specific gamaka rules go in `gamakaRender` in `data/raga-profiles.json`, each with a source.
 
-The app (`app/`, `server/`) follows `docs/design.md`: keep its navigation, spacing scale, one primary action per region and the reduced-motion fallbacks when adding pages. Phase 1 of the research plan still lacks Voice Check (`web/research-plan/index.html`, Project plan).
+The app (`app/`, `server/`) follows `DESIGN.md`: keep its navigation, materials, spacing scale, one primary action per region and the reduced-motion fallbacks when adding pages. No eyebrows above headings, and outside the home page's 3D threshold (`app/js/threshold3d.js`) and the melakarta wheel (`app/js/mela-wheel.js`) only the kolam's line moves, only with the music. Sign-in lives in `server/signin.js` and `server/notify.js`, set up with `.env.example`. Phase 1 of the research plan still lacks Voice Check (`web/research-plan/index.html`, Project plan).

@@ -599,8 +599,144 @@ test('routes: a singer corrects a line, the log keeps every change, and nothing 
   // the imported notation is never written to
   assert.equal(readFileSync(file, 'utf8'), bytes);
 
+  // v0.9.5 the raga's swaras, on the server too: refused by the raga, kept if the line already has them
+  const bhId = readdirSync(new URL('../data/repertoire/c/', import.meta.url)).map(n => JSON.parse(readFileSync(new URL('../data/repertoire/c/' + n, import.meta.url), 'utf8'))).find(c => /^bhairavi$/i.test(c.raga) && !c.ragamalika && c.ragas[0].aro.includes('D2') && c.sections.some(s => s.lines.length));
+  const bhSi = bhId.sections.findIndex(s => s.lines.length), bhKey = 'b:' + bhSi + ':0';
+  r = await a('/api/repertoire/edits/save', { comp: bhId.id, action: 'edit', key: bhKey, line: { cells: ['R1 S , ,'] } });
+  assert.equal(r.status, 400); assert.match(r.body.error, /R1 is not in/);
+  r = await a('/api/repertoire/edits/save', { comp: bhId.id, action: 'edit', key: bhKey, line: { cells: ["D2''' S.... N2 ,"] } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  // v0.9.5 correct as written: remembered by the line and the fix, asked again on request, nothing in the notation changes
+  r = await a('/api/repertoire/edits', { comp: id });
+  assert.deepEqual(r.body.octaveOk, []);
+  const was = r.body.edits.length;
+  r = await a('/api/repertoire/octave-ok', { comp: id, line: ["R' S S' ,"], fix: ["R' S' S' ,"] });
+  assert.equal(r.status, 200); assert.deepEqual(r.body.octaveOk, [{ line: "R' S S' ,", fix: "R' S' S' ," }]);
+  r = await a('/api/repertoire/octave-ok', { comp: id, line: ["R' S S' ,"], fix: ["R' S' S' ,"] });
+  assert.equal(r.body.octaveOk.length, 1, 'marking it twice is one mark');
+  r = await a('/api/repertoire/edits', { comp: id });
+  assert.equal(r.body.edits.length, was, 'it is no change to the notation'); assert.equal(r.body.octaveOk.length, 1);
+  assert.equal((await a('/api/repertoire/octave-ok', { comp: id, line: ['X'], fix: ['S'] })).status, 400);
+  assert.equal((await a('/api/repertoire/octave-ok', { comp: 'no-such', line: ['S'], fix: ['S'] })).status, 400);
+  r = await a('/api/repertoire/octave-ask', { comp: id, line: ["R' S S' ,"], fix: ["R' S' S' ,"] });
+  assert.deepEqual(r.body.octaveOk, []);
+  await a('/api/repertoire/octave-ok', { comp: id, line: ["R' S S' ,"], fix: ["R' S' S' ,"] });
   // deleting the account deletes its corrections
   assert.equal((await a('/api/account/delete', { password: 'sa ri ga ma pa 1' })).status, 200);
   await a('/api/auth/register', { username: 'editor1', password: 'sa ri ga ma pa 1' });
   assert.deepEqual((await a('/api/repertoire/changes', {})).body.comps, []);
+  assert.deepEqual((await a('/api/repertoire/edits', { comp: id })).body.octaveOk, []);
+});
+
+/* v0.9.5 octave checks, the rules of a correction, and the slip a singer confirmed */
+test('withOctave rewrites one token, counting karvais, and nothing else', () => {
+  assert.equal(E.withOctave("[S' , R' S] S' ,", 3, 1), "[S' , R' S'] S' ,");
+  assert.equal(E.withOctave('R2. G', 0, 1), "R2' G");
+  assert.equal(E.withOctave("S' R", 0, 0), 'S R');
+  assert.equal(E.withOctave('S R', 1, -2), 'S R..');
+});
+test('octave checks: a spike, a run read differently, and what they leave alone', () => {
+  const one = (...rows) => E.octaveChecks([{ lines: rows.map(cells => ({ cells })) }])[0];
+  // the singer's example: the fix, what it changes, and the same units
+  const [x] = one(["[S' , R' S] S' ,"])[0];
+  assert.deepEqual(x.changes, [{ cell: 0, tok: 3, was: 'S', now: "S'" }]);
+  assert.deepEqual(x.checks, ['spike']); assert.deepEqual(x.cells, ["[S' , R' S'] S' ,"]);
+  // taken, nothing is left to ask
+  assert.deepEqual(one(x.cells)[0], []);
+  // a swara and its own octave is on purpose; steps are no question; a fix stays in the piece's range
+  assert.deepEqual(one(["S S' S R"])[0], []);
+  assert.deepEqual(one(['S R G M P'])[0], []);
+  assert.deepEqual(one(['S R S D S'])[0], [], 'no lower D anywhere in the piece, so no lower D offered');
+  assert.equal(one(['S R S D S', 'D. S R G'])[0].length, 1, 'with one elsewhere, it is offered');
+  // a run with a mark left off: its notes keep their steps, so only the rest of the piece shows it
+  const run = "S' N D P M G", [a, b, c] = one([run], [run], ['S N D P M G']);
+  assert.deepEqual([a, b], [[], []]);
+  assert.deepEqual(c[0].changes, [{ cell: 0, tok: 0, was: 'S', now: "S'" }]);
+  assert.deepEqual(c[0].checks, ['piece']); assert.equal(c[0].usually, run); assert.equal(c[0].times, 2);
+  // both checks agreeing say so
+  const both = one(["N S' R' S N D"], ["N S' R' S N D"], ["N S' R' S' N D"], ["N S' R' S' N D"], ["N S' R' S' N D"], ["N S' R' S' N D"], ["N S' R' S' N D"]);
+  assert.deepEqual(both[0][0].checks.slice().sort(), ['piece', 'spike']);
+});
+test('every suggestion in the repertoire only moves octaves, inside what the line already was', () => {
+  const clean = new Set();
+  const dir = new URL('../data/repertoire/c/', import.meta.url);
+  readdirSync(dir).map(n => JSON.parse(readFileSync(new URL(n, dir), 'utf8'))).forEach(c => E.octaveChecks(c.sections).forEach((ls, si) => ls.forEach((found, li) => found.forEach(x => {
+    const was = c.sections[si].lines[li].cells, at = c.id + ' ' + si + ':' + li;
+    assert.equal(E.lineUnits(x.cells), E.lineUnits(was), at + ': the same units');
+    const bare = cs => cs.map(z => E.parseCell(z).map(t => t.s + t.v).join(' ')).join('|');
+    assert.equal(bare(x.cells), bare(was), at + ': the same swaras');
+    assert.ok(x.changes.length >= 1 && x.changes.length <= 3, at);
+    assert.notEqual(x.cells.join('|'), was.join('|'), at + ': it changes something');
+    assert.deepEqual(E.cleanLine({ cells: x.cells }).errors, [], at + ': a line the server takes');
+    clean.add(c.id);
+  }))));
+  assert.ok(clean.size > 100);
+});
+test('the rules of a correction: what cannot be sung is refused, in words', () => {
+  const err = t => E.cleanCell(t).errors.join(' ');
+  assert.match(err('S2'), /S has no variants/);
+  assert.match(err('P1'), /P has no variants/);
+  assert.match(err('M3'), /M1, M2/);
+  assert.match(err('R4'), /R1, R2, R3/);
+  assert.match(err("R'2"), /before the octave mark/);
+  assert.match(err('.N'), /after its swara/);
+  // as many octaves as a singer needs, past any instrument only by mistake
+  assert.deepEqual(E.cleanCell("S''' N... R2'''' G3....").errors, []);
+  assert.equal(E.parseCell("S''' N...")[0].o, 3); assert.equal(E.parseCell("S''' N...")[1].o, -3);
+  assert.match(err("S'''''"), /4 octaves at most/);
+  assert.match(err('N.....'), /4 octaves at most/);
+  assert.equal(E.cleanCell("R2' G3. M2 N1 S'' N..").errors.length, 0);
+  assert.equal(E.cleanCell("R2' G3. M2 N1 S'' N..").text, "R2' G3. M2 N1 S'' N..");
+  // every error is listed, not only the first
+  assert.equal(E.cleanLine({ cells: ['S2', 'M3'] }).errors.length, 2);
+});
+test('notesOutside: swaras a raga does not have', () => {
+  const mohanam = { aro: ['S', 'R2', 'G3', 'P', 'D2', "S'"], avaro: ["S'", 'D2', 'P', 'G3', 'R2', 'S'] };
+  assert.deepEqual(E.notesOutside(['S R G P D'], mohanam), []);
+  assert.deepEqual(E.notesOutside(['S M R1 N'], mohanam), ['M', 'R1', 'N']);
+  assert.deepEqual(E.notesOutside(['S M'], null), []);
+  // anya swaras, and a letter whose variant the scale does not say
+  assert.deepEqual(E.notesOutside(['S M N3'], Object.assign({ also: ['M', 'N3'] }, mohanam)), []);
+  assert.deepEqual(E.notesOutside(['M1 M2'], Object.assign({ also: ['M'] }, mohanam)), []);
+  assert.deepEqual(E.notesOutside(['N2'], Object.assign({ also: ['N3'] }, mohanam)), ['N2']);
+  // what the line already has may stay
+  assert.deepEqual(E.notesOutside(['S M N'], mohanam, ['M S']), ['N']);
+  assert.deepEqual(E.allowedNotes(Object.assign({ also: ['N3'] }, mohanam)), ['S', 'R2', 'G3', 'P', 'D2', 'N3']);
+  assert.deepEqual(E.allowedNotes(null), []);
+});
+test('a raga allows its own swaras and its anya swaras, and refuses the rest', () => {
+  const dir = new URL('../data/repertoire/c/', import.meta.url);
+  const all = readdirSync(dir).map(n => JSON.parse(readFileSync(new URL(n, dir), 'utf8')));
+  const scaleOf = (c, s) => c.ragas[s.raga != null && c.ragas[s.raga] ? s.raga : 0];
+  const line = (scale, cell) => E.cleanLine({ cells: [cell] }, { scale }).errors.join(' ');
+  // Bhairavi, a bhashanga raga: D2 as well as D1, every variant its scale has, and no other
+  const bh = all.find(c => /^bhairavi$/i.test(c.raga) && c.ragas[0].aro.includes('D2') && c.ragas[0].avaro.includes('D1')).ragas[0];
+  assert.equal(line(bh, 'D2 D1 R2 G2 M1 P N2 S'), '');
+  assert.match(line(bh, 'R1'), /R1 is not in .*which has S R2/i);
+  assert.match(line(bh, 'S M2 N3'), /M2, N3 are not in/);
+  // an anya swara the raga is written with, though its own post does not print it
+  const k = all.find(c => !c.ragamalika && c.ragas[0] && /^khamas$/i.test(c.ragas[0].name) && !c.ragas[0].aro.concat(c.ragas[0].avaro).includes('N3')).ragas[0];
+  assert.ok(k.also.includes('N3'), JSON.stringify(k));
+  assert.equal(line(k, 'N3 N2'), '');
+  assert.match(line(k, 'N1'), /N1 is not in/);
+  // without the raga, as before; a stored line is never refused, so any of them can be corrected
+  assert.equal(E.cleanLine({ cells: ['R1 G1 N1'] }).errors.length, 0);
+  let lines = 0;
+  all.forEach(c => c.sections.forEach((s, si) => s.lines.forEach((l, li) => { lines++; assert.deepEqual(E.notesOutside(l.cells, scaleOf(c, s)), [], c.id + ' ' + si + ':' + li); })));
+  assert.ok(lines > 20000);
+});
+test('Mahaganapathim: the slip a singer confirmed is corrected, and shows what the site printed', () => {
+  const c = JSON.parse(readFileSync(new URL('../data/repertoire/c/2021-08-mahaganapathim-nattai-adi.json', import.meta.url), 'utf8'));
+  const l = c.sections[1].lines[2];
+  assert.deepEqual(l.cells.slice(1), ["[S' , R' S'] S' , [S' , R' S'] S' ,", "[S' , R' S'] S' , [S' , R' S'] S' ,"]);
+  assert.deepEqual(l.fixed, [{ cell: 1, was: "[S' , R' S] S' , [S' , R' S] S' ,", why: ['confirmed'] }, { cell: 2, was: "[S' , R' S] S' , [S' , R' S] S' ,", why: ['confirmed'] }]);
+  assert.ok(!c.sections.flatMap(s => s.lines).some(x => x.cells.some(y => y.includes("R' S]"))));
+  assert.deepEqual(E.octaveChecks(c.sections)[1][2], []);
+});
+test('docs/octave-review.md is the list the checks give', async () => {
+  const { REVIEW, reviewText, summary } = await import('../scripts/octave-review.js');
+  assert.equal(readFileSync(REVIEW, 'utf8').replace(/\r\n/g, '\n'), reviewText(), 'run node scripts/octave-review.js');
+  const S = summary();
+  assert.equal(S.tiers.reduce((n, t) => n + t.n, 0), S.flags);
+  assert.ok(S.tiers[0].n > 0);
 });

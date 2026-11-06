@@ -35,6 +35,15 @@ function ctx() {
   return AC;
 }
 
+/* one beat, when a singer touches it: heard whatever the click setting, because they asked for it */
+export function tick(strong) {
+  const ac = ctx(); if (!ac) return;
+  const t = ac.currentTime + .005, o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'triangle'; o.frequency.value = strong ? 880 : 620;
+  g.gain.setValueAtTime(strong ? .34 : .2, t); g.gain.exponentialRampToValueAtTime(.0001, t + .13);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .15);
+}
+
 /* ---- voices ---- */
 export function tone(ac, out, f, t, d) {
   const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
@@ -100,9 +109,14 @@ onSettings(k => { if (k === 'sa') warmDrum(); });
    from t0 (cell 0 sounds at t0). root holds the notation, whose cells carry data-i and whose
    ruler beats carry data-b. */
 let cur = null;
+/* v0.10: where the music is, for whatever keeps the tala on the page (the kolam). Each frame fn gets { beats, total }: beats
+   from the sam before the first note, and the beats of a cycle. fn(null) when it stops. */
+const clockFns = new Set();
+export function onClock(fn) { clockFns.add(fn); return () => clockFns.delete(fn); }
 export function stop() {
   if (!cur) return;
   const c = cur; cur = null;
+  clockFns.forEach(fn => fn(null));
   try { c.master.gain.setTargetAtTime(0, AC.currentTime, 0.04); setTimeout(() => { try { c.master.disconnect(); } catch (e) { /* gone */ } }, 400); } catch (e) { /* gone */ }
   cancelAnimationFrame(c.raf); clearTimeout(c.timer);
   if (c.root) c.root.querySelectorAll('.now,.on').forEach(el => el.classList.remove('now', 'on'));
@@ -149,6 +163,7 @@ function start(btn, job, ac) {
   const frame = () => {
     if (cur !== me) return;
     const at = Math.floor((ac.currentTime - t0) / slot), idx = job.cellOf ? job.cellOf(at) : at;
+    if (job.clock && job.clock.total) { const ck = job.clock, position = (ac.currentTime - t0) / slot + (ck.off || 0); clockFns.forEach(fn => fn({ beats: position / ck.per, total: ck.total })); }
     if (idx !== lastIdx) {
       const prev = byIdx.get(lastIdx); if (prev) prev.classList.remove('now');
       const el = byIdx.get(idx);
@@ -191,7 +206,7 @@ export function pitchedJob(root, notes, per, total, angaStarts, opts) {
   const key = () => [bpm(), gamaka(), settings.voice, settings.sa].join('|');
   const off = o.offset || 0;
   const job = {
-    root, per, total: o.offset != null ? null : total, cellOf: o.cellOf, loop: !!o.loop, follow: !!o.follow,
+    root, per, total: o.offset != null ? null : total, cellOf: o.cellOf, loop: !!o.loop, follow: !!o.follow, clock: { per, total, off },
     schedule(ac, out, t0) {
       const beat = 60 / bpm(), slot = beat / per;
       let t = t0, cells = 0;
@@ -219,7 +234,7 @@ export function pitchedJob(root, notes, per, total, angaStarts, opts) {
 /* sylls: one entry per cell from the start of the grid ('' for empty lead cells, ',' for karvai) */
 export function rhythmJob(root, sylls, per, total, angaStarts) {
   return {
-    root, per, total,
+    root, per, total, clock: { per, total, off: 0 },
     schedule(ac, out, t0) {
       const beat = 60 / settings.bpm, slot = beat / per;
       const hits = []; sylls.forEach((s, i) => { if (s && s !== ',') hits.push({ t: t0 + i * slot, s }); });
