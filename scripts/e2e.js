@@ -7,6 +7,7 @@ import { existsSync, mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server/app.js';
+process.env.VG_AUTH_DEV = '1';   // v0.10: the page can read the confirmation code; never in production
 
 const CANDIDATES = [
   process.env.CHROME,
@@ -75,8 +76,11 @@ try {
 
   console.log('home');
   await step('sample plays and the cursor moves', async () => {
-    await click('#hd-play'); await until('document.querySelector("#hd-n .cell.now")', 'a lit cell', 4000); await click('#hd-play');
-    await until('!document.querySelector("#hd-play[data-playing]")', 'playback to stop');
+    await click('#hd-play'); await until('document.querySelector("#hd-n .cell.now")', 'a lit cell', 4000);
+    // the line draws itself in time, and only while the music plays
+    await until('!document.querySelector(".th-kolam .kolam.idle") && parseFloat(document.querySelector(".th-kolam .k-line").style.strokeDasharray) > 0', 'the kolam following the music', 6000);
+    await click('#hd-play');
+    await until('!document.querySelector("#hd-play[data-playing]") && document.querySelector(".th-kolam .kolam.idle")', 'playback to stop, and the kolam at rest');
   });
   await step('glossary pop-up opens from a term', async () => { await click('.term[data-term="raga"]'); await until('!document.getElementById("pop").hidden', 'the pop-up'); await js('document.body.click()'); });
 
@@ -164,7 +168,7 @@ try {
   });
   await step('a korvai opens in the judge and passes', async () => {
     await click('#kl-app [data-ck="form"] [data-v="korvai"]'); await click('#kl-app .kl-check');
-    await until('document.querySelector("#g-res .ring") && document.getElementById("g-src").value.includes("Korvai lab")', 'the judge verdict');
+    await until('document.querySelector("#g-res .score-k") && document.getElementById("g-src").value.includes("Korvai lab")', 'the judge verdict');
   });
 
   console.log('melakartas');
@@ -176,13 +180,14 @@ try {
     await until('document.querySelector("#mx-app .mx-findout .mx-go[data-n=\\"29\\"]")', 'the decoder finds 29');
     await click('#mx-app .mx-findout .mx-go[data-n="29"]'); await until('/29 · Dheerasankarabharanam/.test(document.querySelector("#mx-app .mx-detail").textContent)', 'mela 29');
     await click('#mx-app .mx-play'); await until('document.querySelector("#mx-app .mx-play[data-playing]")', 'the scale plays', 6000); await click('#mx-app .mx-play');
+    await until('document.querySelector(".mw-bar") || getComputedStyle(document.querySelector(".mx-half")).display !== "none"', 'a wheel to turn, or the table');
   });
 
   console.log('jathi judge');
   await step('every example is judged; the short one shows fixes', async () => {
     await go('#/judge'); await until('document.querySelector("[data-ex=\\"adi\\"]")', 'the judge page');
     for (const ex of ['adi', 'short', 'chapu', 'speed']) {
-      await click('[data-ex="' + ex + '"]'); await sleep(250); await until('document.querySelector("#g-res .ring")', 'example ' + ex);
+      await click('[data-ex="' + ex + '"]'); await sleep(250); await until('document.querySelector("#g-res .score-k")', 'example ' + ex);
       if (ex === 'short') await until('document.querySelector("#g-res .fixes li")', 'the fixes');
     }
   });
@@ -207,9 +212,38 @@ try {
     await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the session in the log');
     await until('document.querySelector(".pr-stat .pr-big") && document.querySelector(".pr-stat .pr-big").textContent.trim() === "1"', 'a one-day streak');
   });
-  await step('log out, log back in, and the log is still there', async () => {
+  await step('today is on the threshold: the streak, the note, and one Start', async () => {
+    await go('#/'); await until('document.querySelector("#th-start")', 'the Start on the stone', 10000);
+    await until('/steady gamakas/.test(document.querySelector(".th").textContent) && /streak/.test(document.querySelector("#th-slab").textContent) && !document.querySelector("#hd-play")', 'today, in place of the sample');
+  });
+  await step('sign in with a code by email: confirmed, and the same account after', async () => {
     await go('#/account'); await until('document.getElementById("ac-out")', 'the account page, logged in');
     await click('#ac-out'); await until('document.getElementById("acctbtn").textContent === "Log in"', 'logged out');
+    await go('#/account'); await until('document.getElementById("ac-send")', 'the code form');
+    if (await js('return !!document.querySelector(".ac-google");')) throw new Error('Google is offered with no client id');
+    // a mistake is named, and nothing is sent
+    await js('document.getElementById("ac-to").value = "not an address"; document.getElementById("ac-ask").requestSubmit();');
+    await until('/does not look like an email/.test(document.getElementById("ac-aske").textContent)', 'the address refused');
+    await js('document.getElementById("ac-to").value = "Asha.E2E@example.com"; document.getElementById("ac-ask").requestSubmit();');
+    await until('document.getElementById("ac-check") && /as•••@example.com/.test(document.querySelector(".ac-sent").textContent)', 'the code step, with the address masked');
+    await until('/Send again in/.test(document.getElementById("ac-again").textContent)', 'the wait before resending');
+    const code = await js('return document.getElementById("ac-devcode").value;');
+    await js('document.getElementById("ac-code").value = "' + (code === '000000' ? '000001' : '000000') + '"; document.getElementById("ac-check").requestSubmit();');
+    await until('/wrong or has expired/.test(document.getElementById("ac-checke").textContent) && !document.getElementById("ac-confirm").disabled', 'the wrong code refused');
+    await js('document.getElementById("ac-code").value = "' + code + '"; document.getElementById("ac-check").requestSubmit();');
+    await until('location.hash === "#/practice" && document.getElementById("acctbtn").textContent !== "Log in"', 'signed in, on the practice page', 10000);
+    // the account page lists the ways in, and another email can be added by confirming it
+    await go('#/account'); await until('document.querySelector(".ac-ways li") && /asha.e2e@example.com/.test(document.querySelector(".ac-ways").textContent)', 'the ways in', 10000);
+    await js('document.querySelector(".ac-add").open = true;');
+    await js('const i = document.querySelector(".ac-add #ac-to"); i.value = "second.e2e@example.com"; document.querySelector(".ac-add #ac-ask").requestSubmit();');
+    await until('document.querySelector(".ac-add #ac-devcode")', 'the second code', 10000);
+    const c2 = await js('return document.querySelector(".ac-add #ac-devcode").value;');
+    await js('document.querySelector(".ac-add #ac-code").value = "' + c2 + '"; document.querySelector(".ac-add #ac-check").requestSubmit();');
+    await until('/second.e2e@example.com/.test(document.querySelector(".ac-ways").textContent)', 'the second email added', 10000);
+    // no password yet: deleting asks for the username; here, set one and log out
+    await click('#ac-out'); await until('document.getElementById("acctbtn").textContent === "Log in"', 'logged out again');
+  });
+  await step('log out, log back in, and the log is still there', async () => {
     await go('#/account'); await until('document.getElementById("ac-login")', 'the login form');
     await js('document.getElementById("ac-lu").value = "e2e_singer"; document.getElementById("ac-lp").value = "pa da ni sa 123"; document.getElementById("ac-login").requestSubmit();');
     await until('location.hash === "#/practice" && /steady gamakas/.test((document.getElementById("pr-logs") || {}).textContent || "")', 'the log after logging back in');

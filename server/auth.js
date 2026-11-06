@@ -43,14 +43,14 @@ export async function userOf(req) {
   const t = parseCookies(req.headers.cookie)[COOKIE];
   if (!t || t.length > 100) return null;
   const db = await getDb();
-  const row = db.prepare('SELECT u.id, u.username, u.display_name, u.daily_goal_min, u.created_at, s.expires_at, s.token_hash FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').get(tokenHash(t));
+  const row = db.prepare('SELECT u.id, u.username, u.display_name, u.daily_goal_min, u.created_at, u.pass, s.expires_at, s.token_hash FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?').get(tokenHash(t));
   if (!row) return null;
   if (row.expires_at < now()) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(row.token_hash); return null; }
-  return { id: row.id, username: row.username, displayName: row.display_name, dailyGoalMin: row.daily_goal_min, createdAt: row.created_at, tokenHash: row.token_hash };
+  return { id: row.id, username: row.username, displayName: row.display_name, dailyGoalMin: row.daily_goal_min, createdAt: row.created_at, tokenHash: row.token_hash, hasPassword: row.pass !== '' };
 }
-export const publicUser = u => u && { username: u.username, displayName: u.displayName != null ? u.displayName : u.display_name, dailyGoalMin: u.dailyGoalMin != null ? u.dailyGoalMin : u.daily_goal_min, createdAt: u.createdAt || u.created_at };
+export const publicUser = u => u && { hasPassword: u.hasPassword != null ? u.hasPassword : u.pass != null ? u.pass !== '' : true, username: u.username, displayName: u.displayName != null ? u.displayName : u.display_name, dailyGoalMin: u.dailyGoalMin != null ? u.dailyGoalMin : u.daily_goal_min, createdAt: u.createdAt || u.created_at };
 
-async function startSession(db, userId, ctx) {
+export async function startSession(db, userId, ctx) {
   const t = randomBytes(32).toString('base64url'), exp = new Date(Date.now() + MAX_AGE * 1000).toISOString();
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now());
   db.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(tokenHash(t), userId, now(), exp);
@@ -107,7 +107,8 @@ export async function update(body, ctx) {
 }
 export async function changePassword(body, ctx) {
   const db = await getDb(), row = db.prepare('SELECT pass FROM users WHERE id = ?').get(ctx.user.id);
-  if (typeof body.current !== 'string' || !(await verifyPassword(body.current, row.pass))) throw new Unauthorized('The current password is wrong.');
+  // v0.10: an account that signs in by code or with Google has no password until it sets one
+  if (row.pass !== '' && (typeof body.current !== 'string' || !(await verifyPassword(body.current, row.pass)))) throw new Unauthorized('The current password is wrong.');
   checkPassword(body.password);
   db.prepare('UPDATE users SET pass = ? WHERE id = ?').run(await hashPassword(body.password), ctx.user.id);
   // other devices are logged out; this one stays in
@@ -116,7 +117,9 @@ export async function changePassword(body, ctx) {
 }
 export async function deleteAccount(body, ctx) {
   const db = await getDb(), row = db.prepare('SELECT pass FROM users WHERE id = ?').get(ctx.user.id);
-  if (typeof body.password !== 'string' || !(await verifyPassword(body.password, row.pass))) throw new Unauthorized('The password is wrong.');
+  // v0.10: with no password to ask for, typing the username confirms it
+  if (row.pass === '') { if (body.confirm !== ctx.user.username) throw new Unauthorized('Type your username to confirm.'); }
+  else if (typeof body.password !== 'string' || !(await verifyPassword(body.password, row.pass))) throw new Unauthorized('The password is wrong.');
   db.prepare('DELETE FROM users WHERE id = ?').run(ctx.user.id);   // sessions, routines and logs go with it
   ctx.cookies.push(cookie('', 0, ctx.secure));
   return { ok: true, deleted: true };

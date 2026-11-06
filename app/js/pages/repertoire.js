@@ -22,7 +22,8 @@ const RECENT = 'vg-rep-recent';
 const readRecent = () => { try { return JSON.parse(localStorage.getItem(RECENT) || '[]'); } catch (e) { return []; } };
 const remember = id => { try { localStorage.setItem(RECENT, JSON.stringify([id].concat(readRecent().filter(x => x !== id)).slice(0, 8))); } catch (e) { /* not kept */ } };
 const fold = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]+/g, ' ').replace(/h/g, '').replace(/(.)\1+/g, '$1').replace(/\s+/g, ' ').trim();
-const nice = s => String(s || '').replace(/^./, c => c.toUpperCase());
+/* a name the site runs together comes apart here (MuthuswamiDikshithar); transliteration led by a small letter (mOkshamu) is left alone */
+const nice = s => String(s || '').split(' ').map(w => (/^(?:[A-Z][a-z]{2,}){2,}$/.test(w) ? w.replace(/([a-z])([A-Z])/g, '$1 $2') : w)).join(' ').replace(/^./, c => c.toUpperCase());
 
 async function loadIndex() {
   if (INDEX) return INDEX;
@@ -55,7 +56,6 @@ async function showList(root) {
   const ix = await loadIndex();
   const all = ix.compositions, src = ix.source;
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers · repertoire',
     title: 'Repertoire',
     lead: plural(all.length, 'composition') + ' with their swaras and sahitya, from geethams and varnams to krithis and thillanas. Open one to read it on the tala grid, hear any section sung with its raga’s gamaka, loop a line until it sits, and add it to your practice. The notations are from <a href="' + esc(src.url) + '" target="_blank" rel="noopener">' + esc(src.name) + '</a> by ' + esc(src.author) + ', who offers them free to download and use, with the lessons of ' + Object.values(ix.sources || {}).map(x => esc(x.author)).join(', ') + '. Where a lesson is in several sources, the one that holds up best is used.',
     steps: [
@@ -97,7 +97,7 @@ async function showList(root) {
     updated: (a, b) => b.updated.localeCompare(a.updated) || sorters.name(a, b)
   };
   const row = c => '<li><a class="rp-item" href="#/repertoire/' + esc(c.id) + '"><b>' + esc(nice(c.name)) + '</b><span class="rp-meta">' +
-    [c.raga && nice(c.raga) + (c.ragamalika && !/m[aā]lika/i.test(c.raga) ? ' · ragamalika' : ''), c.tala, c.type, c.composer].filter(Boolean).map(esc).join(' · ') + '</span>' +
+    [c.raga && nice(c.raga) + (c.ragamalika && !/m[aā]lika/i.test(c.raga) ? ' · ragamalika' : ''), c.tala, c.type, c.composer && nice(c.composer)].filter(Boolean).map(esc).join(' · ') + '</span>' +
     (c.lines ? '' : '<span class="rp-flag">lyrics only</span>') + '</a></li>';
   const drawList = () => {
     const list = all.filter(c => matches(c)).sort(sorters[S.sort]);
@@ -172,7 +172,7 @@ async function showChanges(root) {
   };
   await load();
   if (location.hash !== here) return;
-  root.innerHTML = '<div class="wrap"><div class="phead rp-head">' + back + '<span class="eyebrow"><span class="dot"></span>For singers · repertoire</span><h1>Your changes to the notation</h1><p class="lead">Every correction you have made, newest first. Open a change to go to its line, or undo it: an undo is a new entry, so nothing here is ever lost. The imported notation itself never changes.</p></div>' +
+  root.innerHTML = '<div class="wrap"><div class="phead rp-head">' + back + '<h1>Your changes to the notation</h1><p class="lead">Every correction you have made, newest first. Open a change to go to its line, or undo it: an undo is a new entry, so nothing here is ever lost. The imported notation itself never changes.</p></div>' +
     '<div class="tool"><aside class="panel" aria-label="Filters"><div class="step"><div class="field" style="margin-top:0"><span class="lab">What</span><div class="chips rp-types" id="rc-what"></div></div></div>' +
     '<div class="step"><span class="lab rp-lablock">Composition</span><div class="rp-secnav" id="rc-comps"></div></div></aside>' +
     '<section class="result" aria-live="polite"><div class="card"><h2 id="rc-count"></h2><div id="rc-list"></div><div class="rp-more" id="rc-more"></div></div></section></div></div>';
@@ -299,8 +299,8 @@ async function showComposition(root, id, jumpTo) {
     : scales[0].from === 'engine' ? 'The post prints no scale; this is ' + esc(scales[0].name) + ' as the engine knows it.' : '';
 
   root.innerHTML = '<div class="wrap">' +
-    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><span class="eyebrow"><span class="dot"></span>' + esc(c.type) + (c.ragamalika ? ' · ragamalika' : '') + '</span><h1>' + esc(nice(c.name)) + '</h1>' +
-      '<p class="lead">' + [c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(c.composer), c.language && esc(c.language)].filter(Boolean).join(' · ') +
+    '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><h1>' + esc(nice(c.name)) + '</h1>' +
+      '<p class="lead">' + [esc(c.type) + (c.ragamalika ? ', ragamalika' : ''), c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(nice(c.composer)), c.language && esc(c.language)].filter(Boolean).join(' · ') +
       '<br><span class="muted">' + creditOf(c) + '</span></p>' + comparedHtml(c) + '</div>' +
     '<div class="tool"><aside class="panel" aria-label="Settings">' +
       '<div class="step"><div class="step-h"><span class="n">1</span><h3>Sections</h3></div><div class="rp-secnav" id="rp-secnav"></div></div>' +
@@ -359,8 +359,8 @@ async function showComposition(root, id, jumpTo) {
     });
     const flag = l.link ? 'link' : l.at ? 'lead-in' : l.tail ? 'overlap' : '';
     const gap = offCycle(s.lines, li, tala, upb);
-    return '<div class="rp-line nrow" data-s="' + s.i + '" data-l="' + li + '"' + (l.key ? ' data-key="' + esc(l.key) + '"' : '') + '><div class="rp-lh"><button type="button" class="iconbtn rp-loop" data-loop="' + s.i + ':' + li + '" aria-label="Loop this line" title="Loop this line">⟲</button>' +
-      (editing && l.key ? '<button type="button" class="iconbtn rp-pen" data-edit="' + s.i + ':' + li + '" aria-label="Edit this line" title="Edit this line">✎</button>' : '') +
+    return '<div class="rp-line nrow" data-s="' + s.i + '" data-l="' + li + '"' + (l.key ? ' data-key="' + esc(l.key) + '"' : '') + '><div class="rp-lh"><button type="button" class="iconbtn rp-loop" data-loop="' + s.i + ':' + li + '" aria-label="Loop this line" title="Loop this line"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      (editing && l.key ? '<button type="button" class="iconbtn rp-pen" data-edit="' + s.i + ':' + li + '" aria-label="Edit this line" title="Edit this line"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 13l.7-3L10.5 3.2l2.3 2.3L6 12.3zM9.5 4.2l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : '') +
       (l.edited ? '<button type="button" class="rp-flag rp-mine" data-logid="' + l.edited + '" title="You changed this line. Open the log of changes.">edited</button>' : '') +
       (l.fixed ? '<button type="button" class="rp-flag rp-fixed" data-logfix="' + esc(l.key || s.i + ':' + li) + '" title="' + esc('A typing slip was corrected at import. The site prints: ' + l.fixed.map(x => x.was).join(' | ')) + '">fixed</button>' : '') +
       (l.label ? '<span class="rp-lab">' + esc(l.label) + '</span>' : '') + (flag ? '<span class="rp-flag" title="' + (flag === 'link' ? 'A short phrase that leads back into a line' : flag === 'lead-in' ? 'Starts before sam and ends on it' : 'Its last cell fills the next line’s opening rests') + '">' + flag + '</span>' : '') +
@@ -399,7 +399,7 @@ async function showComposition(root, id, jumpTo) {
   const select = x => {
     stop(); sel = x;
     const s = secs[x.s];
-    $('#rp-now').innerHTML = x.l == null ? '<b>' + esc(nice(s.title) || 'Section ' + (x.s + 1)) + '</b> · ' + plural(s.lines.length, 'line') + '<span class="muted"> · Play sings it once (or loops with Loop on). ⟲ beside a line loops that line.</span>'
+    $('#rp-now').innerHTML = x.l == null ? '<b>' + esc(nice(s.title) || 'Section ' + (x.s + 1)) + '</b> · ' + plural(s.lines.length, 'line') + '<span class="muted"> · Play sings it once (or loops with Loop on). The arrow beside a line loops that line.</span>'
       : '<b>Line ' + (x.l + 1) + (s.lines[x.l].label ? ' (' + esc(s.lines[x.l].label) + ')' : '') + '</b> of ' + esc(nice(s.title) || 'section ' + (x.s + 1)) + ', looped <button type="button" class="btn small ghost" id="rp-whole">Back to the whole section</button>';
     const w = $('#rp-whole'); if (w) w.onclick = () => select({ s: x.s, l: null });
     $$('.rp-line.sel', root).forEach(el => el.classList.remove('sel'));
@@ -472,7 +472,7 @@ async function showComposition(root, id, jumpTo) {
     if (editing && view !== 'mine') view = 'mine';
     syncEditBtn();
     redraw();
-    if (editing) toast('Press ✎ beside a line to change it.');
+    if (editing) toast('Press the pen beside a line to change it.');
   };
 
   // the tag on a line off the cycle opens a note under it, since a tooltip never appears on a phone

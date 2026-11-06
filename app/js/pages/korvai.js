@@ -5,12 +5,13 @@ import '/shared/korvai-lab.js';      // globalThis.VGKorvaiLab
 import * as K from '/engine/korvai/index.js';
 import { toggle, rhythmJob, stop, settings, setSetting, saHz, click, solluGaps } from '../audio.js';
 import { pageHead, term } from '../ui.js';
+import { liveKolam } from '../kolam-view.js';
 
 /* the lab's structure (web/shared/mridangam.js, arrange): accented phrase starts, the cadence on tham,
    and a phrase tone tuned to Sa that rises with each phrase's length; syllables too if they are chosen */
 function structureJob(job) {
   return {
-    root: job.root, per: job.per, total: job.total,
+    root: job.root, per: job.per, total: job.total, clock: { per: job.per, total: job.total, off: 0 },
     schedule(ac, out, t0) {
       const beat = 60 / settings.bpm, slot = beat / job.per, M = globalThis.VGMridangam, V = globalThis.VGSolkattu, mode = settings.solluVoice;
       const hits = []; job.sylls.forEach((s, i) => { if (s && s !== ',') hits.push({ t: t0 + i * slot, s }); });
@@ -26,10 +27,10 @@ function structureJob(job) {
 
 export async function mount(root) {
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers, drummers and teachers',
     title: 'Korvai & tihai lab',
     lead: 'A ' + term('mora') + ', a tihai and a ' + term('korvai') + ' are arithmetic: they are counted so that they land exactly on sam, or on the song’s ' + term('eduppu') + '. Choose your ' + term('tala') + ' (any of the 35) once, then learn the counting step by step, or build your own and see every way it can be done.'
-  }) + '<div id="kl-app"></div></div>';
+  }) + '<div class="kclock kl-clock" id="kl-clock" aria-hidden="true"></div><div id="kl-app"></div></div>';
+  const offClock = liveKolam(root.querySelector('#kl-clock'), 8, { seed: 2 });
   const lab = globalThis.VGKorvaiLab.mount(root.querySelector('#kl-app'), {
     K, store: 'vg-korvai-lab',
     audio: { play: (btn, job) => toggle(btn, job.cells && globalThis.VGMridangam && globalThis.VGMridangam.playArranged ? structureJob(job) : rhythmJob(job.root, job.sylls, job.per, job.total, job.angaStarts)), stop,
@@ -47,5 +48,5 @@ export async function mount(root) {
       go() { location.hash = '#/judge'; }
     }
   });
-  return () => { stop(); lab.unmount(); };
+  return () => { stop(); offClock(); lab.unmount(); };
 }

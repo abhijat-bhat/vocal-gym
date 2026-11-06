@@ -4,7 +4,7 @@
    score from conventional to unconventional choices and widens sampling, but it only ever
    chooses among moves that can still finish legally. */
 
-export const VERSION = '0.9.5';
+export const VERSION = '0.10.0';
 export { rng, pick, soft, dial } from './random.js';
 export { SEMI, CHAKRA, MELA_NAMES, melaLabels, defineRaga, melakarta, JANYA, allRagas } from './ragas.js';
 // v0.8.7: the melakarta and katapayadi explorer
@@ -21,6 +21,7 @@ export { rhythmTemplate, parseRhythmTemplate, kalpanaRhythm, rhythmPhrases } fro
 export { rhythmPrompt, INSPIRATION_SCHEMA } from './kalpana/inspire.js';
 export { parseInspiration, parseSwaras } from './kalpana/sargam.js';
 export { getProfile, setProfiles, getSource } from './profiles.js';
+export { kolam, dotRows, lineAt } from './kolam.js';
 export { renderGamaka, buildContour, GAMAKA_CONSTANTS, gamakaExpression, syllableOf } from './gamaka/index.js';
 export { SOLLU, ALIAS, norm, KNOWN, HEAVY, CADENCE, LIB, idiomatic, splitCompound } from './sollu.js';
 export { TEER, yatiBlocks, jathi } from './jathi/generator.js';

@@ -13,10 +13,13 @@ const PRESETS = [
 const KIND = { conv: 'Familiar device', nov: 'Unusual device', mora: 'Mora ending', step: 'Single step', start: 'Opening swara' };
 
 export async function mount(root, meta) {
+  // v0.10: the raga and tala you left, so a day's practice opens where it should
+  try { const last = JSON.parse(localStorage.getItem('vg-last-kalpana') || 'null'); if (last && !S.restored) { S.raga = last.raga || S.raga; S.tala = last.tala || S.tala; } S.restored = true; } catch (e) { /* defaults */ }
+  const keepPlace = () => { try { localStorage.setItem('vg-last-kalpana', JSON.stringify({ raga: S.raga, tala: S.tala })); } catch (e) { /* not kept */ } };
+  window.addEventListener('hashchange', keepPlace, { once: true }); window.addEventListener('pagehide', keepPlace, { once: true });
+  const about = term('kalpana', 'Kalpana swaras') + ' are improvised in a concert, between repetitions of a song line. A round must stay in the raga, fill an exact number of beats, and land so the song can resume on time. Here you can hear model rounds, see how they are built, and turn the creativity dial to explore.';
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers · improvisation',
     title: 'Kalpana swaras',
-    lead: term('kalpana', 'Kalpana swaras') + ' are improvised in a concert, between repetitions of a song line. A round must stay in the raga, fill an exact number of beats, and land so the song can resume on time. Here you can hear model rounds, see how they are built, and turn the creativity dial to explore.',
     steps: [
       ['Pick a raga, a tala and a length', 'Rounds of half a cycle, one cycle or two cycles. Second speed (2 swaras per beat) is the usual choice.'],
       ['Choose where to start and where to land', 'Landing on Pa or on the upper Sa is common. The round is planned backwards so it always arrives.'],
@@ -32,10 +35,11 @@ export async function mount(root, meta) {
     '<div class="step">' + stepHead(4, 'Start and landing', 'swara') + '<div class="field"><span class="lab">Start on</span><div id="k-start"></div></div><div class="field"><span class="lab">Land on</span><div id="k-land"></div></div><div class="field"><span class="lab">Ending</span><div id="k-ending"></div></div></div>' +
     '<div class="step">' + stepHead(5, 'Creativity', 'creativity') + '<div id="k-dial"></div></div>' +
   '</aside><section class="result" aria-live="polite">' +
-    '<div class="card"><div class="card-h"><div><h2 id="k-title">…</h2><div class="card-sub" id="k-sub"></div></div><button class="btn primary" id="k-new">New round</button></div><div id="k-explain"></div></div>' +
-    '<div class="card" id="k-main"><div id="k-tr"></div><div class="notation-wrap" id="k-n"></div><div id="k-legend"></div><div class="notation-actions"><button class="btn small" id="k-copy">Copy notation</button></div></div>' +
+    '<div class="card"><div class="card-h"><div><h2 id="k-title">…</h2><div class="card-sub" id="k-sub"></div></div><button class="btn" id="k-new">New round</button></div><div id="k-explain"></div></div>' +
+    '<div class="card" id="k-main"><div id="k-tr"></div><div class="kfloor" id="k-clock" aria-hidden="true"></div><div class="notation-wrap" id="k-n"></div><div id="k-legend"></div><div class="notation-actions"><button class="btn small" id="k-copy">Copy notation</button></div></div>' +
+    '<div class="card tool-about"><p class="lead">' + about + '</p></div>' +
     '<div class="card" id="k-inside"><h3 class="sec-h">What is inside this round</h3><div id="k-meter"></div></div>' +
-    '<div class="card" id="k-ck"><h3 class="sec-h">Why this is correct</h3><div id="k-checks"></div></div>' +
+    '<div class="card" id="k-ck"><h3 class="sec-h">What was checked</h3><div id="k-checks"></div></div>' +
   '</section></div></div>';
 
   // v0.8.3: a rhythm from the korvai lab (handed over in sessionStorage); kept until Stop following
@@ -83,7 +87,7 @@ export async function mount(root, meta) {
     $('#k-rh-use').onclick = () => { S.inspiration = $('#k-rh-ans').value.trim(); $('#k-rh-clear').hidden = !S.inspiration; status(S.inspiration ? 'Singing with the pasted lines.' : ''); run(); };
   };
   let data = null, token = 0;
-  const tr = transport($('#k-tr'), undefined, { voice: true });
+  const tr = transport($('#k-tr'), undefined, { voice: true, floor: $('#k-clock') });
   const raga = () => meta.ragas.find(r => r.id === S.raga);
   const tala = () => meta.talas.find(t => t.fam === S.tala.fam && t.L === S.tala.L);
   const aksharas = () => S.cycles === 0.5 ? Math.max(2, Math.floor(tala().total / 2)) : tala().total * S.cycles;
@@ -150,7 +154,8 @@ export async function mount(root, meta) {
     $('#k-legend').innerHTML = legend([['conv', '', 'familiar device'], ['nov', '', 'unusual device'], ['mora', '', 'mora ending'], ['', '', 'single step'], ['land', '', 'landing swara'], ['now', '', 'playing now']]) +
       '<p class="card-sub" style="margin-top:10px">A thin bar marks where each device starts. Hover any swara to see which device it belongs to.</p>';
     const starts = new Set(r.tala.angas.map(a => a.start));
-    const job = pitchedJob($('#k-n'), notes, r.per, r.tala.total, starts, { raga: r.raga.id, units, seed: r.seed });   // sung with the raga's gamaka
+    tr.setBeats(r.tala.total);
+    const job = pitchedJob($('#k-n'), notes, r.per, r.tala.total, starts, { raga: r.raga.id, units, seed: r.seed, follow: true });   // sung with the raga's gamaka
     tr.btn.onclick = () => toggle(tr.btn, job);
     $('#k-copy').onclick = () => copy(r.raga.name + ' · ' + r.tala.name + '\n' + notationText(slots, r.tala, r.per), 'Notation copied');
 
@@ -168,7 +173,7 @@ export async function mount(root, meta) {
     const p = PRESETS[+b.dataset.preset];
     Object.assign(S, { raga: p.raga, tala: { fam: p.fam, L: p.L }, cycles: p.cycles, per: p.per, start: p.start, land: p.land, T: p.T, ending: p.ending, seed: 3 });
     rp.set(S.raga); tp.set(S.tala); drawAll(); run();
-    $('.result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('.result').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
   await run();
   // leaving the page: an answer still on its way is ignored

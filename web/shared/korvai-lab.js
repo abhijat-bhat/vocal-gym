@@ -171,7 +171,7 @@
       o = o || {};
       const L = R.layout;
       const snd = audio.sound ? audio.sound() : null;
-      el.innerHTML = '<div class="kl-gridbar"><button type="button" class="kl-btn primary kl-play" data-label="Play">▶ Play</button>' +
+      el.innerHTML = '<div class="kl-gridbar"><button type="button" class="kl-btn primary kl-play" data-label="Play"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg>Play</button>' +
         '<button type="button" class="kl-btn kl-copy">Copy notation</button>' + (host.check && F && o.check !== false ? '<button type="button" class="kl-btn kl-check">Check it in the judge</button>' : '') +
         (host.kalpana && F && R.layout ? '<button type="button" class="kl-btn kl-kalpana" title="The kalpana swara generator sings this exact rhythm in a raga: the same phrases, gaps and cadence">Sing it as kalpana swaras →</button>' : '') +
         '<span class="kl-gridsum">' + esc(o.summary || '') + '</span></div>' +
@@ -251,9 +251,9 @@
       if (!N) return { order, item: null, html: '<div class="kl-ex">' + head + notice('No variation matches these filters.', 'warn') + '</div>', wire: el => wireEx(el, space, order, e) };
       const pos = Math.max(0, Math.min(N - 1, e.pos | 0)), item = space.items[order[pos]];
       const nav = '<div class="kl-exnav">' +
-        '<button type="button" class="kl-btn" data-ex="prev" data-fk="ex:prev" aria-label="Previous variation">◀</button>' +
+        '<button type="button" class="kl-btn" data-ex="prev" data-fk="ex:prev" aria-label="Previous variation"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M7.5 3l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         '<label class="kl-expos">Variation <input type="number" data-ex="pos" data-fk="ex:pos" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Variation number"> of ' + N.toLocaleString('en') + '</label>' +
-        '<button type="button" class="kl-btn" data-ex="next" data-fk="ex:next" aria-label="Next variation">▶</button>' +
+        '<button type="button" class="kl-btn" data-ex="next" data-fk="ex:next" aria-label="Next variation"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         (N > 12 ? '<input type="range" class="kl-exjump" data-ex="jump" data-fk="ex:jump" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Jump to a variation">' : '') +
         '<button type="button" class="kl-btn primary" data-ex="surprise" data-fk="ex:surprise" title="A variation drawn at the creativity setting, one you have not seen yet">🎲 Surprise me</button>' +
         '<label class="kl-exT">Creativity <input type="range" data-ex="T" data-fk="ex:T" min="0" max="2" step="0.1" value="' + e.T + '" aria-label="Creativity"><span class="kl-exTw">' + creativityWord(e.T) + '</span></label>' +

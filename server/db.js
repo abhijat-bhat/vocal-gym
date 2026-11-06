@@ -3,7 +3,7 @@
    install). The file is var/vocal-gym.db, or VG_DB to put it elsewhere (VG_DB=:memory: keeps nothing).
    It opens on first use, so the rest of the server runs on older Node versions with accounts unavailable.
    Tables: users, sessions (login tokens, stored hashed), routines (a user's practice routines) and logs
-   (finished practice sessions); v0.9.1: notation_edits (a singer's corrections to the repertoire, server/edits.js); v0.9.5: octave_ok (octave questions a singer has settled as correct as written).
+   (finished practice sessions); v0.9.1: notation_edits (a singer's corrections to the repertoire, server/edits.js); v0.9.5: octave_ok (octave questions a singer has settled as correct as written); v0.10: identities and login_codes (signing in with Google, or with an email or phone and a code, server/signin.js).
    Foreign keys cascade, so deleting a user deletes everything of theirs. */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -72,6 +72,27 @@ CREATE TABLE IF NOT EXISTS notation_edits (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS notation_edits_comp ON notation_edits(user_id, comp, line_key, id);
+CREATE TABLE IF NOT EXISTS identities (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  value TEXT NOT NULL,
+  label TEXT,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (kind, value)
+);
+CREATE INDEX IF NOT EXISTS identities_user ON identities(user_id);
+CREATE TABLE IF NOT EXISTS login_codes (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,
+  value TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  tries INTEGER NOT NULL DEFAULT 0,
+  consumed INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS login_codes_to ON login_codes(kind, value, created_at);
 CREATE TABLE IF NOT EXISTS octave_ok (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   comp TEXT NOT NULL,

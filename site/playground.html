@@ -729,7 +729,7 @@ $A $A tha , dhi , | tha-ki-ta (tha-ka)x2 ...   # one word = one matra; , and ; a
 </main>
 
 <script>
-/* Vocal Gym engine 0.9.5: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
+/* Vocal Gym engine 0.10.0: bundled from src/engine by scripts/build.js. Exposes the global VGEngine. */
 var VGEngine = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -803,6 +803,7 @@ var VGEngine = (() => {
     cycleGap: () => cycleGap,
     defineRaga: () => defineRaga,
     dial: () => dial,
+    dotRows: () => dotRows,
     eduppuNeighbours: () => eduppuNeighbours,
     enumerateMotifs: () => enumerateMotifs,
     fmtTicks: () => fmtTicks,
@@ -821,9 +822,11 @@ var VGEngine = (() => {
     kalpanaSession: () => kalpanaSession,
     katapayadi: () => katapayadi,
     katapayadiLetters: () => katapayadiLetters,
+    kolam: () => kolam,
     korvai: () => korvai_exports,
     korvaiFrame: () => korvaiFrame,
     korvaiPlans: () => korvaiPlans,
+    lineAt: () => lineAt,
     linePitches: () => linePitches,
     lineText: () => lineText,
     lineTokens: () => lineTokens,
@@ -4876,7 +4879,7 @@ var VGEngine = (() => {
       }
       const order = cand.map((x, k) => k);
       if (hi - lo > 15 * D.tau) order.sort((a, b) => ub[b] - ub[a] || a - b);
-      const memo = /* @__PURE__ */ new Map();
+      const memo2 = /* @__PURE__ */ new Map();
       const pickIx = [], scores = [];
       let best = -Infinity, avoided = [];
       for (const k of order) {
@@ -4887,10 +4890,10 @@ var VGEngine = (() => {
         else {
           const i1 = cn.length > 1 ? cn[1].i + 1 : 0, i2 = cn.length > 2 ? cn[2].i + 1 : 0;
           const key = (((cn[0].i + 1) * 64 + i1) * 64 + i2) * 64 + Math.min(cn[0].dur, 15) * 4 + (cn[0].phrase ? 2 : 0) + (cn[0].arp ? 1 : 0);
-          bt = memo.get(key);
+          bt = memo2.get(key);
           if (!bt) {
             bt = boundaryTerms(LX, tail, cn, [], false);
-            memo.set(key, bt);
+            memo2.set(key, bt);
           }
         }
         x.L = { unl: x.int.unl + bt.unl, dbl: x.int.dbl + bt.dbl, unres: x.int.unres + bt.unres };
@@ -5179,14 +5182,14 @@ var VGEngine = (() => {
     if (!s.length) return true;
     const key = s.join(" ");
     if (LIB.set.has(key) || LIB.suf.has(key)) return true;
-    const memo = {};
+    const memo2 = {};
     const seg = (i, k) => {
       if (i === s.length) return true;
       if (k === 0) return false;
       const id = i + ":" + k;
-      if (id in memo) return memo[id];
-      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo[id] = true;
-      return memo[id] = false;
+      if (id in memo2) return memo2[id];
+      for (let L = 1; L <= 9 && i + L <= s.length; L++) if (LIB.set.has(s.slice(i, i + L).join(" ")) && seg(i + L, k - 1)) return memo2[id] = true;
+      return memo2[id] = false;
     };
     return seg(0, 3);
   }
@@ -5904,6 +5907,182 @@ var VGEngine = (() => {
     L.push('Answer with JSON only: {"idea": "the musical idea in a sentence", "phrases": [{"phrase": 1, "swaras": "S , R G"}, ...]} with every phrase from 1 to ' + ph.length + ".");
     const system = "You are an experienced Carnatic musician who sings kalpana swaras. You suggest swara lines for a rhythm that is already fixed, keeping strictly to the raga's grammar. Your lines are taken as inspiration by a rule-based engine that checks every rule, so be idiomatic and musical rather than exhaustive.";
     return { system, prompt: L.join("\n"), schema: INSPIRATION_SCHEMA, phrases: ph.length };
+  }
+
+  // src/engine/kolam.js
+  var MAX_DOTS = 64;
+  var rowsMemo = /* @__PURE__ */ new Map();
+  function dotRows(n) {
+    if (!Number.isInteger(n) || n < 1 || n > MAX_DOTS) throw new RangeError("A kolam has 1 to " + MAX_DOTS + " dots.");
+    if (rowsMemo.has(n)) return rowsMemo.get(n);
+    let best = null, bestScore = Infinity;
+    const consider = (half) => {
+      const middle = half.middle ? [half.middle] : [], rows = half.side.slice().reverse().concat(middle, half.side);
+      const widest = Math.max(...rows), squareness = Math.abs(rows.length - widest);
+      const flat = rows.slice(1).filter((w, i) => w === rows[i]).length;
+      const jumps = rows.slice(1).reduce((s, w, i) => s + Math.max(0, Math.abs(w - rows[i]) - 2), 0);
+      const score = squareness * 2 + flat * 0.5 + jumps + (rows.length > 1 && widest === rows[0] && flat ? 0.25 : 0);
+      if (score < bestScore - 1e-9) {
+        bestScore = score;
+        best = rows;
+      }
+    };
+    const walk = (left, limit, side, middle) => {
+      if (left === 0) {
+        consider({ middle, side });
+        return;
+      }
+      for (let w = Math.min(limit, left); w >= 1; w--) {
+        if ((w - limit) % 2 !== 0) continue;
+        walk(left - w, w, side.concat(w), middle);
+      }
+    };
+    for (let m = n; m >= 1; m--) {
+      if ((n - m) % 2 !== 0) continue;
+      walk((n - m) / 2, m, [], m);
+    }
+    if (n % 2 === 0) for (let w = n / 2; w >= 1; w--) walk(n / 2 - w, w, [w], 0);
+    rowsMemo.set(n, best);
+    return best;
+  }
+  var sideKey = (x, y) => x + "," + y;
+  var stateKey = (x, y, dx, dy) => x + "," + y + "," + dx + "," + dy;
+  function figure(rows) {
+    const widest = Math.max(...rows), cells = /* @__PURE__ */ new Set(), centres = [];
+    rows.forEach((w, r) => {
+      const from = (widest - w) / 2;
+      for (let c = 0; c < w; c++) {
+        const x = 2 * (from + c) + 1, y = 2 * r + 1;
+        cells.add(sideKey(x, y));
+        centres.push([x, y]);
+      }
+    });
+    const sides = /* @__PURE__ */ new Map();
+    centres.forEach(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => {
+      const px = x + a, py = y + b;
+      const shared = cells.has(sideKey(x + 2 * a, y + 2 * b));
+      sides.set(sideKey(px, py), shared);
+    }));
+    return { widest, cells, centres, sides, height: rows.length };
+  }
+  function onward(f, walls, x, y, dx, dy) {
+    const k = sideKey(x, y), through = f.sides.get(k) && !walls.has(k);
+    if (through) return [dx, dy];
+    return x % 2 === 0 ? [-dx, dy] : [dx, -dy];
+  }
+  var startsOf = (f, x, y) => {
+    const out = [];
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([dx, dy]) => {
+      const cell = x % 2 === 0 ? sideKey(x + dx, y) : sideKey(x, y + dy);
+      if (f.cells.has(cell)) out.push([dx, dy]);
+    });
+    return out;
+  };
+  function trace(f, walls) {
+    const seen = /* @__PURE__ */ new Map(), loops = [];
+    f.sides.forEach((_, k) => {
+      const [x, y] = k.split(",").map(Number);
+      startsOf(f, x, y).forEach(([dx, dy]) => {
+        if (seen.has(stateKey(x, y, dx, dy))) return;
+        const id = loops.length, loop = [];
+        let px = x, py = y, ax = dx, ay = dy;
+        do {
+          seen.set(stateKey(px, py, ax, ay), id);
+          loop.push({ x: px, y: py, dx: ax, dy: ay });
+          const qx = px + ax, qy = py + ay;
+          seen.set(stateKey(qx, qy, -ax, -ay), id);
+          const [bx, by] = onward(f, walls, qx, qy, ax, ay);
+          px = qx;
+          py = qy;
+          ax = bx;
+          ay = by;
+        } while (!(px === x && py === y && ax === dx && ay === dy));
+        loops.push(loop);
+      });
+    });
+    return { loops, seen };
+  }
+  function singleLine(f, seed) {
+    const walls = /* @__PURE__ */ new Set(), rand = rng(seed);
+    const mirror = (k) => {
+      const [x, y] = k.split(",").map(Number), W = f.widest * 2, H = f.height * 2;
+      return [[W - x, y], [x, H - y], [W - x, H - y]].map(([a, b]) => sideKey(a, b));
+    };
+    const shared = Array.from(f.sides.keys()).filter((k) => f.sides.get(k));
+    const cx = f.widest, cy = f.height;
+    const order = shared.map((k) => {
+      const [x, y] = k.split(",").map(Number);
+      return { k, d: Math.abs(x - cx) + Math.abs(y - cy) + rand() * 1.5 };
+    }).sort((a, b) => a.d - b.d).map((o) => o.k);
+    let t = trace(f, walls);
+    while (t.loops.length > 1) {
+      let joined = false;
+      for (const k of order) {
+        if (walls.has(k)) continue;
+        const [x, y] = k.split(",").map(Number);
+        const ids = new Set(startsOf(f, x, y).map(([dx, dy]) => t.seen.get(stateKey(x, y, dx, dy))));
+        if (ids.size < 2) continue;
+        const group = [k].concat(mirror(k).filter((m) => f.sides.get(m) && !walls.has(m)));
+        group.forEach((g) => walls.add(g));
+        let next = trace(f, walls);
+        if (next.loops.length >= t.loops.length) {
+          group.forEach((g) => walls.delete(g));
+          walls.add(k);
+          next = trace(f, walls);
+        }
+        if (next.loops.length < t.loops.length) {
+          t = next;
+          joined = true;
+          break;
+        }
+        walls.delete(k);
+      }
+      if (!joined) throw new Error("The loops of a kolam could not be joined.");
+    }
+    return t.loops[0];
+  }
+  var round = (v) => Math.round(v * 1e3) / 1e3;
+  var memo = /* @__PURE__ */ new Map();
+  function kolam(n, opts) {
+    const seed = opts && opts.seed || 1, key = n + "|" + seed;
+    if (memo.has(key)) return memo.get(key);
+    const f = figure(dotRows(n));
+    let loop = singleLine(f, seed);
+    const first = loop.reduce((best, p, i) => p.y < loop[best].y || p.y === loop[best].y && p.x < loop[best].x ? i : best, 0);
+    loop = loop.slice(first).concat(loop.slice(0, first));
+    const pts = loop.map((p) => [p.x, p.y]), N = pts.length;
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    let d = "M" + mid(pts[N - 1], pts[0]).map(round).join(" "), total = 0;
+    const along = [];
+    for (let i = 0; i < N; i++) {
+      const a = mid(pts[(i + N - 1) % N], pts[i]), c = pts[i], b = mid(pts[i], pts[(i + 1) % N]);
+      d += "Q" + c.join(" ") + " " + b.map(round).join(" ");
+      along.push(total);
+      let len = 0, last = a;
+      for (let s = 1; s <= 8; s++) {
+        const u = s / 8, v = 1 - u, p = [v * v * a[0] + 2 * v * u * c[0] + u * u * b[0], v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]];
+        len += Math.hypot(p[0] - last[0], p[1] - last[1]);
+        last = p;
+      }
+      total += len;
+    }
+    const order = [], reached = /* @__PURE__ */ new Map();
+    const cellOf = (p, q) => p[0] % 2 === 0 ? sideKey(p[0] + (q[0] - p[0]), p[1]) : sideKey(p[0], p[1] + (q[1] - p[1]));
+    for (let i = 0; i < N; i++) {
+      const cell = cellOf(pts[i], pts[(i + 1) % N]);
+      if (!reached.has(cell)) {
+        reached.set(cell, along[i] / total);
+        order.push(cell);
+      }
+    }
+    const dots = f.centres.map(([x, y]) => ({ x, y, beat: order.indexOf(sideKey(x, y)) })).sort((a, b) => a.beat - b.beat);
+    const out = { n, width: f.widest * 2, height: f.height * 2, dots, d, length: round(total), closed: true, beats: dots.map((p) => reached.get(sideKey(p.x, p.y))) };
+    memo.set(key, out);
+    return out;
+  }
+  function lineAt(k, beat) {
+    const n = k.n, b = (beat % n + n) % n, i = Math.floor(b), f = b - i, from = k.beats[i], to = i + 1 < n ? k.beats[i + 1] : 1;
+    return from + (to - from) * f;
   }
 
   // src/engine/gamaka/constants.js
@@ -10152,7 +10331,7 @@ tha , ki-ta tha-ka-dhi-mi | tha-ka-dhi-mi tha-ka-jho-nu (tha-ka-dhi-mi)x2 ||
   var REPERTOIRE_NOTE = "Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.";
 
   // src/engine/index.js
-  var VERSION = "0.9.5";
+  var VERSION = "0.10.0";
   return __toCommonJS(engine_exports);
 })();
 </script>
@@ -10898,7 +11077,7 @@ globalThis.VG_SOLKATTU_BANK = null;
       o = o || {};
       const L = R.layout;
       const snd = audio.sound ? audio.sound() : null;
-      el.innerHTML = '<div class="kl-gridbar"><button type="button" class="kl-btn primary kl-play" data-label="Play">▶ Play</button>' +
+      el.innerHTML = '<div class="kl-gridbar"><button type="button" class="kl-btn primary kl-play" data-label="Play"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg>Play</button>' +
         '<button type="button" class="kl-btn kl-copy">Copy notation</button>' + (host.check && F && o.check !== false ? '<button type="button" class="kl-btn kl-check">Check it in the judge</button>' : '') +
         (host.kalpana && F && R.layout ? '<button type="button" class="kl-btn kl-kalpana" title="The kalpana swara generator sings this exact rhythm in a raga: the same phrases, gaps and cadence">Sing it as kalpana swaras →</button>' : '') +
         '<span class="kl-gridsum">' + esc(o.summary || '') + '</span></div>' +
@@ -10978,9 +11157,9 @@ globalThis.VG_SOLKATTU_BANK = null;
       if (!N) return { order, item: null, html: '<div class="kl-ex">' + head + notice('No variation matches these filters.', 'warn') + '</div>', wire: el => wireEx(el, space, order, e) };
       const pos = Math.max(0, Math.min(N - 1, e.pos | 0)), item = space.items[order[pos]];
       const nav = '<div class="kl-exnav">' +
-        '<button type="button" class="kl-btn" data-ex="prev" data-fk="ex:prev" aria-label="Previous variation">◀</button>' +
+        '<button type="button" class="kl-btn" data-ex="prev" data-fk="ex:prev" aria-label="Previous variation"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M7.5 3l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         '<label class="kl-expos">Variation <input type="number" data-ex="pos" data-fk="ex:pos" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Variation number"> of ' + N.toLocaleString('en') + '</label>' +
-        '<button type="button" class="kl-btn" data-ex="next" data-fk="ex:next" aria-label="Next variation">▶</button>' +
+        '<button type="button" class="kl-btn" data-ex="next" data-fk="ex:next" aria-label="Next variation"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         (N > 12 ? '<input type="range" class="kl-exjump" data-ex="jump" data-fk="ex:jump" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Jump to a variation">' : '') +
         '<button type="button" class="kl-btn primary" data-ex="surprise" data-fk="ex:surprise" title="A variation drawn at the creativity setting, one you have not seen yet">🎲 Surprise me</button>' +
         '<label class="kl-exT">Creativity <input type="range" data-ex="T" data-fk="ex:T" min="0" max="2" step="0.1" value="' + e.T + '" aria-label="Creativity"><span class="kl-exTw">' + creativityWord(e.T) + '</span></label>' +
@@ -11565,6 +11744,7 @@ globalThis.VG_SOLKATTU_BANK = null;
     function select(m) {
       if (!(m >= 1 && m <= 72)) return;
       n = m; draw();
+      if (host.onSelect) host.onSelect(n);
       try { if (host.store) localStorage.setItem(host.store, String(n)); } catch (e) { /* not stored */ }
     }
 

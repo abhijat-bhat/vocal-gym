@@ -16,7 +16,7 @@ const SWARAS = [
 export function mount(root, meta, args) {
   const famOrder = meta.families.filter(f => f.fam !== 'chapu');
   const tl = (fam, L) => meta.talas.find(t => t.fam === fam && t.L === L);
-  root.innerHTML = '<div class="wrap"><div class="phead"><span class="eyebrow"><span class="dot"></span>Learn</span><h1>A short guide to the ideas behind Vocal Gym</h1><p class="lead">You do not need to know Carnatic music to explore the app. This page explains every term it uses, in plain language. Tap any dotted term elsewhere in the app to see its definition here.</p></div>' +
+  root.innerHTML = '<div class="wrap"><div class="phead"><h1>A short guide to the ideas behind Vocal Gym</h1><p class="lead">You do not need to know Carnatic music to explore the app. This page explains every term it uses, in plain language. Tap any dotted term elsewhere in the app to see its definition here.</p></div>' +
     '<div class="learn"><nav class="toc" aria-label="On this page">' +
       '<a href="#" data-to="sec-start">Start here</a><a href="#" data-to="sec-swaras">The seven swaras</a>' + GROUPS.map(g => '<a href="#" data-to="sec-' + g.id + '">' + esc(g.title) + '</a>').join('') +
       '<a href="#" data-to="sec-talas">The 35 talas</a><a href="#" data-to="sec-reading">Reading the notation</a><a href="#" data-to="sec-rules">How correctness is guaranteed</a>' +
@@ -24,7 +24,7 @@ export function mount(root, meta, args) {
       '<section class="lsec" id="sec-start"><h2>Start here</h2>' +
         '<p>Carnatic music is the classical music of South India. Every piece is set in a <b>raga</b>, which decides which notes you may sing and how you may move between them, and a <b>tala</b>, a repeating rhythmic cycle kept with the hand.</p>' +
         '<p>Students build their skill with exercises. Singers start with <b>alankaras</b>, patterns sung through the whole raga, and later learn to improvise <b>kalpana swaras</b>. Rhythm is practised with <b>jathis</b> and <b>korvais</b>, passages spoken in drum syllables that must add up to the tala.</p>' +
-        '<p>The hard part of making new exercises is keeping them correct: every note must fit the raga’s rules and every phrase must add up to the beat. Vocal Gym does that arithmetic for you, so every exercise it makes is correct and you can ask for as many as you like.</p>' +
+        '<p>The hard part of making new exercises is keeping them correct: every note must fit the raga’s rules and every phrase must add up to the beat. Vocal Gym does that arithmetic for you, so every exercise it makes keeps the raga’s direction rules, fills the tala exactly, and you can ask for as many as you like.</p>' +
       '</section>' +
       '<section class="lsec" id="sec-swaras"><h2>The seven swaras</h2><p>Like do-re-mi, but sung relative to a home note, Sa, that each singer chooses. Most swaras have more than one possible pitch; a raga picks one of each.</p>' +
         '<div class="tbl-wrap"><table class="swtable"><thead><tr><th>Sung</th><th>Written</th><th>Full name</th><th>Positions</th><th>Semitones above Sa</th></tr></thead><tbody>' +
@@ -44,13 +44,13 @@ export function mount(root, meta, args) {
         '<p>Colours carry meaning: in kalpana swaras, teal marks familiar devices and violet unusual ones; in jathis, teal marks the yati and saffron the teermanam. A legend under each result names them.</p>' +
       '</section>' +
       '<section class="lsec" id="sec-rules"><h2>How correctness is guaranteed</h2>' +
-        '<p>Vocal Gym does not make a guess and then check it. Before choosing each note or phrase, it works out which choices can still finish legally: in the raga, in the beat, and on the landing. It then picks only among those. So the result cannot be wrong, whatever the creativity setting.</p>' +
+        '<p>Vocal Gym does not make a guess and then check it. Before choosing each note or phrase, it works out which choices can still finish legally: in the raga, in the beat, and on the landing. It then picks only among those. So those rules hold whatever the creativity setting. Phrase grammar and gamaka are not checked yet, so your teacher’s ear still has the last word.</p>' +
         '<p>Creativity changes only which legal choice is preferred. At 0, the most traditional, recognisable move wins. As you turn it up, rarer moves (leaps, zig-zags, unusual yati shapes) become more likely. They are always moves the rules allow.</p>' +
-        '<p>Every result page ends with a checklist (“Why this is correct”) showing the checks for that result.</p>' +
+        '<p>Every result page ends with a checklist (“What was checked”) showing the checks for that result.</p>' +
       '</section>' +
     '</div></div></div>';
 
-  root.querySelectorAll('[data-to]').forEach(a => a.onclick = e => { e.preventDefault(); const el = document.getElementById(a.dataset.to); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  root.querySelectorAll('[data-to]').forEach(a => a.onclick = e => { e.preventDefault(); const el = document.getElementById(a.dataset.to); if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); });
   const target = args && args[0] ? document.getElementById(TERMS[args[0]] ? 't-' + args[0] : 'sec-' + args[0]) : null;
   if (target) requestAnimationFrame(() => { target.scrollIntoView({ block: 'start' }); target.style.borderColor = 'var(--saffron)'; });
   else window.scrollTo(0, 0);

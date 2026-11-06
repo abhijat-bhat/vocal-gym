@@ -85,4 +85,4 @@ What backs the claim, and what a neighbouring app could not truthfully copy:
 
 ## Accessibility & Inclusion
 
-Keep the reduced-motion fallbacks (`CLAUDE.md`, `docs/design.md`). Tags that explain something must open a note rather than rely on a tooltip, because a phone never shows one. No formal standard has been set.
+Keep the reduced-motion fallbacks (`CLAUDE.md`, `DESIGN.md`). Tags that explain something must open a note rather than rely on a tooltip, because a phone never shows one. No formal standard has been set.

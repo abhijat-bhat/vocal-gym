@@ -72,6 +72,7 @@
     function select(m) {
       if (!(m >= 1 && m <= 72)) return;
       n = m; draw();
+      if (host.onSelect) host.onSelect(n);
       try { if (host.store) localStorage.setItem(host.store, String(n)); } catch (e) { /* not stored */ }
     }
 

@@ -29,7 +29,6 @@ export async function mount(root, meta) {
   if (S.script == null) S.script = meta.examples[0].script;
 
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For students and teachers',
     title: 'Jathi judge',
     lead: 'Write a jathi in ' + term('jathiscript', 'JathiScript') + ', a simple text notation, and the judge checks the arithmetic exactly: does it fill the cycles, start at the ' + term('eduppu') + ', and land on sam? If not, it tells you which line to fix and by how much. Then it scores the craft out of 100.',
     steps: [
@@ -83,7 +82,7 @@ export async function mount(root, meta) {
     }
     const failed = r.gate.filter(g => !g.ok).length, I = r.info;
     const facts = [['Tala', I.tala + (I.kalai > 1 ? ' · kalai ' + I.kalai : '')], ['Nadai', I.nadai + ' per beat'], ['Cycles', I.avartanams ? I.avartanams + (I.avartanamsInferred ? ' (inferred)' : '') : '—'], ['Start', I.eduppu === 0 ? 'on sam' : (I.eduppu > 0 ? '+' : '') + I.eduppu + ' matras'], ['Landing', I.land === 'sam' ? 'on sam' : I.land === 'end' ? 'ends at sam' : I.land], ['Teermanam', I.teermanam || 'none found'], ['Yati', I.yati || 'none']];
-    let h = '<div class="card"><div class="scorebox">' + ring(r.total) + '<div class="verdict"><span class="badge ' + (r.gatePass ? 'good' : 'bad') + '">' + (r.gatePass ? 'Passes every correctness check' : failed + ' correctness check' + (failed > 1 ? 's' : '') + ' failed') + '</span><h2 style="margin-top:8px">' + esc(r.grade) + '</h2><p>' +
+    let h = '<div class="card"><div class="scorebox">' + ring(r.total) + '<div class="verdict"><h2>' + esc(r.grade) + '</h2>' + (r.gatePass ? '' : '<span class="badge bad">' + failed + ' correctness check' + (failed > 1 ? 's' : '') + ' failed</span>') + '<p>' +
       (r.gatePass ? 'The counting is exact. The score below rates the craft.' : 'The score is capped at ' + r.cap + ' until the counting is right. Start with the fixes below.') + '</p></div></div>' +
       '<div class="facts">' + facts.map(([k, v]) => '<div><span class="k">' + k + '</span><span>' + esc(v) + '</span></div>').join('') + '</div></div>';
     if (r.fixes.length) h += '<div class="card"><h3 class="sec-h">What to change</h3><p class="card-sub">Computed from the exact arithmetic. Any one of these resolves the problem it addresses.</p><ol class="fixes">' + r.fixes.map(f => '<li>' + esc(f) + '</li>').join('') + '</ol></div>';

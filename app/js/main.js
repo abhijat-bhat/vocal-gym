@@ -11,7 +11,6 @@ import * as melakarta from './pages/melakarta.js';
 import * as practice from './pages/practice.js';
 import * as account from './pages/account.js';
 import { initSession, refreshUser, onUser } from './session.js';
-import { initFx, enter } from './fx.js';
 import * as judge from './pages/judge.js';
 import * as learn from './pages/learn.js';
 import * as repertoire from './pages/repertoire.js';
@@ -44,7 +43,6 @@ async function route() {
     const off = await PAGES[name].mount(main, meta, parts.slice(1)) || null;
     if (me !== nav) { if (off) try { off(); } catch (e) { /* ignore */ } return; }
     unmount = off;
-    enter(main);
     settingsJump(main);
   } catch (e) {
     if (me !== nav) return;
@@ -75,11 +73,15 @@ function settingsJump(main) {
   if (!res || res.querySelector('.to-settings')) return;
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'btn small to-settings'; b.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="5" cy="4" r="1.8" fill="currentColor"/><circle cx="11" cy="8" r="1.8" fill="currentColor"/><circle cx="7" cy="12" r="1.8" fill="currentColor"/></svg>Settings';
-  b.onclick = () => panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  b.onclick = () => panel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   res.prepend(b);
+  if (panel.querySelector('.to-result')) return;
+  const back = document.createElement('button');
+  back.type = 'button'; back.className = 'btn small to-result'; back.textContent = 'Back to the notation';
+  back.onclick = () => res.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  panel.appendChild(back);
 }
 initGlossary();
-initFx();
 // v0.8.7: who is logged in (the header's account button), the session in progress, and offline use
 initSession();
 onUser(u => { const b = $('#acctbtn'); if (b) { b.textContent = u ? u.displayName : 'Log in'; b.title = u ? 'Your account (' + u.username + ')' : 'Log in or create an account'; } });

@@ -2,6 +2,8 @@
    the playback bar and result checklists. Components render into a container and call onChange. */
 import { TERMS } from './glossary.js';
 import { settings, setSetting, onSettings, SA, initPlayButton, solluInfo } from './audio.js';
+import { liveKolam, kolamSvg } from './kolam-view.js';
+import { getUser, getRun, startRun, KIND } from './session.js';
 
 export const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -53,8 +55,8 @@ export function download(name, text) {
 }
 
 /* ---------- page header ---------- */
-export function pageHead({ eyebrow, title, lead, steps, presets }) {
-  let h = '<div class="phead"><span class="eyebrow"><span class="dot"></span>' + esc(eyebrow) + '</span><h1>' + esc(title) + '</h1><p class="lead">' + lead + '</p>';
+export function pageHead({ title, lead, steps, presets }) {
+  let h = '<div class="phead"><h1>' + esc(title) + '</h1>' + (lead ? '<p class="lead">' + lead + '</p>' : '');
   // v0.8.8: the quick starts in one strip and the how-to as a help popover beside them, so the tool starts higher
   if (steps || presets) h += '<div class="phead-tools">';
   if (presets) h += '<div class="presets"><div class="presets-lab">Quick start</div><div class="chips">' + presets.map((p, i) => '<button type="button" class="chip" data-preset="' + i + '"><b>' + esc(p.title) + '</b> <span class="tag">' + esc(p.tag) + '</span></button>').join('') + '</div></div>';
@@ -101,7 +103,7 @@ export function ragaPicker(el, ragas, value, onChange) {
   let open = false, cur = ragas.find(r => r.id === value) || ragas[0];
   const render = () => {
     el.className = 'rpick';
-    el.innerHTML = '<button type="button" class="rpick-cur" aria-expanded="' + open + '"><span><b>' + esc(cur.name) + '</b><small>' + esc(sub(cur)) + '</small></span><span class="chev">' + (open ? 'Close ▲' : 'Change ▼') + '</span></button>' +
+    el.innerHTML = '<button type="button" class="rpick-cur" aria-expanded="' + open + '"><span><b>' + esc(cur.name) + '</b><small>' + esc(sub(cur)) + '</small></span><span class="chev">' + (open ? 'Close<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M3 7.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : 'Change<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</span></button>' +
       (open ? '<div class="rpick-pop"><input type="search" placeholder="Search 86 ragas by name or mela number" aria-label="Search ragas"><div class="rpick-list" role="listbox"></div></div>' : '') +
       keysStrip(cur) +
       '<div class="facts"><div><span class="k">' + term('arohana', 'Arohana') + '</span><span class="scale">' + cur.aro.map(s => esc(s.t)).join(' ') + '</span></div><div><span class="k">' + term('avarohana', 'Avarohana') + '</span><span class="scale">' + cur.avaro.map(s => esc(s.t)).join(' ') + '</span></div></div>';
@@ -162,7 +164,7 @@ const gamakaWord = v => v <= 0 ? 'straight' : v < 35 ? 'light' : v < 75 ? 'perfo
 export function transport(el, playLabel, opts) {
   el.className = 'transport';
   const info = opts && opts.sollu ? solluInfo() : null;
-  el.innerHTML = '<button type="button" class="btn primary play"></button>' +
+  el.innerHTML = '<div class="kclock" aria-hidden="true"></div><button type="button" class="btn primary play"></button>' +
     '<label>Tempo <input type="range" min="40" max="160" step="2" class="t-bpm" aria-label="Tempo in beats per minute"><span class="tempo-val"></span></label>' +
     '<label>Sa <select class="t-sa" aria-label="Pitch of Sa">' + SA.map((s, i) => '<option value="' + i + '">' + s[0] + '</option>').join('') + '</select></label>' +
     '<span class="grow"></span>' +
@@ -195,7 +197,24 @@ export function transport(el, playLabel, opts) {
   }
   const off = onSettings(sync);
   const btn = $('.play', el); initPlayButton(btn, playLabel);
-  return { btn, dispose: off };
+  // v0.10: the kolam keeps the tala beside the player, and closes on sam
+  // and, where a page gives it room, a larger one on the floor beside the notation
+  const clocks = [$('.kclock', el)].concat(opts && opts.floor ? [opts.floor] : []);
+  let beats = (opts && opts.beats) || 8, offKolams = clocks.map(c => liveKolam(c, beats, { seed: 2 }));
+  const setBeats = n => { if (n === beats || n < 1 || n > 64) return; beats = n; offKolams.forEach(f => f()); offKolams = clocks.map(c => liveKolam(c, n, { seed: 2 })); };
+  const ctl = document.createElement('div');
+  ctl.className = 't-ctl';
+  Array.from(el.children).slice(1).forEach(c => ctl.appendChild(c));
+  el.appendChild(ctl);
+  // v0.10: practice begun in a tool can be timed and logged too
+  const route = location.hash.replace(/^#\/?/, '').split('/')[0], kind = KIND[route];
+  if (kind && route !== 'repertoire' && getUser() && !getRun()) {
+    const time = document.createElement('button');
+    time.type = 'button'; time.className = 'btn small ghost t-time'; time.textContent = 'Time this'; time.title = 'Time this practice and keep it in your log';
+    time.onclick = () => { startRun({ id: null, name: kind.label, items: [{ kind: route, title: kind.label, minutes: 10 }] }); time.remove(); };
+    ctl.appendChild(time);
+  }
+  return { btn, setBeats, dispose: () => { off(); offKolams.forEach(f => f()); } };
 }
 
 /* ---------- notation grid ----------
@@ -211,7 +230,7 @@ export function notation(slots, tala, per, opts = {}) {
   const dense = per >= 4;
   const cellW = (opts.syl ? (dense ? 32 : 44) : (dense ? 24 : 34)) + 1;
   // a cycle wider than the card wraps section by section, each section labelled with its beats
-  if (cyc * cellW + tala.angas.length * 12 + 60 > (opts.maxWidth || 720)) return wrapped(slots, tala, per, opts, dense, rows);
+  if (cyc * cellW + tala.angas.length * 12 + 60 > (opts.maxWidth || Math.min(720, window.innerWidth - 56))) return wrapped(slots, tala, per, opts, dense, rows);
   const ghost = '<span class="cell" style="height:auto;min-height:0"></span>';
   let h = '<div class="notation' + (opts.syl ? ' syl' : '') + (dense ? ' dense' : '') + '">';
   // ruler: anga names, beat numbers and the hand action for each beat
@@ -291,5 +310,6 @@ const TICK = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"
 const CROSS = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 export const checks = list => '<ul class="checks">' + list.map(c => '<li class="' + (c.ok ? 'ok' : 'bad') + '"><span class="mark" aria-label="' + (c.ok ? 'Passed' : 'Failed') + '">' + (c.ok ? TICK : CROSS) + '</span><div><b>' + esc(c.title) + '</b><span class="d">' + esc(c.detail) + '</span></div></li>').join('') + '</ul>';
 export const explain = text => '<div class="explain"><span class="ico" aria-hidden="true">i</span><p>' + text + '</p></div>';
-export const ring = (v, cls) => '<div class="ring ' + (cls || '') + '" style="--v:' + v + ';--c:' + (v >= 75 ? 'var(--good)' : v >= 50 ? 'var(--warn)' : 'var(--bad)') + '"><div><span><b>' + v + '</b><small>of 100</small></span></div></div>';
+/* v0.10: a score is a kolam whose line closes as far as the score goes: all of it at 100 */
+export const ring = (v, cls) => '<div class="score-k ' + (cls || '') + '" style="--v:' + v + '">' + kolamSvg(16, { seed: 4, hundredths: true }) + '<span><b>' + v + '</b><small>of 100</small></span></div>';
 export const errorCard = msg => '<div class="notice"><b>Something went wrong.</b> ' + esc(msg) + '</div>';

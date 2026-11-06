@@ -17,10 +17,13 @@ const PRESETS = [
 const key = () => S.raga + '|' + S.tala.fam + S.tala.L;
 
 export async function mount(root, meta) {
+  // v0.10: the raga and tala you left, so a day's practice opens where it should
+  try { const last = JSON.parse(localStorage.getItem('vg-last-alankara') || 'null'); if (last && !S.restored) { S.raga = last.raga || S.raga; S.tala = last.tala || S.tala; } S.restored = true; } catch (e) { /* defaults */ }
+  const keepPlace = () => { try { localStorage.setItem('vg-last-alankara', JSON.stringify({ raga: S.raga, tala: S.tala })); } catch (e) { /* not kept */ } };
+  window.addEventListener('hashchange', keepPlace, { once: true }); window.addEventListener('pagehide', keepPlace, { once: true });
+  const about = 'An ' + term('alankara') + ' is a short pattern sung from each swara of the raga in turn, up to the upper Sa and back down. Start from the traditional pattern for your tala, then ask for new ones: each is different from everything you have already seen, and each obeys the raga.';
   root.innerHTML = '<div class="wrap">' + pageHead({
-    eyebrow: 'For singers · warm-up',
     title: 'Alankaras',
-    lead: 'An ' + term('alankara') + ' is a short pattern sung from each swara of the raga in turn, up to the upper Sa and back down. Start from the traditional pattern for your tala, then ask for new ones: each is different from everything you have already seen, and each obeys the raga.',
     steps: [
       ['Choose a raga and a tala', 'The pattern is fitted to both. If the raga skips notes or zig-zags, the engine adjusts the pattern so it stays correct.'],
       ['Press Play and read along', 'The lit cell follows the music. A drone holds Sa and clicks mark the beats; the loud click is the start of a section.'],
@@ -36,14 +39,15 @@ export async function mount(root, meta) {
   '</aside><section class="result" aria-live="polite">' +
     '<div class="card"><div class="card-h"><div><h2 id="a-title">…</h2><div class="card-sub" id="a-sub"></div></div><span id="a-badge"></span></div>' +
       '<div id="a-explain"></div>' +
-      '<div class="varnav"><button class="btn small" id="a-prev">← Previous</button><span class="count" id="a-count"></span><button class="btn small" id="a-next">Next →</button><span class="spacer"></span><button class="btn small ghost" id="a-sheet">Back to the sheet pattern</button><button class="btn primary" id="a-new">New pattern</button></div>' +
+      '<div class="varnav"><button class="btn small" id="a-prev">← Previous</button><span class="count" id="a-count"></span><button class="btn small" id="a-next">Next →</button><span class="spacer"></span><button class="btn small ghost" id="a-sheet">Back to the sheet pattern</button><button class="btn" id="a-new">New pattern</button></div>' +
     '</div>' +
-    '<div class="card"><div id="a-tr"></div><div class="notation-wrap" id="a-n"></div><div id="a-legend"></div><div class="notation-actions"><button class="btn small" id="a-copy">Copy notation</button></div></div>' +
-    '<div class="card"><h3 class="sec-h">Why this is correct</h3><div id="a-checks"></div></div>' +
+    '<div class="card"><div id="a-tr"></div><div class="kfloor" id="a-clock" aria-hidden="true"></div><div class="notation-wrap" id="a-n"></div><div id="a-legend"></div><div class="notation-actions"><button class="btn small" id="a-copy">Copy notation</button></div></div>' +
+    '<div class="card tool-about"><p class="lead">' + about + '</p></div>' +
+    '<div class="card"><h3 class="sec-h">What was checked</h3><div id="a-checks"></div></div>' +
   '</section></div></div>';
 
   let data = null, token = 0;
-  const tr = transport($('#a-tr'), undefined, { voice: true });
+  const tr = transport($('#a-tr'), undefined, { voice: true, floor: $('#a-clock') });
   const rp = ragaPicker($('#a-raga'), meta.ragas, S.raga, v => { S.raga = v; show(); });
   const tp = talaPicker($('#a-tala'), meta, S.tala, v => { S.tala = v; S.span = null; show(); });
   const drawSpeed = () => seg($('#a-speed'), [{ v: 1, label: '1st', sub: '1 per beat' }, { v: 2, label: '2nd', sub: '2 per beat' }, { v: 4, label: '3rd', sub: '4 per beat' }], S.speed, v => { S.speed = v; draw(); });
@@ -114,7 +118,8 @@ export async function mount(root, meta) {
     $('#a-legend').innerHTML = legend([['sam', '', 'beat 1 of the cycle (sam)'], ['', ',', 'hold the previous swara'], ['adj', 'G', 'adjusted to fit the raga'], ['now', '', 'playing now']]) +
       '<p class="card-sub" style="margin-top:10px">↑ rows climb, each starting one swara higher; ↓ rows descend. Hover a swara to see its full name. In the ruler: ● clap, ○ wave, • finger count. ' + q('kriya') + '</p>';
     const starts = new Set(r.tala.angas.map(a => a.start));
-    const job = pitchedJob($('#a-n'), notes, per, r.tala.total, starts, { raga: r.raga.id });   // sung with the raga's gamaka
+    tr.setBeats(r.tala.total);
+    const job = pitchedJob($('#a-n'), notes, per, r.tala.total, starts, { raga: r.raga.id, follow: true });   // sung with the raga's gamaka
     tr.btn.onclick = () => toggle(tr.btn, job);
     $('#a-copy').onclick = () => copy(r.raga.name + ' · ' + r.tala.name + '\n' + notationText(slots, r.tala, per), 'Notation copied');
     $('#a-checks').innerHTML = checks(r.checks);
@@ -130,7 +135,7 @@ export async function mount(root, meta) {
     rp.set(p.raga); tp.set(S.tala);
     if (p.T !== undefined) { S.T = p.T; dial($('#a-dial'), S.T, v => { S.T = v; }); }
     if (p.fresh) generate(); else { const H = hist(); S.idx[H.k] = 0; show(); }
-    $('.result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('.result').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
   await show();
   return () => { stop(); tr.dispose(); };
