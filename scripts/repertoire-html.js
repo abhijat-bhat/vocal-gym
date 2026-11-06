@@ -48,6 +48,18 @@ function cellParas(html) {
   }, [])).filter(p => p.some(r => r.text.trim()));
 }
 
+/* a post in page order: [{ table } | { paras: ['one paragraph', …] }], for what is printed outside the tables */
+export function blocks(html) {
+  const clean = String(html).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, '');
+  const out = [];
+  const text = part => { const paras = cellParas(part).map(p => p.map(r => r.text).join('').replace(/\s+/g, ' ').trim()).filter(Boolean); if (paras.length) out.push({ paras }); };
+  const re = /<table\b[\s\S]*?<\/table>/gi;
+  let m, at = 0;
+  while ((m = re.exec(clean))) { text(clean.slice(at, m.index)); out.push({ table: grid(m[0]) }); at = m.index + m[0].length; }
+  text(clean.slice(at));
+  return out;
+}
+
 export function tables(html) {
   const out = [];
   const re = /<table\b[\s\S]*?<\/table>/gi;

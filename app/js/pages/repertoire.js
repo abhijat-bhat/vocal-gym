@@ -11,7 +11,7 @@ import { api } from '../api.js';
 import { toggle, pitchedJob, stop, isPlaying } from '../audio.js';
 import { esc, $, $$, pageHead, transport, seg, toast, errorCard, explain, plural } from '../ui.js';
 import { getUser, refreshUser, userKnown, getRun, startRun } from '../session.js';
-import { parseCell, ragaOf, talaOf, playPlan, cleanCell, cleanLine, applyEdits, cycleGap, offCycle } from '/engine/repertoire.js';
+import { parseCell, ragaOf, talaOf, playPlan, cleanCell, cleanLine, applyEdits, cycleGap, offCycle, sustainText, sustainLayout } from '/engine/repertoire.js';
 
 let INDEX = null;
 const CACHE = new Map();
@@ -33,6 +33,8 @@ async function loadIndex() {
 async function loadComposition(id) {
   if (CACHE.has(id)) return CACHE.get(id);
   const res = await fetch('/repertoire/c/' + encodeURIComponent(id) + '.json');
+  // a post that gathered several lessons has given way to them
+  if (res.status === 404) { const ix = await loadIndex(), to = ix.redirects && ix.redirects[id]; if (to) return loadComposition(to); }
   if (!res.ok) throw new Error(res.status === 404 ? 'No composition “' + id + '” in the repertoire.' : 'Could not load the composition (' + res.status + ').');
   const c = await res.json();
   CACHE.set(id, c);
@@ -53,7 +55,7 @@ async function showList(root) {
   root.innerHTML = '<div class="wrap">' + pageHead({
     eyebrow: 'For singers · repertoire',
     title: 'Repertoire',
-    lead: plural(all.length, 'composition') + ' with their swaras and sahitya, from geethams and varnams to krithis and thillanas. Open one to read it on the tala grid, hear any section sung with its raga’s gamaka, loop a line until it sits, and add it to your practice. The notations are from <a href="' + esc(src.url) + '" target="_blank" rel="noopener">' + esc(src.name) + '</a> by ' + esc(src.author) + ', who offers them free to download and use.',
+    lead: plural(all.length, 'composition') + ' with their swaras and sahitya, from geethams and varnams to krithis and thillanas. Open one to read it on the tala grid, hear any section sung with its raga’s gamaka, loop a line until it sits, and add it to your practice. The notations are from <a href="' + esc(src.url) + '" target="_blank" rel="noopener">' + esc(src.name) + '</a> by ' + esc(src.author) + ', who offers them free to download and use, with the lessons of ' + Object.values(ix.sources || {}).map(x => esc(x.author)).join(', ') + '. Where a lesson is in several sources, the one that holds up best is used.',
     steps: [
       ['Find a composition', 'Search by name, raga or composer, or narrow the list by type, raga, tala, composer and language.'],
       ['Read and listen', 'Each section is laid out on the tala grid, with the sahitya under its swaras. Play a section, or loop one line or sangati.'],
@@ -73,7 +75,7 @@ async function showList(root) {
   '</section></div></div>';
 
   const counts = (key, list) => { const m = new Map(); list.forEach(c => { const v = c[key]; if (v) m.set(v, (m.get(v) || 0) + 1); }); return m; };
-  const TYPES = ['Geetham', 'Lakshana geetham', 'Swarajathi', 'Jathiswaram', 'Varnam', 'Pada varnam', 'Daru varnam', 'Krithi', 'Thillana', 'Nottuswaram', 'Dasara pada', 'Thiruppugazh', 'Thiruppavai', 'Vachana', 'Ashtapadi', 'Shlokam', 'Basics'];
+  const TYPES = ['Geetham', 'Lakshana geetham', 'Swarajathi', 'Jathiswaram', 'Varnam', 'Pada varnam', 'Daru varnam', 'Krithi', 'Thillana', 'Nottuswaram', 'Dasara pada', 'Thiruppugazh', 'Thiruppavai', 'Vachana', 'Ashtapadi', 'Shlokam'];
   const matches = (c, skip) => (!S.q || S.q.split(' ').every(w => c._q.includes(w))) &&
     ['type', 'raga', 'tala', 'composer', 'language'].every(f => f === skip || !S[f] || c[f] === S[f]);
   const drawFilters = () => {
@@ -118,7 +120,7 @@ async function showList(root) {
 }
 
 /* ---------------- changes: one entry of the log, and the page of them all ---------------- */
-const tokensOf = line => line ? line.cells.join(' | ').replace(/\[/g, '[ ').replace(/\]/g, ' ]').split(/\s+/).filter(Boolean) : [];
+const tokensOf = line => line ? line.cells.map(sustainText).join(' | ').replace(/\[/g, '[ ').replace(/\]/g, ' ]').split(/\s+/).filter(Boolean) : [];
 /* the tokens of two versions of a line, with those that differ marked */
 function diffHtml(a, b) {
   const n = a.length, m = b.length, T = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
@@ -214,10 +216,41 @@ const gapTag = g => g.over ? amount(g.over) + ' over' : amount(g.short) + ' shor
 const gapNote = (g, talaName) => 'This line has ' + plural(g.units, 'unit').replace(String(g.units), amount(g.units)) + ', and each cycle of ' + talaName + ' here takes ' + g.cycle + ', so it is ' + plural(g.over || g.short, 'unit').replace(String(g.over || g.short), amount(g.over || g.short)) + (g.over ? ' over' : ' short of') + ' whole cycles.' + (g.cell != null ? ' It first goes off at cell ' + (g.cell + 1) + ', and the sam lines after that shift.' : '') + ' This is usually a slip in the notation. The swaras are shown and sung as written, because the right correction is a singer’s call.';
 const COMMON_SCALE = name => ({ name: name || 'Raga', aro: ['S', 'R2', 'G3', 'M1', 'P', 'D2', 'N3', "S'"], avaro: ["S'", 'N3', 'D2', 'P', 'M1', 'G3', 'R2', 'S'], note: '', from: 'common' });
 
+/* where the notation comes from, and (v0.9.3) how it did against the other sources of the same lesson */
+function creditOf(c) {
+  if (!c.source) return 'Notation from <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.title) + '</a> on Carnatic Music Notations (Balaji J.).';
+  const s = c.source, pages = s.pages ? (s.pages[0] === s.pages[1] ? ', page ' + s.pages[0] : ', pages ' + s.pages[0] + '–' + s.pages[1]) : '';
+  return 'Notation from ' + (s.url ? '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.name) + '</a>' : esc(s.name)) + ' (' + esc(s.author) + ')' + pages + '.' +
+    (c.siteUrl ? ' <a href="' + esc(c.siteUrl) + '" target="_blank" rel="noopener">Another version is on Carnatic Music Notations</a>.' : '');
+}
+function comparedHtml(c) {
+  if (!c.compared || c.compared.length < 2) return '';
+  const pct = x => Math.round(x * 100) + '%';
+  const others = c.compared.length - 1;
+  return '<details class="rp-compared"><summary>Why this notation: compared with ' + plural(others, 'other version') + '</summary>' +
+    '<p class="hint muted">Each version is checked by the math and the rules: its lines must fill the tala’s cycles, keep to the raga’s swaras and make no leap an octave mark should explain. Fuller versions, and ones the others confirm, count too.</p>' +
+    '<div class="rp-comptable"><table><thead><tr><th>Source</th><th>Tala</th><th>Raga</th><th>Octaves</th><th>Complete</th><th>Agrees</th></tr></thead><tbody>' +
+    c.compared.map(v => '<tr' + (v.used ? ' class="used"' : '') + '><td>' + esc(v.source) + (v.pages ? ' <span class="muted">p.' + v.pages[0] + '</span>' : '') + (v.used ? ' <b>used</b>' : '') + '</td><td>' + pct(v.fit) + '</td><td>' + pct(v.raga) + '</td><td>' + pct(v.octave) + '</td><td>' + pct(v.whole) + '</td><td>' + pct(v.agree) + '</td></tr>').join('') +
+    '</tbody></table></div></details>';
+}
+/* v0.9.4 what a geetham says, from the book that explains it, whichever version's notation is shown */
+function meaningHtml(c) {
+  const m = c.meaning;
+  if (!m) return '';
+  const s = m.source, pages = s.pages.length > 1 ? 'pages ' + s.pages[0] + '–' + s.pages[s.pages.length - 1] : 'page ' + s.pages[0];
+  const paras = list => list.map(p => '<p>' + esc(p) + '</p>').join('');
+  const head = t => t ? '<h3>' + esc(t) + '</h3>' : '';
+  return '<div class="card rp-meaning" id="rp-meaning"><div class="card-h"><div><h2>Meaning</h2><div class="card-sub">From ' + esc(s.name) + ' (' + esc(s.author) + '), ' + pages + ', its English corrected</div></div></div>' +
+    m.parts.map(p => head(p.title) + paras(p.text)).join('') +
+    '<details class="rp-words"><summary>Word to word meaning</summary>' +
+    m.words.map(w => head(w.title) + '<p class="rp-lyrics">' + w.lyric.map(esc).join('<br>') + '</p>' + paras(w.text)).join('') + '</details></div>';
+}
+
 async function showComposition(root, id, jumpTo) {
   root.innerHTML = '<div class="wrap"><div class="loading">Loading the composition…</div></div>';
   const here = location.hash;
   const c = await loadComposition(id);
+  id = c.id;
   if (!userKnown()) await refreshUser();
   // the singer's corrections, from the server; the page still opens without them (offline, or logged out)
   let edits = [], editsOk = true;
@@ -238,6 +271,7 @@ async function showComposition(root, id, jumpTo) {
     secs = a.comp.sections.map((s, i) => Object.assign({ i }, s));
   };
   compute();
+  const secName = s => nice(s.title) || (s.i === (secs.find(x => x.lines.length) || {}).i ? 'The composition' : 'Section ' + (s.i + 1));
   const playable = secs.filter(s => s.lines.length);
   const talaNote = !c.tala ? 'The post names no tala and its lines fit none, so the swaras are played without beat clicks.'
     : c.tala.refit ? 'The post names ' + esc(c.tala.refit) + ', but its notation is written in cycles of ' + esc(c.tala.name) + ', so the grid and the clicks follow ' + esc(c.tala.name) + '.'
@@ -249,7 +283,7 @@ async function showComposition(root, id, jumpTo) {
   root.innerHTML = '<div class="wrap">' +
     '<div class="phead rp-head"><a class="rp-back" href="#/repertoire">← All compositions</a><span class="eyebrow"><span class="dot"></span>' + esc(c.type) + (c.ragamalika ? ' · ragamalika' : '') + '</span><h1>' + esc(nice(c.name)) + '</h1>' +
       '<p class="lead">' + [c.raga && '<b>' + esc(nice(c.raga)) + '</b>', c.tala && esc(c.tala.name), c.composer && esc(c.composer), c.language && esc(c.language)].filter(Boolean).join(' · ') +
-      '<br><span class="muted">Notation from <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.title) + '</a> on Carnatic Music Notations (Balaji J.).</span></p></div>' +
+      '<br><span class="muted">' + creditOf(c) + '</span></p>' + comparedHtml(c) + '</div>' +
     '<div class="tool"><aside class="panel" aria-label="Settings">' +
       '<div class="step"><div class="step-h"><span class="n">1</span><h3>Sections</h3></div><div class="rp-secnav" id="rp-secnav"></div></div>' +
       '<div class="step"><div class="step-h"><span class="n">2</span><h3>Practice speed</h3></div><div id="rp-speed"></div><p class="hint muted">Of the tempo set in the player. The notation’s speed is kept: double-speed groups stay twice as fast as the swaras around them.</p>' +
@@ -262,12 +296,12 @@ async function showComposition(root, id, jumpTo) {
     '</aside><section class="result" aria-live="polite">' +
       '<div class="card rp-player"><div id="rp-tr"></div><div class="rp-now" id="rp-now"></div>' + (talaNote ? explain(talaNote) : '') + '</div>' +
       '<div id="rp-log"></div>' +
-      '<div id="rp-body"></div>' +
+      '<div id="rp-body"></div>' + meaningHtml(c) +
     '</section></div></div>';
 
   // the raga card(s)
   $('#rp-ragas').innerHTML = scales.map((sc, k) => '<div class="rp-raga"><b>' + esc(nice(k === 0 && c.raga ? c.raga : sc.name)) + '</b>' + (ragas[k] && ragas[k].twin ? '<span class="tag"> · gamaka from its profile</span>' : '') +
-    '<div class="facts"><div><span class="k">Arohana</span><span class="scale">' + esc(scaleText(sc.aro)) + '</span></div><div><span class="k">Avarohana</span><span class="scale">' + esc(scaleText(sc.avaro)) + '</span></div></div>' + (sc.note ? '<p class="hint muted">' + esc(sc.note) + '</p>' : '') + '</div>').join('') + (scaleNote ? '<p class="hint muted">' + scaleNote + '</p>' : '');
+    '<div class="facts"><div><span class="k">Arohana</span><span class="scale">' + esc(scaleText(sc.aro)) + '</span></div><div><span class="k">Avarohana</span><span class="scale">' + esc(scaleText(sc.avaro)) + '</span></div></div>' + (sc.note ? '<p class="hint muted">' + esc(sc.note) + '</p>' : '') + (sc.was ? '<p class="hint muted">Corrected here. The source prints: ' + esc(sc.was) + '</p>' : '') + '</div>').join('') + (scaleNote ? '<p class="hint muted">' + scaleNote + '</p>' : '');
 
   // the notation: every token gets a data-i; key "section:line:cell:tok" → data-i
   const idOf = new Map();
@@ -282,17 +316,26 @@ async function showComposition(root, id, jumpTo) {
     l.cells.forEach((cell, ci) => {
       const toks = parseCell(cell);
       h += '<span class="rp-cell">';
-      let k = 0;
-      while (k < toks.length) {
-        // one written unit: a swara, or the group of faster swaras that shares its time
-        const grp = []; let d = 0;
-        do { grp.push(k); d += toks[k].d; k++; } while (k < toks.length && d < 1 - 1e-9);
-        const pos = Math.round(u * 1000) / 1000, inCyc = cyc ? ((Math.floor(pos + 1e-6) % cyc) + cyc) % cyc : -1;
-        const cls = 'rp-u' + (grp.length > 1 ? ' fast' + (grp.length > 2 ? ' x' + grp.length : '') : '') + (cyc && Math.abs(pos - Math.round(pos)) < 1e-6 ? (inCyc === 0 ? ' sam' : angaAt.has(inCyc) ? ' a' : inCyc % upb === 0 ? ' b' : '') : '');
-        h += '<span class="' + cls + '"><span class="rp-sw">' + grp.map(j => { const t = toks[j], n = nextId++; idOf.set(s.i + ':' + li + ':' + ci + ':' + j, n); return '<i data-i="' + n + '"' + (t.s === ',' ? ' class="k"' : ' title="' + esc(FULL[t.s] + (t.v ? ' ' + t.v : '') + (t.o > 0 ? ', upper octave' : t.o < 0 ? ', lower octave' : '')) + '"') + '>' + esc(glyph(t)) + '</i>'; }).join('') + '</span>' +
+      // a new column at each beat line and each syllable, so a ; never hides either
+      const whole = x => Math.abs(x - Math.round(x)) < 1e-6;
+      const breakAt = x => {
+        if (!whole(x)) return false;
+        if (S.sahitya && syl.has(Math.round(x))) return true;
+        if (!cyc) return false;
+        const at = ((Math.round(x) % cyc) + cyc) % cyc;
+        return at === 0 || angaAt.has(at) || (upb > 1 && at % upb === 0);
+      };
+      sustainLayout(toks, u, breakAt).forEach(col => {
+        const pos = Math.round(col.from * 1000) / 1000, inCyc = cyc ? ((Math.floor(pos + 1e-6) % cyc) + cyc) % cyc : -1;
+        const cls = 'rp-u' + (col.fast > 1 ? ' fast' + (col.fast > 2 ? ' x' + col.fast : '') : '') + (cyc && whole(pos) ? (inCyc === 0 ? ' sam' : angaAt.has(inCyc) ? ' a' : inCyc % upb === 0 ? ' b' : '') : '');
+        h += '<span class="' + cls + '"' + (col.fast === 1 && col.units > 1 ? ' style="--u:' + col.units + '"' : '') + '><span class="rp-sw">' + col.parts.map(p => {
+          const t = toks[p.toks[0]], n = nextId++;
+          p.toks.forEach(j => idOf.set(s.i + ':' + li + ':' + ci + ':' + j, n));
+          return '<i data-i="' + n + '"' + (t.s === ',' ? ' class="k"' : ' title="' + esc(FULL[t.s] + (t.v ? ' ' + t.v : '') + (t.o > 0 ? ', upper octave' : t.o < 0 ? ', lower octave' : '')) + '"') + '>' + esc(p.text || glyph(t)) + '</i>';
+        }).join('') + '</span>' +
           (S.sahitya ? '<span class="rp-syl">' + esc(syl.get(Math.floor(pos + 1e-6)) || '') + '</span>' : '') + '</span>';
-        u += d;
-      }
+        u = col.from + col.units;
+      });
       h += '</span>';
     });
     const flag = l.link ? 'link' : l.at ? 'lead-in' : l.tail ? 'overlap' : '';
@@ -300,16 +343,16 @@ async function showComposition(root, id, jumpTo) {
     return '<div class="rp-line nrow" data-s="' + s.i + '" data-l="' + li + '"' + (l.key ? ' data-key="' + esc(l.key) + '"' : '') + '><div class="rp-lh"><button type="button" class="iconbtn rp-loop" data-loop="' + s.i + ':' + li + '" aria-label="Loop this line" title="Loop this line">⟲</button>' +
       (editing && l.key ? '<button type="button" class="iconbtn rp-pen" data-edit="' + s.i + ':' + li + '" aria-label="Edit this line" title="Edit this line">✎</button>' : '') +
       (l.edited ? '<button type="button" class="rp-flag rp-mine" data-logid="' + l.edited + '" title="You changed this line. Open the log of changes.">edited</button>' : '') +
-      (l.fixed ? '<button type="button" class="rp-flag rp-fixed" data-logfix="' + esc(l.key || s.i + ':' + li) + '" title="' + esc('A typing slip in the octave marks was corrected at import. The site prints: ' + l.fixed.map(x => x.was).join(' | ')) + '">fixed</button>' : '') +
+      (l.fixed ? '<button type="button" class="rp-flag rp-fixed" data-logfix="' + esc(l.key || s.i + ':' + li) + '" title="' + esc('A typing slip was corrected at import. The site prints: ' + l.fixed.map(x => x.was).join(' | ')) + '">fixed</button>' : '') +
       (l.label ? '<span class="rp-lab">' + esc(l.label) + '</span>' : '') + (flag ? '<span class="rp-flag" title="' + (flag === 'link' ? 'A short phrase that leads back into a line' : flag === 'lead-in' ? 'Starts before sam and ends on it' : 'Its last cell fills the next line’s opening rests') + '">' + flag + '</span>' : '') +
       (gap ? '<button type="button" class="rp-flag rp-off" data-off="' + s.i + ':' + li + '" aria-expanded="false" title="' + esc(gapNote(gap, c.tala.name)) + '">' + esc(gapTag(gap)) + '</button>' : '') + '</div>' +
-      '<div class="rp-cells">' + h + '</div></div>';
+      '<div class="rp-cells">' + h + (l.note ? '<span class="rp-linenote">' + esc(l.note) + '</span>' : '') + '</div></div>';
   };
   const drawBody = () => {
     idOf.clear(); nextId = 0;
     $('#rp-body').innerHTML = secs.map(s => {
-      const sc = scaleOfSection(s), showRaga = c.ragas.length > 1 && s.raga != null;
-      return '<div class="card rp-sec" id="rp-sec-' + s.i + '"><div class="card-h"><div><h2>' + esc(nice(s.title) || (s.i === 0 ? 'The composition' : 'Section ' + (s.i + 1))) + '</h2>' +
+      const sc = scaleOfSection(s), showRaga = c.ragas.length > 1 && s.raga != null && fold(s.title) !== fold(sc.name);
+      return '<div class="card rp-sec" id="rp-sec-' + s.i + '"><div class="card-h"><div><h2>' + esc(secName(s)) + '</h2>' +
         '<div class="card-sub">' + [showRaga ? esc(nice(sc.name)) : '', s.lines.length ? plural(s.lines.length, 'line') : 'lyrics', s.unitsPerBeat && c.tala ? esc(s.unitsPerBeat + ' swaras a beat') : ''].filter(Boolean).join(' · ') + '</div></div>' +
         (s.lines.length ? '<button type="button" class="btn small" data-play="' + s.i + '">Play this section</button>' : '') + '</div>' +
         (s.lyrics.length ? '<p class="rp-lyrics">' + s.lyrics.map(esc).join('<br>') + '</p>' : '') +
@@ -354,9 +397,9 @@ async function showComposition(root, id, jumpTo) {
   };
   const play = () => { if (!job) return; if (!isPlaying(tr.btn)) toggle(tr.btn, job); };
 
-  const drawNav = () => { $('#rp-secnav').innerHTML = secs.map(s => '<button type="button" class="rp-secbtn" data-sec="' + s.i + '"' + (s.lines.length ? '' : ' data-lyrics') + '>' + esc(nice(s.title) || (s.i === 0 ? 'The composition' : 'Section ' + (s.i + 1))) + '<small>' + (s.lines.length ? plural(s.lines.length, 'line') : 'lyrics') + '</small></button>').join(''); };
+  const drawNav = () => { $('#rp-secnav').innerHTML = secs.map(s => '<button type="button" class="rp-secbtn" data-sec="' + s.i + '"' + (s.lines.length ? '' : ' data-lyrics') + '>' + esc(secName(s)) + '<small>' + (s.lines.length ? plural(s.lines.length, 'line') : 'lyrics') + '</small></button>').join('') + (c.meaning ? '<button type="button" class="rp-secbtn" data-meaning data-lyrics>Meaning<small>in English</small></button>' : ''); };
   drawNav();
-  $('#rp-secnav').onclick = e => { const b = e.target.closest('[data-sec]'); if (!b) return; const si = +b.dataset.sec; if (secs[si].lines.length) select({ s: si, l: null }); const el = $('#rp-sec-' + si); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  $('#rp-secnav').onclick = e => { if (e.target.closest('[data-meaning]')) { $('#rp-meaning').scrollIntoView({ behavior: motion(), block: 'start' }); return; } const b = e.target.closest('[data-sec]'); if (!b) return; const si = +b.dataset.sec; if (secs[si].lines.length) select({ s: si, l: null }); const el = $('#rp-sec-' + si); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   seg($('#rp-speed'), [{ v: 0.5, label: '½', sub: 'slow' }, { v: 0.75, label: '¾', sub: 'steady' }, { v: 1, label: '1×', sub: 'the tempo' }], S.speed, v => { S.speed = v; if (sel) select(sel); });
   $('#rp-sah').checked = S.sahitya;
   $('#rp-sah').onchange = e => { S.sahitya = e.target.checked; drawBody(); if (sel) select(sel); };
@@ -444,14 +487,14 @@ async function showComposition(root, id, jumpTo) {
     if (!adding) (l.syl || []).forEach(x => { const k = Math.floor(x[0] + 1e-6); if (!orig.has(k)) orig.set(k, []); orig.get(k).push(x); });
     const typed = new Map(Array.from(orig.entries()).map(([k, v]) => [k, v.map(x => x[1]).join(' ')]));
     const blank = adding ? Math.max(1, l ? l.cells.length : 1) : 0;
-    const startCells = adding ? Array.from({ length: blank }, () => '') : l.cells.slice();
+    const startCells = adding ? Array.from({ length: blank }, () => '') : l.cells.map(sustainText);
     const where = esc(nice(s.title) || 'Section ' + (si + 1));
     const form = document.createElement('form');
     form.className = 'rp-edit'; form.noValidate = true;
     form.setAttribute('aria-label', adding ? 'Add a line' : 'Edit line ' + (li + 1));
     form.innerHTML = '<div class="rp-edh"><b>' + (adding ? 'A new line' + (l ? ' after line ' + (li + 1) : '') : 'Line ' + (li + 1)) + '</b><span class="muted"> · ' + where + '</span></div>' +
       '<div class="rp-edcells"></div><button type="button" class="btn small ghost rp-edmore">Add a cell</button>' +
-      '<p class="hint muted">S R G M P D N, with a digit for a variant (R2). <code>S\'</code> is the upper octave and <code>N.</code> the lower (the site’s S’ and ‘N work too). <code>,</code> holds for one unit. <code>[P N]</code> is double speed and <code>[[P N S R]]</code> four times.</p>' +
+      '<p class="hint muted">S R G M P D N, with a digit for a variant (R2). <code>S\'</code> is the upper octave and <code>N.</code> the lower (the site’s S’ and ‘N work too). <code>,</code> holds for one unit and <code>;</code> for two, so <code>P, ;</code> lasts four. <code>[P N]</code> is double speed and <code>[[P N S R]]</code> four times. The grid below shows every unit, so a syllable can go under any of them.</p>' +
       '<div class="rp-edgrid" aria-label="The line on the tala grid, with a box for each syllable"></div>' +
       '<div class="rp-edstat" role="status"></div>' +
       '<div class="rp-edmeta"><div class="field"><label class="lab" for="rp-edlab">Label</label><input type="text" id="rp-edlab" maxlength="80" autocomplete="off" value="' + esc(l && !adding ? l.label || '' : '') + '"></div>' +
@@ -587,9 +630,9 @@ async function showComposition(root, id, jumpTo) {
     box.innerHTML = '<details class="card rp-log"' + (logOpen ? ' open' : '') + '><summary><b>Changes to this composition</b><span class="muted"> · ' + [n ? plural(n, 'change') + ' by you' : '', fixes.length ? plural(fixes.length, 'slip') + ' corrected at import' : ''].filter(Boolean).join(' · ') + '</span></summary>' +
       (n ? '<div class="rp-stepper"><button type="button" class="btn small ghost" id="rp-older"' + (at <= 0 ? ' disabled' : '') + '>‹ Earlier</button><span class="rp-stepnow" role="status">Change ' + (at + 1) + ' of ' + n + '</span><button type="button" class="btn small ghost" id="rp-newer"' + (at >= n - 1 ? ' disabled' : '') + '>Later ›</button><a class="rp-all" href="#/repertoire/changes">All my changes</a></div>' +
         '<ol class="rp-chgs">' + edits.map((e, k) => ({ e, k })).reverse().map(({ e, k }) => changeHtml(e, { latest: latest.get(e.key) === e.id, current: k === at, lost: lost.some(x => x.key === e.key) })).join('') + '</ol>' : '') +
-      (fixes.length ? '<h3 class="rp-loghead">Corrected at import</h3><p class="hint muted">Typing slips in the site’s octave marks, read as they were clearly meant. Your own changes come on top of these.</p><ul class="rp-chgs">' +
+      (fixes.length ? '<h3 class="rp-loghead">Corrected at import</h3><p class="hint muted">Typing slips on the site, read as they were clearly meant. Your own changes come on top of these.</p><ul class="rp-chgs">' +
         fixes.map(f => '<li class="rp-chg" data-fixof="b:' + f.si + ':' + f.li + '"><div class="rp-chgh"><b>' + esc(nice(c.sections[f.si].title) || 'Section ' + (f.si + 1)) + ', line ' + (f.li + 1) + '</b><span class="rp-acts"><button type="button" class="btn small ghost" data-gofix="b:' + f.si + ':' + f.li + '">Go to the line</button></span></div>' +
-          '<div class="rp-chgrow"><span class="k">Site</span><code>' + esc(f.x.was) + '</code></div><div class="rp-chgrow"><span class="k">Read as</span><code>' + esc(f.l.cells[f.x.cell]) + '</code></div></li>').join('') + '</ul>' : '') + '</details>';
+          '<div class="rp-chgrow"><span class="k">Site</span><code>' + esc(f.x.was) + '</code></div><div class="rp-chgrow"><span class="k">Read as</span><code>' + esc(sustainText(f.l.cells[f.x.cell])) + '</code></div></li>').join('') + '</ul>' : '') + '</details>';
     const d = box.querySelector('details');
     d.ontoggle = () => { logOpen = d.open; };
     const step = k => { logAt = k; logOpen = true; drawLog(); goTo(edits[k]); };

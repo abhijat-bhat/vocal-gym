@@ -10,6 +10,8 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 - `npm start`: the web app at http://localhost:3000 (accounts in `var/vocal-gym.db`; Node 22.13+). `npm run e2e`: drives the app in headless Chrome or Edge.
 - `node scripts/make-icons.js`: redraws the app's install icons from the logo.
 - `node scripts/import-repertoire.js`: re-imports the repertoire from carnaticnotations.blogspot.com into `data/repertoire/` (`--save-feed f.json`, then `--cache f.json` to re-run offline; `--report` lists the lines off the cycle). Edit the importer, never the generated JSON.
+- `node scripts/lessons.js --report`: how each lesson from the book in `data/lessons/` compares with the other version, and which notation is used. `python scripts/lessons-extract.py <folder with the PDF> [--lib dir]` re-reads the book (needs pymupdf and numpy; nothing else does).
+- `node scripts/repertoire-stats.js`: rewrites the numbers in `docs/repertoire-status.md`, the repertoire's stats and working notes (`--check` to compare). Read that file before changing the repertoire.
 - `node scripts/check-raga-profiles.js`: validates `data/raga-profiles.json`. Add `--fix` to recompute its checked fields.
 - `node scripts/solkattu-bank.js`: builds `web/shared/solkattu-bank.js`, the recorded syllables for jathi playback, from WAV recordings (`docs/solkattu-recording.md`). `--clear` empties it.
 - `node scripts/mridangam-wav.js --strokes --out dir/` (or `--sollus "tha ka dhi mi" --out x.wav`): renders the synthesized mridangam of `web/shared/mridangam.js`. Its stroke table comes from `research/calibration/mridangam/` (`docs/research/mridangam-synthesis.md`); regenerate it there rather than editing the numbers.
@@ -19,12 +21,12 @@ Vocal Gym is a Carnatic practice system. This repository holds its rule-based co
 - **Temperature is creativity:** `score = (1 − c)·F + c·N`, with `c = T / 2`, and τ never reaches zero.
 - **Determinism:** the same inputs and seed give the same output. Use `rng(seed)` from `src/engine/random.js`; never use `Math.random` in the engine.
 - **`src/engine` stays dependency-free and browser-safe.** No Node built-ins.
-- **Raga knowledge comes only from `data/raga-profiles.json`, with sources.** Do not invent phrases. The research behind it is in `docs/research/raga-profiles-report.md`. The repertoire (`data/repertoire/`) is notation to read and sing, credited to its site; it does not feed the generators. A singer's corrections are rows of `notation_edits` (`server/edits.js`), laid over the imported files when read; nothing writes to `data/repertoire/` but the importer.
+- **Raga knowledge comes only from `data/raga-profiles.json`, with sources.** Do not invent phrases. The research behind it is in `docs/research/raga-profiles-report.md`. The repertoire (`data/repertoire/`) is notation to read and sing, credited to its site; it does not feed the generators. A singer's corrections are rows of `notation_edits` (`server/edits.js`), laid over the imported files when read; nothing writes to `data/repertoire/` but the importer. Lessons from books are merged by the importer too (`scripts/lessons.js`), and the choice between versions follows its measures: add a version to `SAME`, do not pick one by hand. Update the notes in `docs/repertoire-status.md` when a decision changes.
 - **Edit `web/` and `src/`, never `site/`.** Rebuild with `npm run build`, and commit the rebuilt `site/`.
 - **Keep the public API backward compatible.** Deprecate, don't remove.
 - **Update the docs with the code:** README sections, CHANGELOG, tests, and Module C of `web/research-plan/index.html` when the generator changes.
 
 ## Current work
-The plans in `docs/plans/` (kalpana v0.3 and v0.4, gamaka audio) are implemented; see `CHANGELOG.md` (0.9.1 now: the repertoire, with corrections at import and a singer's own edits). Gamaka stays a rendering layer only: it must never change the generated notes, and raga-specific gamaka rules go in `gamakaRender` in `data/raga-profiles.json`, each with a source.
+The plans in `docs/plans/` (kalpana v0.3 and v0.4, gamaka audio) are implemented; see `CHANGELOG.md` (0.9.4 now: the repertoire, with the lesson books, corrections at import and a singer's own edits). Gamaka stays a rendering layer only: it must never change the generated notes, and raga-specific gamaka rules go in `gamakaRender` in `data/raga-profiles.json`, each with a source.
 
 The app (`app/`, `server/`) follows `docs/design.md`: keep its navigation, spacing scale, one primary action per region and the reduced-motion fallbacks when adding pages. Phase 1 of the research plan still lacks Voice Check (`web/research-plan/index.html`, Project plan).

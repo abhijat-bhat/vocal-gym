@@ -57,6 +57,72 @@ export function parseCell(text) {
 export const cellUnits = text => parseCell(text).reduce((a, t) => a + t.d, 0);
 export const lineUnits = cells => (cells || []).reduce((a, c) => a + cellUnits(c), 0);
 
+/* ---------- sustains as a singer writes them (v0.9.2) ----------
+   The stored text has one comma a unit. On the page, , holds for one unit and ; for two: P , , , is written P, ; .
+   In a stretch of karvais an odd one comes first, and the first mark stands against its swara. */
+const sustainMarks = n => (n % 2 ? [','] : []).concat(Array.from({ length: Math.floor(n / 2) }, () => ';'));
+/* a cell's compact text with its sustains so: "P , , , [S , , R]" → "P, ; [S; R]". cleanCell reads it back. */
+export function sustainText(cell) {
+  const toks = String(cell || '').match(/\[|\]|,|[^\s[\],]+/g) || [];
+  let out = '', i = 0;
+  const put = (t, tight) => { out += !out || out.endsWith('[') || tight || t === ']' ? t : ' ' + t; };
+  while (i < toks.length) {
+    if (toks[i] !== ',') { put(toks[i]); i++; continue; }
+    let n = 0;
+    while (toks[i + n] === ',') n++;
+    const before = toks[i - 1];
+    sustainMarks(n).forEach((m, k) => put(m, k === 0 && before && before !== '[' && before !== ']'));
+    i += n;
+  }
+  return out;
+}
+/* the columns of a cell on the grid: toks from parseCell, start its unit, breakAt(unit) true where a new column must
+   begin (a beat line, or a syllable). → [{ from, units, fast, parts: [{ toks: [indices], text? }] }]. A part is what
+   lights as one: a swara (text is left to the page, which draws it), or a sustain mark, whose toks are the commas it
+   stands for. A ; never crosses a break, so it never hides a beat line or a syllable. */
+export function sustainLayout(toks, start, breakAt) {
+  const cols = [], cut = breakAt || (() => false);
+  let k = 0, u = start || 0;
+  while (k < toks.length) {
+    const t = toks[k];
+    if (t.d < 1 - 1e-9) {
+      // a group sharing its unit: its karvais pair up inside it
+      const group = [];
+      let d = 0;
+      do { group.push(k); d += toks[k].d; k++; } while (k < toks.length && d < 1 - 1e-9);
+      const parts = [];
+      for (let g = 0; g < group.length;) {
+        if (toks[group[g]].s !== ',') { parts.push({ toks: [group[g]] }); g++; continue; }
+        let n = 0;
+        while (g + n < group.length && toks[group[g + n]].s === ',') n++;
+        let at = g;
+        sustainMarks(n).forEach(m => { const w = m === ';' ? 2 : 1; parts.push({ toks: group.slice(at, at + w), text: m }); at += w; });
+        g += n;
+      }
+      cols.push({ from: u, units: d, fast: group.length, parts });
+      u += d;
+      continue;
+    }
+    if (t.s !== ',') { cols.push({ from: u, units: t.d, fast: 1, parts: [{ toks: [k] }] }); u += t.d; k++; continue; }
+    // a stretch of karvais, cut at each break
+    let first = true;
+    while (k < toks.length && toks[k].s === ',' && toks[k].d >= 1 - 1e-9) {
+      let n = 1;
+      while (k + n < toks.length && toks[k + n].s === ',' && toks[k + n].d >= 1 - 1e-9 && !cut(u + n * toks[k].d)) n++;
+      const last = cols[cols.length - 1];
+      let attach = first && !cut(u) && last && last.fast === 1 && last.parts.length === 1 && toks[last.parts[0].toks[0]].s !== ',';
+      sustainMarks(n).forEach(m => {
+        const w = m === ';' ? 2 : 1, part = { toks: Array.from({ length: w }, (_, x) => k + x), text: m }, units = w * toks[k].d;
+        if (attach) { last.parts.push(part); last.units += units; attach = false; }
+        else cols.push({ from: u, units, fast: 1, parts: [part] });
+        u += units; k += w;
+      });
+      first = false;
+    }
+  }
+  return cols;
+}
+
 /* ---------- ragas from the printed scale ---------- */
 const tokenPitch = t => {   // "R2", "S'", "N3." → semitones from Sa
   const m = /^([SRGMPDN])([1-3]?)('*)(\.*)$/.exec(t);

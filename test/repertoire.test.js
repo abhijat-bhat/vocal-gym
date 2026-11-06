@@ -149,6 +149,158 @@ test('the importer: cells, scale rows and a whole post', () => {
   assert.deepEqual(q.fixed, [{ cell: 1, was: 'S , ’D , S R G ,', why: ['lower-mark'] }]);
 });
 
+/* v0.9.2: posts written for the test, in the site's markup, for what the first import misread */
+const row = (...cells) => '<tr>' + cells.map(c => typeof c === 'string' ? td(span(c)) : td(span(c.t), c.a)).join('') + '</tr>';
+const wide = (t, n = 4) => ({ t, a: 'colspan="' + n + '"' });
+const post = (name, labels, html) => Object.assign({}, POST, { title: { $t: name }, category: labels.map(term => ({ term })), content: { $t: html } });
+const table = (...rows) => '<table><tbody>' + rows.join('') + '</tbody></table>';
+const LINE = 'S R G M P D N S', HALF = 'S R G M', FULL = [LINE, HALF, HALF];
+
+test('scale rows in every way the site writes them, and a swara row is not one', () => {
+  const lists = t => { const r = scaleRow(t); return r && [r.name, r.aro.join(' '), r.avaro.join(' ')]; };
+  // a dash with a space on one side only, or two dashes: the arohana was lost
+  assert.deepEqual(lists('AbhEri- S G2 M1 P N2 S’ - S’ N2 D2 P M1 G2 R2 S'), ['AbhEri', "S G2 M1 P N2 S'", "S' N2 D2 P M1 G2 R2 S"]);
+  assert.deepEqual(lists('bahudhAri - - S G3 M1 P D2 N2 S’ - S’ N2 P M1 G3 S'), ['bahudhAri', "S G3 M1 P D2 N2 S'", "S' N2 P M1 G3 S"]);
+  assert.deepEqual(lists('mukhAri - S R2 M1 P N2 D2 S’- S’ N2 D1 P M1 G2 R2 S'), ['mukhAri', "S R2 M1 P N2 D2 S'", "S' N2 D1 P M1 G2 R2 S"]);
+  assert.deepEqual(lists('gowlam - S R1 M1 P N3 S’ - S’N3 P M1 R1 G3 M1 R1 S')[2], "S' N3 P M1 R1 G3 M1 R1 S");
+  // the name, and what is said about it
+  let r = scaleRow('sarasAngi - 27th mELakartha - S R2 G3 M1 P D1 N3 S’ - S’ N3 D1 P M1 G3 R2 S');
+  assert.equal(r.name, 'sarasAngi'); assert.equal(r.note, '27th mELakartha');
+  r = scaleRow('CharaNam 1 - bAlakhAndam - nAtakurunji - S R2 G3 M1 N2 D2 N2 P D2 N2 S’ - S’ N2 D2 M1 G3 R2 S');
+  assert.equal(r.name, 'nAtakurunji'); assert.equal(r.section, 'CharaNam 1'); assert.equal(r.note, 'bAlakhAndam');
+  r = scaleRow('Kharaharapriya Janya (22nd Melakartha) S R2 M1 P N2 S’ - S’ N2 P M1 R2 S');
+  assert.equal(r.aro.join(' '), "S R2 M1 P N2 S'"); assert.equal(r.avaro.join(' '), "S' N2 P M1 R2 S");
+  assert.equal(scaleRow('3. gaurI - S R1 M1 P N3 S’ - S’ N3 P M1 G3 R1 S').name, 'gaurI');
+  // typing slips, each kept with the scale
+  const slip = (t, aro, avaro) => { const x = scaleRow(t); assert.equal(x.aro.join(' '), aro, t); assert.equal(x.avaro.join(' '), avaro, t); assert.equal(x.was, t); };
+  slip('v - S R1 G3 M1 D1 N2 S’ - S’ N2 D1 M1 P M1 F3 R1 S', "S R1 G3 M1 D1 N2 S'", "S' N2 D1 M1 P M1 G3 R1 S");
+  slip('v - S R3 G3 M1 P D3 N3 S’ - S’ N# P M1 G3 M1 R3 S', "S R3 G3 M1 P D3 N3 S'", "S' N3 P M1 G3 M1 R3 S");
+  slip('v - S R1 G3 M2 P Nn3 S’ - S’ N3 P M2 G3 R1 S', "S R1 G3 M2 P N3 S'", "S' N3 P M2 G3 R1 S");
+  slip('v - S R2 M1 P N2 S’ - S’ N2 P1 M1 R2 G2 R2 S', "S R2 M1 P N2 S'", "S' N2 P M1 R2 G2 R2 S");
+  slip('v - S 12 M1 P D2 N2 S’ - S’ D2 P M1 R1 S', "S R1 M1 P D2 N2 S'", "S' D2 P M1 R1 S");
+  slip('v - S R1 G2 P D1 S - Av: S D1 P G2 R1 S', "S R1 G2 P D1 S'", "S' D1 P G2 R1 S");
+  slip('v - S R2 G2 M1 P D2 N2 S’ - S’ N2 D1 P G2 R2 ‘S', "S R2 G2 M1 P D2 N2 S'", "S' N2 D1 P G2 R2 S");
+  slip('v - S G2 M1 D2 N3 S’ - S’ N3 D2 P M1 G2 S’', "S G2 M1 D2 N3 S'", "S' N3 D2 P M1 G2 S");
+  // a descending scale printed without digits takes them from the arohana (N2, not the common N3)
+  slip('v - S R1 G3 M1 P D1 N2 S’ - S’ N D P M G R S (14th Melakartha)', "S R1 G3 M1 P D1 N2 S'", "S' N2 D1 P M1 G3 R1 S");
+  // a scale with no slip says nothing more
+  assert.deepEqual(Object.keys(scaleRow('kalyANi - S R2 G3 M2 P D2 N3 S’ - S’ N3 D2 P M2 G3 R2 S')), ['name', 'aro', 'avaro', 'note']);
+  // swara rows with digits are not scales
+  ['M2 P M2 P D N2 , D', 'P , D1 , D1 P P M', 'S’ , N M1 G P’ M1’ R’ , , S’ , N D , P', 'R1, G1', 'R2 M P R2 M ,', 'pallavi - vanajAkshi ninnE kori'].forEach(t => assert.equal(scaleRow(t), null, t));
+});
+
+test('a post in page order: scales and lyrics outside the tables, and each line sung in the raga above it', () => {
+  // printed above the table, with a note on its mela and the words; links are left out
+  let p = parsePost(post('g - Abheri - Adi - X', ['Geetham', 'Abheri'], '<p>' + span('Abheri - S G2 M1 P N2 S’ - S’ N2 D2 P M1 G2 R2 S') + '</p><p>20th Mela Natabhairavi Janya</p>' +
+    '<p>garuda gamana sathya bhAshaNa vibheeshaNa pOshaku rEy rEy</p><p>chathushruthi rishabha sAdhAraNa gAndhAra kaishiki swara ithara shuddha</p><p>Listen at https://www.youtube.com/watch?v=x</p><p>Please share lyrics if you have them.</p>' + table(row(...FULL))));
+  assert.equal(p.ragas.length, 1); assert.equal(p.ragas[0].aro.join(' '), "S G2 M1 P N2 S'"); assert.match(p.ragas[0].note, /Natabhairavi/);
+  assert.equal(p.sections[0].title, 'Lyrics'); assert.equal(p.sections[0].lyrics.length, 2); assert.equal(p.sections[0].lines.length, 0);
+  assert.equal(p.sections[1].lines.length, 1); assert.equal(p.sections[1].raga, 0);
+  assert.ok(!JSON.stringify(p.sections).includes('youtube')); assert.ok(!JSON.stringify(p.sections).includes('share'));
+  // a section's name printed outside the table goes with the table after it; a short remark is a note
+  p = parsePost(post('j - Neelambari - Adi - X', ['Neelambari'], '<p>Pallavi</p>' + table(row(...FULL)) + '<p>Charanam</p>' + table(row(...FULL)) + '<p>Tuned by a singer</p>'));
+  assert.deepEqual(p.sections.map(s => [s.title, s.lines.length]), [['Pallavi', 1], ['Charanam', 1], ['Notes', 0]]);
+
+  // a ragamalika: a scale row after lines starts a new section in that raga
+  const A = 'mAyA - S R1 G3 M1 P D1 N3 S’ - S’ N3 D1 P M1 G3 R1 S', B = 'mOhanam - S R2 G3 P D2 S’ - S’ D2 P G3 R2 S', C = 'hindhoLam - S G2 M1 D1 N2 S’ - S’ N2 D1 M1 G2 S';
+  p = parsePost(post('n - rAgamAlika - Adi', ['Ragamalika'], table(row(wide(A, 3)), row(...FULL), row(wide(B, 3)), row(...FULL), row(...FULL), row(wide(C, 3)), row(...FULL))));
+  assert.deepEqual(p.sections.map(s => [s.title, s.raga, s.lines.length]), [['', 0, 1], ['mOhanam', 1, 2], ['hindhoLam', 2, 1]]);
+  assert.equal(p.ragamalika, true); assert.equal(p.raga, 'mAyA');
+  // a scale row in a narrow cell, under swaras and over a label column, is still a scale and not syllables
+  p = parsePost(post('n - rAgamAlika - Adi', ['Ragamalika'], table(row(wide(A, 4)), row('1', ...FULL), row('2', wide(B, 3)), row('3', ...FULL))));
+  assert.deepEqual(p.sections.flatMap(s => s.lines.map(l => [s.raga, l.syl])), [[0, undefined], [1, undefined]]);
+  // scales listed together, then named: a line of a heading, a title, brackets, or first in the words
+  p = parsePost(post('n - rAgamAlika - Adi', ['Ragamalika'], table(
+    row(wide(A + '</span></p><p>' + span(B) + '</p><p>' + span(C))),
+    row(wide('pallavi - words one')), row(...FULL),
+    row(wide('anupallavi (mOhanam) - words two')), row(...FULL),
+    row(wide('hindhoLam')), row(...FULL),
+    row(wide('charaNam 4 - mOhanam - words three')), row(...FULL))));
+  assert.deepEqual(p.sections.filter(s => s.lines.length).map(s => s.raga), [0, 1, 2, 1]);
+  // a raga named beside swara rows, in a post with no scale: a section of its own, with a borrowed scale later
+  p = parsePost(post('a - rAgamAlika - Adi', ['Ragamalika'], table(row(wide('pallavi - words')), row('Arabhi', ...FULL), row('Mohanam', ...FULL), row(...FULL))));
+  assert.deepEqual(p.sections.filter(s => s.lines.length).map(s => [s.title, s.lines.length]), [['pallavi', 1], ['Mohanam', 2]]);
+  assert.deepEqual(p.ragas.map(r => r.name), ['Arabhi', 'Mohanam']);
+  // a tala word is not a raga
+  p = parsePost(post('a - Kalyani - Adi', ['Kalyani'], table(row('sankeerNa', ...FULL))));
+  assert.deepEqual(p.ragas, []);
+});
+
+test('rows the first import dropped or misread: first cells, notes beside swaras, headings under swaras, letters for swaras', () => {
+  // swaras in a label column stay swaras, and their sahitya stays under them
+  let p = parsePost(post('j - Hemavathi - Adi', ['Hemavathi'], table(row('S’ , , , S’ , N D P , , , M G , ,', ...FULL.slice(1)), row('1', ...FULL), row('2', ...FULL))));
+  const lines = p.sections[0].lines;
+  assert.equal(lines.length, 3); assert.equal(lines[0].cells[0], "S' , , , S' , N D P , , , M G , ,"); assert.equal(lines[0].label, undefined);
+  assert.equal(lines[1].label, '1'); assert.equal(lines[2].cells.length, 3);
+  // a note beside swaras keeps the row, and goes with it
+  p = parsePost(post('n - nalinakAnthi - Nottuswaram', ['Nottuswaram'], table(row(...FULL, '2 times'), row(...FULL), row(...FULL, 'Repeat the anupallavi twice'))));
+  assert.deepEqual(p.sections[0].lines.map(l => [l.cells.length, l.note]), [[3, '2 times'], [3, undefined], [3, 'Repeat the anupallavi twice']]);
+  // a heading in a narrow cell under swaras is a heading, not syllables; words really under swaras stay sahitya
+  p = parsePost(post('k - Adi', ['Krithi'], table(row(...FULL, ''), row({ t: 'Charanam - its words here', a: 'colspan="2"' }, '', ''), row(...FULL, ''), row('sa ri', '', '', ''))));
+  assert.deepEqual(p.sections.map(s => [s.title, s.lines.length]), [['', 1], ['Charanam', 1]]);
+  assert.equal(p.sections[0].lines[0].syl, undefined); assert.deepEqual(p.sections[1].lyrics, ['its words here']);
+  assert.deepEqual(p.sections[1].lines[0].syl.map(x => x[1]), ['sa', 'ri']);
+  // lyrics before any section are kept
+  p = parsePost(post('k - Adi', ['Krithi'], table(row(wide('Nagumomu Galavaani', 2), wide('ನಗುಮೋಮು', 2)), row(...FULL))));
+  assert.deepEqual(p.sections[0].lyrics, ['Nagumomu Galavaani', 'ನಗುಮೋಮು']);
+  // a letter that is no swara, read as the key beside it, if the raga has that swara; the row says what the site prints
+  const M = 'madhyamAvathi - S R2 M1 P N2 S’ - S’ N2 P M1 R2 S';
+  p = parsePost(post('k - madhyamAvathi - Adi', ['madhyamAvathi'], table(row(wide(M, 3)), row(LINE, HALF, 'N , P , E , E ,'))));
+  assert.equal(p.sections[0].lines[0].cells[2], 'N , P , R , R ,');
+  assert.deepEqual(p.sections[0].lines[0].fixed, [{ cell: 2, was: 'N , P , E , E ,', why: ['letter'] }]);
+  // not when the raga lacks it (F would be G, which Madhyamavathi does not have); the row is then left as it was
+  p = parsePost(post('k - madhyamAvathi - Adi', ['madhyamAvathi'], table(row(wide(M, 3)), row(LINE, HALF, 'S , R , M , F ,'))));
+  assert.equal(p.sections[0].lines.length, 0);
+  // syllables with commas are still syllables
+  const H = 'hamsadhwani - S R2 G3 P N3 S’ - S’ N3 P G3 R2 S';
+  p = parsePost(post('k - hamsadhwani - Adi', ['hamsadhwani'], table(row(wide(H, 3)), row(...FULL), row(', , ha , ri , , ,', '', ''))));
+  assert.deepEqual(p.sections[0].lines[0].syl.map(x => x[1]), [',', ',', 'ha', ',', 'ri', ',', ',', ',']);
+  // a stray syllable before a swara
+  assert.equal(parsePost(post('k - hamsadhwani - Adi', ['hamsadhwani'], table(row(wide(H, 3)), row('P , P thaP R , , S', HALF, HALF)))).sections[0].lines[0].cells[0], 'P , P P R , , S');
+});
+
+test('the raga’s name comes from the title when the scale row does not give it', () => {
+  const S = n => n + ' - S R2 M1 P N2 S’ - S’ N2 P M1 R2 S';
+  const name = (title, labels, scale) => parsePost(post(title, labels, table(...(scale ? [row(wide(scale, 3))] : []), row(...FULL)))).raga;
+  assert.equal(name('Thiruppavai - 01 - Margazhi ThingaL - Nattai - Adi - AnDaL', ['Thiruppavai', 'Nattai', 'AnDaL']), 'Nattai');
+  assert.equal(name('Nagumomu - Madhyamavathi - Adi - Thyagaraja', ['Madhyamavathi', 'Thyagaraja'], S('Kharaharapriya Janya')), 'Madhyamavathi');
+  assert.equal(name('alai pAyudhE - kAnada - Adi - X', ['Kaanada', 'X'], 'S R2 G2 M1 P D2 N2 S’ - S’ N2 P M1 G2 M1 R2 S'), 'Kaanada');
+  assert.equal(name('neekEla - sarasAngi - khanda chApu - X', ['SarasAngi', 'X'], 'sarasAngi - 27th mELakartha - S R2 G3 M1 P D1 N3 S’ - S’ N3 D1 P M1 G3 R2 S'), 'SarasAngi');
+  assert.equal(name('hoova - AbhEri - KhandaChapu - X', ['AbhEri', 'X'], 'AbhEri- S G2 M1 P N2 S’ - S’ N2 D2 P M1 G2 R2 S'), 'AbhEri');
+  assert.equal(name('Kalyani - 2 - Jathiswara - Adi', ['Jathiswara', 'Kalyani']), 'Kalyani');
+  // a nottuswaram's raga is the last part of its title, after the composer
+  assert.equal(name('hE mAyE! - Nottuswaram - Muthuswami Dikshitar - Thisra Eka - ShankharAbharaNam', ['Nottuswaram', 'MuthuswamiDikshithar', 'ShankharAbharaNam']), 'ShankharAbharaNam');
+  // not the composition's name, nor a number, a kind of piece or a tala
+  assert.equal(name('Alankaras', ['Basics']), '');
+  // a ragamalika with no scale printed says so
+  assert.equal(name('lalitha - rAgamalika - Adi - X', ['Ragamalika', 'X']), 'Ragamalika');
+});
+
+test('sustains as a singer writes them: , for one unit and ; for two', () => {
+  const T = E.sustainText;
+  assert.equal(T('P , , ,'), 'P, ;');      // the singer's own example
+  assert.equal(T('P ,'), 'P,'); assert.equal(T('P , ,'), 'P;'); assert.equal(T('P , , , ,'), 'P; ;'); assert.equal(T('P , , , , ,'), 'P, ; ;');
+  assert.equal(T(', , ,'), ', ;'); assert.equal(T(', ,'), ';'); assert.equal(T(','), ',');
+  assert.equal(T("S' , , , N. , , R"), "S', ; N.; R");
+  assert.equal(T('[S , , R] P , , ,'), '[S; R] P, ;');
+  assert.equal(T('[P N] , ,'), '[P N] ;');
+  assert.equal(T('S R G M'), 'S R G M'); assert.equal(T(''), '');
+  // it reads back as the same notes
+  ['P , , ,', '[S , , R] P , , ,', "S' , , , N. , ,", ', , , S', '[[S , R ,]] ,'].forEach(c => assert.equal(E.cleanCell(T(c)).text, c));
+  // on the grid: a ; never crosses a beat line or a syllable, and every token is drawn once
+  const lay = (c, b) => E.sustainLayout(E.parseCell(c), 0, b).map(x => [x.from, x.units, x.parts.map(p => p.text || E.parseCell(c)[p.toks[0]].s).join('')]);
+  assert.deepEqual(lay('P , , , R , , ,', u => u % 4 === 0), [[0, 2, 'P,'], [2, 2, ';'], [4, 2, 'R,'], [6, 2, ';']]);
+  assert.deepEqual(lay('R S , , , M', u => u % 4 === 0), [[0, 1, 'R'], [1, 3, 'S;'], [4, 1, ','], [5, 1, 'M']]);
+  assert.deepEqual(lay('S , , ,', u => u === 2), [[0, 2, 'S,'], [2, 2, ';']]);
+  assert.deepEqual(lay('S , , ,', u => u === 1), [[0, 1, 'S'], [1, 1, ','], [2, 2, ';']]);
+  assert.deepEqual(lay(', , , , S', () => false), [[0, 2, ';'], [2, 2, ';'], [4, 1, 'S']]);
+  // inside a double-speed group, within the unit it shares
+  assert.deepEqual(lay('[S , , , R , , ,] P', () => false), [[0, 1, 'S,'], [1, 1, ';'], [2, 1, 'R,'], [3, 1, ';'], [4, 1, 'P']]);
+  // two commas a part: one mark lights for both
+  const parts = E.sustainLayout(E.parseCell('P , , ,'), 0).flatMap(x => x.parts.map(p => p.toks));
+  assert.deepEqual(parts, [[0], [1], [2, 3]]);
+});
+
 test('a line off the cycle: how far, where it first goes off, and the lines that are short on purpose', () => {
   const rup = E.talaOf('roopakam').tala, adi = E.tala('triputa', 4);
   const row = (...us) => us.map(n => Array.from({ length: n }, () => 'S').join(' '));
@@ -254,10 +406,18 @@ test('every imported composition reads, resolves its pitches and plays on its gr
   ix.compositions.forEach(s => ok(ids.has(s.id), 'no file for ' + s.id));
   files.forEach(f => {
     const c = JSON.parse(readFileSync(join(DATA, 'c', f), 'utf8'));
-    ok(/^https:\/\/carnaticnotations\.blogspot\.com\//.test(c.url), c.id + ': its page on the site');
+    ok(c.source ? c.source.name && c.source.author : /^https:\/\/carnaticnotations\.blogspot\.com\//.test(c.url), c.id + ': where it comes from');
     const tl = c.tala && E.talaOf(c.tala.name);
     ok(!c.tala || tl, c.id + ': tala ' + (c.tala && c.tala.name));
     const ragas = c.ragas.map(E.ragaOf);
+    // v0.9.2: a scale runs up, then down; a name is a name
+    c.ragas.forEach(r => {
+      ok(r.aro.length && r.avaro.length, c.id + ': a scale with both lists: ' + r.name);
+      ok(!/^S'/.test(r.aro[0]), c.id + ': an arohana that starts at the top: ' + r.aro.join(' '));
+      ok(!/[-–]\s|\s[-–]|[RGMDN][1-3]/.test(r.name), c.id + ': a raga’s name, not a row: ' + r.name);
+    });
+    ok(!/^\d+$/.test(c.raga) && !/[RGMDN][1-3]/.test(c.raga) && !/\bjanya$/i.test(c.raga), c.id + ': the raga’s name: ' + c.raga);
+    ok(!c.ragas.length || c.sections.every(s => !s.lines.length || (s.raga != null && c.ragas[s.raga])), c.id + ': each section with lines has its raga');
     c.sections.forEach((s, si) => {
       if (!s.lines.length) return;
       const raga = ragas[s.raga != null ? s.raga : 0];
@@ -269,6 +429,12 @@ test('every imported composition reads, resolves its pitches and plays on its gr
         const ps = E.linePitches(raga, l.cells);
         ok(ps.every(n => n.p === null || (Number.isInteger(n.p) && n.p >= -24 && n.p <= 36)), c.id + ' ' + si + ':' + li + ': pitches in range');
         (l.syl || []).forEach(([u]) => ok(u >= 0 && u <= E.lineUnits(l.cells) + 1e-9, c.id + ' ' + si + ':' + li + ': a syllable inside its line'));
+        // v0.9.2: its sustains read back as the same notes, and the grid draws every token once
+        l.cells.forEach(cell => {
+          ok(E.cleanCell(E.sustainText(cell)).text === cell, c.id + ' ' + si + ':' + li + ': sustains read back: ' + cell);
+          const toks = E.parseCell(cell), drawn = E.sustainLayout(toks, 0, u => u % 2 === 0).flatMap(x => x.parts.flatMap(p => p.toks));
+          ok(drawn.length === toks.length && drawn.every((v, i) => v === i), c.id + ' ' + si + ':' + li + ': the grid draws every token: ' + cell);
+        });
         // v0.9.1: every stored line can be opened in the editor and saved unchanged
         const gap = tl ? E.offCycle(s.lines, li, tl.tala, s.unitsPerBeat || c.tala.unitsPerBeat) : null;
         if (gap) { tagged++; ok((gap.over > 0) !== (gap.short > 0) && gap.over + gap.short < gap.cycle, c.id + ' ' + si + ':' + li + ': over or short, by less than a cycle'); }

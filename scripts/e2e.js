@@ -226,7 +226,7 @@ try {
     await until('location.hash === "#/repertoire" && document.querySelectorAll(".rp-item").length >= 60', 'the repertoire list', 15000);
     await until('/^All 1[,.]?5\\d\\d compositions$/.test(document.getElementById("rp-count").textContent)', 'every composition counted');
     await click('#rp-types [data-type="Geetham"]');
-    await until('/^3\\d compositions$/.test(document.getElementById("rp-count").textContent)', 'the geethams');
+    await until('/^[34]\\d compositions$/.test(document.getElementById("rp-count").textContent)', 'the geethams');
     await js('const q = document.getElementById("rp-q"); q.value = "vandhe madhavam"; q.dispatchEvent(new Event("input"));');
     await until('document.querySelectorAll(".rp-item").length === 1', 'one search result');
   });
@@ -301,6 +301,21 @@ try {
     if (now) throw new Error('the undone line lost its place: ' + was);
   });
 
+  await step('sustains are written , and ; on the grid and in the editor, and still light as they sound', async () => {
+    await go('#/repertoire/2021-07-kamalamanohari-jathiswaram-adi');
+    await until('document.querySelector(".rp-line .rp-sw i")', 'the notation', 10000);
+    const first = await js('return document.querySelector(".rp-line .rp-cells").textContent.replace(/\\s+/g, " ");');
+    if (!/;/.test(first) || /,\s*,/.test(first)) throw new Error('sustains not written as , and ;: ' + first.slice(0, 80));
+    await click('[data-loop$=":0"]');
+    await until('document.querySelector(".rp-line.sel .rp-sw i.k.now")', 'a sustain lit as it sounds', 25000);
+    await click('#rp-tr .play'); await until('!document.querySelector("#rp-tr .play[data-playing]")', 'the loop to stop');
+    await click('#rp-edit'); await until('document.querySelector(".rp-pen")', 'a pen');
+    await click('.rp-pen'); await until('document.querySelector(".rp-edin")', 'the editor');
+    const typed = await js('return document.querySelector(".rp-edin").value;');
+    if (!/;/.test(typed) || /,\s+,/.test(typed)) throw new Error('the editor does not write sustains so: ' + typed);
+    await click('.rp-edno');
+    await js('document.getElementById("rp-edit").click();');
+  });
   await step('a line off the cycle says so, explains itself, and clears when corrected', async () => {
     await go('#/repertoire/2025-06-abhayambikayai-ashvaroodayai-yadhukula');
     await until('document.querySelector(".rp-off")', 'the tag on the line with an extra swara', 10000);
@@ -319,6 +334,26 @@ try {
     // the imported version still shows it
     await js('Array.from(document.querySelectorAll("#rp-view button")).find(b => /imported/i.test(b.textContent)).click();');
     await until('document.querySelector(".rp-off")', 'the tag in the imported version');
+  });
+
+  await step('a lesson from a book: its source, why this notation was chosen, and a post that gave way', async () => {
+    await go('#/repertoire/lesson-gurukulam-vani-veena-pustaka-pani-hindolam');
+    await until('document.querySelector(".rp-line .rp-sw i") && /Geetham notes/.test(document.querySelector(".rp-head").textContent)', 'a new lesson, with its source', 10000);
+    await go('#/repertoire/2021-01-bhairavi-shreeramachandra-dhruva-geetham');
+    await until('document.querySelector(".rp-compared") && document.querySelector(".rp-compared tr.used") && /Geetham notes/.test(document.querySelector(".rp-head").textContent)', 'the notation chosen, and why', 10000);
+    await click('.rp-compared summary');
+    await until('document.querySelector(".rp-compared[open]") && document.querySelectorAll(".rp-compared tbody tr").length === 2', 'the versions compared');
+    // a geetham's meaning: its own card and a place in the sections, also where the site's notation is used
+    await go('#/repertoire/2020-12-geetham-janakasutha-saveri-roopakam');
+    await until('document.querySelector("#rp-meaning") && /kumkum/.test(document.querySelector("#rp-meaning").textContent) && /Geetham notes/.test(document.querySelector("#rp-meaning .card-sub").textContent)', 'the meaning, credited to its book', 10000);
+    await until('document.querySelector("#rp-secnav [data-meaning]")', 'Meaning among the sections');
+    await click('#rp-secnav [data-meaning]');
+    await click('#rp-meaning .rp-words summary');
+    await until('document.querySelector("#rp-meaning .rp-words[open] .rp-lyrics") && document.documentElement.scrollWidth <= innerWidth', 'the word to word meaning, in the page');
+    await go('#/repertoire/2020-09-alankaras');
+    await until('!document.querySelector(".rp-line") && /No composition/.test(document.body.textContent)', 'an alankara gone from the repertoire', 10000);
+    await go('#/repertoire/2020-12-pillari-geethams-malahari-purandaradaasa');
+    await until('document.querySelector(".rp-line .rp-sw i") && /Sri Gananatha/.test(document.querySelector(".rp-head h1").textContent)', 'the gathered post, leading to its first lesson', 10000);
   });
 
   console.log('learn');
