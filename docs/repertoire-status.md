@@ -4,6 +4,10 @@ Everything needed to change the repertoire section safely, and where it stands. 
 
 Refresh the numbers with `node scripts/repertoire-stats.js` (the importer also does it). A test fails if they fall behind the data.
 
+## The repertoire and the generators
+
+The generators do not read the repertoire at run time. One script, `scripts/mine-repertoire-phrases.js`, writes phrases from it into `data/raga-profiles.json`, only for rare melas with no other source (17 of them), each naming its composition. Re-run it after an import that changes those compositions, then `node scripts/check-raga-profiles.js --fix` and `npm run profiles`.
+
 ## How to read the score
 
 The score is the share of compositions with notation that carry no off-cycle tag. It says the notation **fits the tala**, not that it is **musically right**:

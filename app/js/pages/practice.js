@@ -21,7 +21,7 @@ const nice = d => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { week
 export async function mount(root, meta, parts) {
   let alive = true;
   if (!userKnown()) await refreshUser();
-  const draw = () => { if (alive) (parts[0] === 'finish' ? drawFinish : drawMain)(root); };
+  const draw = () => { if (alive) { if (parts[0] === 'take') drawTake(root, parts[1]); else (parts[0] === 'finish' ? drawFinish : drawMain)(root); } };
   const off = onUser(() => draw());
   draw();
   return () => { alive = false; off(); };
@@ -30,6 +30,19 @@ export async function mount(root, meta, parts) {
 function loggedOut(root) {
   root.innerHTML = '<div class="wrap">' + pageHead({ title: 'Practice with a plan', lead: 'Sign in to keep routines, time each part of a session as you move between the tools, and keep a log with your daily goal and your streak.' }) +
     '<div class="card pr-cta"><p>Practice sessions belong to an account, so your log and streak are there next time.</p><div class="pr-row"><a class="btn primary" href="#/account">Sign in or create an account</a></div></div></div>';
+}
+
+/* v0.11: a routine a teacher has sent */
+async function drawTake(root, code) {
+  const head = t => '<div class="wrap"><div class="phead pr-head"><h1>' + esc(t) + '</h1></div>';
+  let r;
+  try { r = await api.practice.shared(code); }
+  catch (x) { root.innerHTML = head('This routine cannot be opened') + '<div class="card pr-cta"><p>' + esc(x.message) + '</p><div class="pr-row"><a class="btn" href="#/practice">Your routines</a></div></div></div>'; return; }
+  const total = r.items.reduce((s, it) => s + it.minutes, 0), user = getUser();
+  root.innerHTML = head(r.name) + '<section class="slab-card pr-take"><p>From <b>' + esc(r.from) + '</b> · ' + total + ' min</p><ol>' + r.items.map(it => '<li>' + kindOf(it) + esc(it.title) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
+    '<p class="pr-err" id="pr-takee" role="alert"></p><div class="pr-row">' + (user ? '<button class="btn primary" id="pr-take">Add to my routines</button>' : '<a class="btn primary" href="#/account">Sign in to add it</a><span class="muted">Then open this link again.</span>') + '</div>' + '<p class="hint">Your copy is yours to change. ' + esc(r.from) + ' sees how many have added it, and nothing of your practice.</p></section></div>';
+  const b = $('#pr-take', root);
+  if (b) b.onclick = async () => { b.disabled = true; try { const a = await api.practice.take(code); toast(a.added ? 'Added to your routines.' : 'You already have it.'); location.hash = '#/practice'; } catch (x) { $('#pr-takee', root).textContent = x.message; b.disabled = false; } };
 }
 
 async function drawMain(root) {
@@ -84,7 +97,7 @@ function drawRoutines(root, R) {
   const card = (r, own) => '<article class="pr-rt"><div class="pr-h"><h3>' + esc(r.name) + '</h3><span class="muted">' + minutes(r) + ' min' + (own ? '' : ' · starter') + '</span></div>' +
     '<ol>' + r.items.map(it => '<li>' + kindOf(it) + (it.ref ? '<a href="#/repertoire/' + esc(it.ref) + '">' + esc(it.title) + '</a>' : esc(it.title)) + ' <span class="muted">' + it.minutes + ' min</span></li>').join('') + '</ol>' +
     '<div class="pr-row"><button type="button" class="btn small" data-start="' + esc(r.id) + '">Start</button>' +
-    (own ? '<button type="button" class="btn small ghost" data-edit="' + r.id + '">Edit</button><button type="button" class="btn small ghost" data-del="' + r.id + '">Delete</button>' : '<button type="button" class="btn small ghost" data-copy="' + esc(r.id) + '">Copy and edit</button>') + '</div></article>';
+    (own ? '<button type="button" class="btn small ghost" data-assign="' + r.id + '">Assign to students</button><button type="button" class="btn small ghost" data-edit="' + r.id + '">Edit</button><button type="button" class="btn small ghost" data-del="' + r.id + '">Delete</button>' : '<button type="button" class="btn small ghost" data-copy="' + esc(r.id) + '">Copy and edit</button>') + '</div></article>';
   $('#pr-routines', root).innerHTML = R.routines.map(r => card(r, true)).join('') + R.starters.map(r => card(r, false)).join('');
   const find = id => R.routines.concat(R.starters).find(r => String(r.id) === String(id));
   root.querySelectorAll('[data-start]').forEach(b => { b.onclick = () => {
@@ -93,6 +106,17 @@ function drawRoutines(root, R) {
     startRun(find(b.dataset.start));
   }; });
   root.querySelectorAll('[data-edit]').forEach(b => { b.onclick = () => editor(root, find(b.dataset.edit)); });
+  root.querySelectorAll('[data-assign]').forEach(b => { b.onclick = async () => {
+    const card = b.closest('.pr-rt'); let box = card.querySelector('.pr-assign');
+    if (box) { box.remove(); return; }
+    try {
+      const s = await api.practice.share(+b.dataset.assign), url = location.origin + location.pathname + '#/practice/take/' + s.code;
+      box = document.createElement('div'); box.className = 'pr-assign';
+      box.innerHTML = '<label class="lab" for="pr-link-' + b.dataset.assign + '">Send this link to your students</label><div class="pr-row"><input type="text" readonly id="pr-link-' + b.dataset.assign + '" value="' + esc(url) + '"><button type="button" class="btn small">Copy</button></div><p class="hint">' + (s.taken ? s.taken + (s.taken === 1 ? ' student has' : ' students have') + ' added it. ' : '') + 'They get a copy to change. You see how many have added it, and nothing of their practice.</p>';
+      card.appendChild(box);
+      $('button', box).onclick = async () => { const i = $('input', box); try { await navigator.clipboard.writeText(i.value); toast('Link copied.'); } catch (x) { i.select(); toast('Press Ctrl+C to copy it.'); } };
+    } catch (x) { toast(x.message); }
+  }; });
   root.querySelectorAll('[data-copy]').forEach(b => { b.onclick = () => { const r = find(b.dataset.copy); editor(root, { name: r.name + ' (mine)', items: r.items.map(it => Object.assign({}, it)) }); }; });
   root.querySelectorAll('[data-del]').forEach(b => { b.onclick = async () => {
     if (!confirm('Delete this routine? Its logged sessions stay in your history.')) return;
@@ -108,7 +132,7 @@ function editor(root, r) {
     '<input type="text" data-f="title" maxlength="80" placeholder="What to practise" value="' + esc(it.title) + '" aria-label="What to practise">' +
     '<label class="pr-min"><input type="number" data-f="minutes" min="1" max="120" value="' + it.minutes + '" aria-label="Minutes"> min</label>' +
     '<button type="button" class="iconbtn" data-mv="-1" aria-label="Move up"' + (k ? '' : ' disabled') + '>↑</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move down"' + (k < items.length - 1 ? '' : ' disabled') + '>↓</button>' +
-    '<button type="button" class="iconbtn" data-rm aria-label="Remove"' + (items.length > 1 ? '' : ' disabled') + '>✕</button></div>';
+    '<button type="button" class="iconbtn" data-rm aria-label="Remove"' + (items.length > 1 ? '' : ' disabled') + '><svg viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>';
   const read = () => { el.querySelectorAll('.pr-item').forEach(x => { const it = items[+x.dataset.k]; it.kind = x.querySelector('[data-f="kind"]').value; it.title = x.querySelector('[data-f="title"]').value; it.minutes = Math.round(+x.querySelector('[data-f="minutes"]').value) || 1; }); };
   const draw = () => {
     el.innerHTML = '<div class="card pr-editor"><h3>' + (r && r.id ? 'Edit routine' : 'New routine') + '</h3><div class="field"><label class="lab" for="pr-name">Name</label><input type="text" id="pr-name" maxlength="60" value="' + esc(r ? r.name : '') + '" placeholder="Before class"></div>' +
@@ -136,7 +160,7 @@ function editor(root, r) {
 function drawLogs(root, logs, first) {
   const el = $('#pr-logs', root); if (!el) return;
   const html = logs.map(l => '<article class="pr-log" data-id="' + l.id + '"><div class="pr-log-h"><b>' + esc(nice(l.localDate)) + '</b><span>' + esc(l.routineName) + '</span><span class="muted">' + dur(l.seconds) + '</span>' +
-    (l.rating ? '<span class="pr-stars" aria-label="' + l.rating + ' of 5">' + dots(l.rating, 5) + '</span>' : '') + '<button type="button" class="iconbtn" data-dl="' + l.id + '" aria-label="Delete this session">✕</button></div>' +
+    (l.rating ? '<span class="pr-stars" aria-label="' + l.rating + ' of 5">' + dots(l.rating, 5) + '</span>' : '') + '<button type="button" class="iconbtn" data-dl="' + l.id + '" aria-label="Delete this session"><svg viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>' +
     '<div class="pr-log-items">' + l.items.map(it => '<span class="' + (it.done ? 'done' : '') + '">' + esc(it.title || (KIND[it.kind] || KIND.free).label) + ' · ' + dur(it.spentSec) + '</span>').join('') + '</div>' +
     (l.notes ? '<p class="pr-notes">' + esc(l.notes) + '</p>' : '') + '</article>').join('');
   if (first) el.innerHTML = logs.length ? html : '<p class="muted">No sessions yet. Start a routine above; when you finish, it is logged here.</p>';

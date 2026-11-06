@@ -9,14 +9,17 @@ test('melakartas are computed correctly from the mela number', t => {
   ok(new Set(R.melakartas.map(m => m.aro.join(','))).size === 72, '72 distinct scales');
   ok(E.MELA_NAMES[58] === 'Dharmavati' && E.MELA_NAMES[64] === 'Mechakalyani', 'names 59 and 65');
   ok(R.melakartas.every(m => m.cls === 'sampurna–sampurna'), 'every melakarta is sampurna both ways');
-  ok(R.janyas.length === 14, '14 janyas encoded');
+  ok(R.janyas.length === 28, '28 janyas encoded');
   const CLS = { mohanam: 'audava–audava', hamsadhwani: 'audava–audava', hindolam: 'audava–audava', madhyamavati: 'audava–audava', abhogi: 'audava–audava', shuddhasaveri: 'audava–audava',
     malahari: 'audava–shadava', bilahari: 'audava–sampurna', arabhi: 'audava–sampurna', saveri: 'audava–sampurna', kedaragowla: 'audava–sampurna', abheri: 'audava–sampurna',
-    sriranjani: 'shadava–shadava', kambhoji: 'shadava–sampurna' };
+    sriranjani: 'shadava–shadava', kambhoji: 'shadava–sampurna',
+    begada: 'shadava–sampurna', sahana: 'sampurna–sampurna', sri: 'audava–sampurna', darbar: 'shadava–sampurna', nayaki: 'audava–sampurna', kanada: 'shadava–shadava', anandabhairavi: 'shadava–sampurna', bhairavi: 'sampurna–sampurna', mukhari: 'shadava–sampurna', kapi: 'audava–sampurna', huseni: 'sampurna–sampurna', devagandhari: 'audava–sampurna', dhanyasi: 'audava–sampurna', sama: 'audava–shadava' };
   R.janyas.forEach(j => ok(CLS[j.id] === j.cls, 'class of ' + j.name + ': ' + j.cls));
-  const PARENT = { mohanam: 28, hamsadhwani: 29, hindolam: 20, madhyamavati: 22, abhogi: 22, shuddhasaveri: 29, malahari: 15, saveri: 15, bilahari: 29, arabhi: 29, kedaragowla: 28, abheri: 22, sriranjani: 22, kambhoji: 28 };
+  const PARENT = { mohanam: 28, hamsadhwani: 29, hindolam: 20, madhyamavati: 22, abhogi: 22, shuddhasaveri: 29, malahari: 15, saveri: 15, bilahari: 29, arabhi: 29, kedaragowla: 28, abheri: 22, sriranjani: 22, kambhoji: 28, begada: 28, sahana: 28, sri: 22, darbar: 22, nayaki: 22, kanada: 22, anandabhairavi: 20, bhairavi: 20, mukhari: 20, kapi: 22, huseni: 22, devagandhari: 29, dhanyasi: 8, sama: 28 };
   R.janyas.forEach(j => ok(PARENT[j.id] === j.parent, 'parent of ' + j.name));
-  R.janyas.forEach(j => { const parent = E.melakarta(j.parent); const pcs = new Set(parent.aro.map(E.mod12)); ok(j.aro.concat(j.avaro).every(p => pcs.has(E.mod12(p))), j.name + ' uses only its parent\'s swaras'); });
+  // a bhashanga raga takes a swara from outside its parent, by definition
+  const BHASHANGA = new Set(['anandabhairavi', 'bhairavi', 'mukhari', 'kapi', 'huseni']);
+  R.janyas.forEach(j => { const parent = E.melakarta(j.parent), pcs = new Set(parent.aro.map(E.mod12)), upanga = j.aro.concat(j.avaro).every(p => pcs.has(E.mod12(p))); ok(upanga !== BHASHANGA.has(j.id), j.name + (BHASHANGA.has(j.id) ? ' has a swara from outside its parent' : ' uses only its parent\'s swaras')); });
   done();
 });
 

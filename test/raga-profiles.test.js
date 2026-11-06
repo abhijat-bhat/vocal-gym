@@ -10,10 +10,10 @@ const LETTERS = new Set(['S', 'R', 'G', 'M', 'P', 'D', 'N']);
 const ROLE_KEYS = ['jiva', 'nyasa', 'chaya', 'prominent', 'graha', 'dirgha', 'alpa', 'notNyasa'];
 const engineScale = (r, list) => list.map(p => (p === 12 ? "S'" : r.labels[E.mod12(p)])).join(' ');
 
-test('raga profiles cover exactly the 86 engine ragas with the engine scales', t => {
+test('raga profiles cover exactly the 100 engine ragas with the engine scales', t => {
   const { ok, done } = checker(t);
   const ids = Object.keys(DOC.ragas);
-  ok(ids.length === 86, '86 profiles, found ' + ids.length);
+  ok(ids.length === 100, '100 profiles, found ' + ids.length);
   ALL.forEach(r => ok(!!DOC.ragas[r.id], 'profile for ' + r.id));
   ids.forEach(id => ok(!!BY_ID[id], 'no extra profile ' + id));
   ok(DOC.schemaVersion === 1, 'schemaVersion 1');
@@ -149,5 +149,36 @@ test('the compiled profile module is up to date with the JSON and loads in the e
   E.setProfiles(null);
   ok(E.getProfile('mela65') && E.getProfile('mela65').phrases.length > 0, 'setProfiles(null) restores the compiled table');
   t.diagnostic(Object.keys(table).length + ' compiled profiles, ' + phrases + ' usable phrases, ' + (Buffer.byteLength(fresh) / 1024).toFixed(0) + ' KB module');
+  done();
+});
+
+test('phrases from the repertoire: only for ragas with nothing else, each from a real composition of that raga, and repeatable', async t => {
+  const { ok, done } = checker(t);
+  const { mine, apply } = await import('../scripts/mine-repertoire-phrases.js');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const doc = JSON.parse(readFileSync(new URL('../data/raga-profiles.json', import.meta.url), 'utf8'));
+  const dir = new URL('../data/repertoire/c/', import.meta.url);
+  const comps = readdirSync(dir).map(f => JSON.parse(readFileSync(new URL(f, dir), 'utf8'))).sort((a, b) => a.id.localeCompare(b.id));
+  const byUrl = new Map(comps.map(c => [c.url, c]));
+  const ragas = Object.values(doc.ragas), mined = ragas.filter(r => r.phrases.some(p => p.mined));
+  ok(mined.length > 0, 'some ragas take phrases from the repertoire');
+  mined.forEach(r => {
+    ok(r.kind === 'melakarta', r.name + ' is a melakarta');
+    ok(!r.phrases.some(p => !p.mined && p.weight >= 0.4), r.name + ': no phrase of weight from anywhere else');
+    ok(r.confidence.phrases === 'low', r.name + ': phrase confidence stays low');
+    r.phrases.filter(p => p.mined).forEach(p => {
+      ok(p.weight < 0.5, r.name + ': lower weight than a lakshana');
+      const c = byUrl.get(doc.sources[p.source].url);
+      ok(!!c, r.name + ': "' + p.swaras + '" names a composition of the repertoire');
+      if (c) { ok(!c.ragamalika, r.name + ': not from a ragamalika'); ok(!!p.composition, r.name + ': says which composition'); }
+    });
+  });
+  // the same files give the same phrases, and applying again changes nothing
+  const before = JSON.stringify(doc.ragas);
+  const a = mine(doc, comps), b = mine(doc, comps);
+  ok(JSON.stringify(a.report.map(l => l.phrases.map(x => x.swaras))) === JSON.stringify(b.report.map(l => l.phrases.map(x => x.swaras))), 'deterministic');
+  apply(doc, a.found);
+  const norm = s => JSON.stringify(JSON.parse(s), (k, v) => (['features', 'directionRuleOk', 'anyaSwaras', 'inEngineRange'].includes(k) ? undefined : v));
+  ok(norm(JSON.stringify(doc.ragas)) === norm(before), 'running it again changes nothing');
   done();
 });

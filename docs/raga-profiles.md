@@ -1,6 +1,6 @@
 # Raga profiles for the kalpana swara generator
 
-`data/raga-profiles.json` gives every raga the engine knows (72 melakartas, `mela1` … `mela72`, and 14 janyas) a profile the kalpana generator can use: swara roles, gamaka notes, sourced phrases, avoid rules, allied ragas and landing hints. It was built only from the project's research notes. Where the notes had nothing, arrays are empty and the gap is written down, so an empty field means "not found", never "not allowed".
+`data/raga-profiles.json` gives every raga the engine knows (72 melakartas, `mela1` … `mela72`, and 28 janyas) a profile the kalpana generator can use: swara roles, gamaka notes, sourced phrases, avoid rules, allied ragas and landing hints. It was built only from the project's research notes. Where the notes had nothing, arrays are empty and the gap is written down, so an empty field means "not found", never "not allowed".
 
 The file is checked by `test/raga-profiles.test.js` (run by `npm test`) and by `node scripts/check-raga-profiles.js`.
 
@@ -18,15 +18,15 @@ The file is checked by `test/raga-profiles.test.js` (run by `npm test`) and by `
 
 | | Count |
 | --- | --- |
-| Ragas | 86 (all engine ids, no extras) |
-| Phrases | 488, of which 415 have weight ≥ 0.4 |
-| Phrases derived from composition notation | 140 |
-| Phrases whose octave was inferred (`octaveCertain: false`) | 139 |
-| Phrases that break the engine's direction rule (`directionRuleOk: false`) | 13, in Malahari, Saveri, Bilahari, Abheri and Kambhoji |
+| Ragas | 100 (all engine ids, no extras) |
+| Phrases | 993, of which 920 have weight ≥ 0.4 |
+| Phrases derived from composition notation | 366 |
+| Phrases whose octave was inferred (`octaveCertain: false`) | 203 |
+| Phrases that break the engine's direction rule (`directionRuleOk: false`) | 75, sung only whole, and only with `allowExceptions` |
 | Avoid entries | 40 (5 hard) |
-| Sources | 199 (S193–S199 for gamaka rendering) |
+| Sources | 265 (S193–S199 for gamaka rendering) |
 | Ragas with gamaka render rules (`gamakaRender`) | 23 |
-| Ragas with no phrases | 50 (47 of them have no swara-role data either) |
+| Ragas with no phrases | 26 |
 
 ## 2. Notation
 
@@ -98,7 +98,7 @@ Per phrase:
 | `inEngineRange` | Computed: all pitches within mandra Pa to tara Pa (−5 … 19), the range `kalpana()` uses. |
 | `note` | Source notation, caveats, overrides. |
 
-`confidence.phrases` is computed: `none` without phrases; `low` with fewer than 6 phrases of weight ≥ 0.4; `high` with at least 12 such phrases of which at least 8 have a certain octave; `medium` otherwise. `confidence.roles` was set by hand from the strength of the role and gamaka sources (`none` when there are none).
+`confidence.phrases` is computed: `none` without phrases; `low` with fewer than 6 phrases of weight ≥ 0.4; `high` with at least 12 such phrases of which at least 8 have a certain octave; `medium` otherwise. A raga whose only phrases of weight ≥ 0.4 are from `scripts/mine-repertoire-phrases.js` stays `low` however many it has. `confidence.roles` was set by hand from the strength of the role and gamaka sources (`none` when there are none).
 
 ### `gamakaRender`: gamaka as render rules
 
@@ -120,6 +120,10 @@ Per phrase:
 | `global` | Raga-wide settings with sources: `maxChain` (the longest run of non-plain notes before a plain one, from ISMIR 2017, S193). |
 
 Coverage: 5 ragas `heavy` (Todi, Mayamalavagowla, Gourimanohari, Sankarabharanam, Kalyani), 6 `medium`, 12 `light`; the other 63 use the default. The gamaka research sources are S193–S199. `scripts/check-raga-profiles.js` checks every rule (letters in the raga, enums, sources, cycles, target distance and order), and `scripts/compile-profiles.js` resolves the letters to semitone offsets with each raga's own swarasthanas, so the engine never parses letters while rendering.
+
+### Vakra and bhashanga ragas (v0.11)
+
+A raga may carry `scale.krama`: `{ arohana, avarohana, source }`, its walk as a lakshana writes it, equal to `krama` in `src/engine/ragas.js`. `scale.arohana` and `scale.avarohana` stay in order of pitch. The engine also holds `deny` (a step of the scale the krama walks around, unless a phrase of weight 0.4 or more makes it) and `oneWay` (a variant in only one list leads on only in that direction). A letter with two variants in a raga, such as Bhairavi's D, must be written with its number in phrases. The move lists were derived from the krama and the sourced phrases, not from a further source, and no teacher has checked them yet.
 
 ## 4. How the generator should use it
 
@@ -158,42 +162,42 @@ Explicit overrides are explained in the phrase `note`: Chakravakam's Gajananayut
 
 | Mela | Raga | Phrases | Weight ≥ 0.4 | Rule exceptions | Roles | Phrase confidence | Landing swaras (basis) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Kanakangi | 0 | 0 | 0 | none | none | S P (default) |
-| 2 | Ratnangi | 0 | 0 | 0 | none | none | S P (default) |
-| 3 | Ganamurti | 2 | 0 | 0 | none | low | S P (default) |
-| 4 | Vanaspati | 0 | 0 | 0 | none | none | S P (default) |
-| 5 | Manavati | 0 | 0 | 0 | none | none | S P (default) |
+| 1 | Kanakangi | 10 | 10 | 0 | none | low | S P (default) |
+| 2 | Ratnangi | 5 | 5 | 0 | none | low | S P (default) |
+| 3 | Ganamurti | 17 | 15 | 0 | none | high | S P (default) |
+| 4 | Vanaspati | 10 | 10 | 0 | none | low | S P (default) |
+| 5 | Manavati | 10 | 10 | 0 | none | low | S P (default) |
 | 6 | Tanarupi | 0 | 0 | 0 | none | none | S P (default) |
 | 7 | Senavati | 0 | 0 | 0 | none | none | S P (default) |
 | 8 | Hanumatodi | 32 | 32 | 0 | high | high | S P R M D (sourced) |
-| 9 | Dhenuka | 0 | 0 | 0 | low | none | S P (default) |
-| 10 | Natakapriya | 0 | 0 | 0 | low | none | S P (default) |
+| 9 | Dhenuka | 14 | 14 | 0 | low | high | S P (default) |
+| 10 | Natakapriya | 8 | 8 | 0 | low | medium | S P (default) |
 | 11 | Kokilapriya | 0 | 0 | 0 | none | none | S P (default) |
-| 12 | Rupavati | 5 | 0 | 0 | low | low | S P (default) |
+| 12 | Rupavati | 15 | 10 | 0 | low | low | S P (default) |
 | 13 | Gayakapriya | 0 | 0 | 0 | none | none | S P (default) |
-| 14 | Vakulabharanam | 0 | 0 | 0 | none | none | S P (default) |
+| 14 | Vakulabharanam | 16 | 16 | 0 | none | high | S P (default) |
 | 15 | Mayamalavagowla | 16 | 16 | 0 | medium | medium | S P M (inferred) |
 | 16 | Chakravakam | 15 | 15 | 0 | low | medium | P R S M (inferred) |
 | 17 | Suryakantam | 0 | 0 | 0 | none | none | S P (default) |
 | 18 | Hatakambari | 0 | 0 | 0 | none | none | S P (default) |
-| 19 | Jhankaradhwani | 0 | 0 | 0 | none | none | S P (default) |
-| 20 | Natabhairavi | 6 | 0 | 0 | low | low | S P (default) |
+| 19 | Jhankaradhwani | 10 | 10 | 0 | none | low | S P (default) |
+| 20 | Natabhairavi | 22 | 16 | 0 | low | high | S P (default) |
 | 21 | Keeravani | 15 | 15 | 0 | medium | high | R M N S P (sourced) |
 | 22 | Kharaharapriya | 4 | 4 | 0 | medium | low | R G D N S P (sourced) |
 | 23 | Gourimanohari | 20 | 20 | 0 | medium | medium | R S P (inferred) |
-| 24 | Varunapriya | 0 | 0 | 0 | none | none | S P (default) |
+| 24 | Varunapriya | 10 | 10 | 0 | none | low | S P (default) |
 | 25 | Mararanjani | 0 | 0 | 0 | none | none | S P (default) |
 | 26 | Charukesi | 20 | 20 | 0 | medium | high | S P G D (sourced) |
-| 27 | Sarasangi | 0 | 0 | 0 | none | none | S P (default) |
+| 27 | Sarasangi | 10 | 10 | 0 | none | low | S P (default) |
 | 28 | Harikambhoji | 20 | 20 | 0 | medium | high | G D N S (sourced) |
-| 29 | Dheerasankarabharanam | 0 | 0 | 0 | medium | none | S G M P (sourced) |
-| 30 | Naganandini | 0 | 0 | 0 | none | none | S P (default) |
+| 29 | Dheerasankarabharanam | 12 | 12 | 0 | medium | medium | S G M P (sourced) |
+| 30 | Naganandini | 10 | 10 | 0 | none | low | S P (default) |
 | 31 | Yagapriya | 9 | 0 | 0 | low | low | S P (default) |
 | 32 | Ragavardhini | 0 | 0 | 0 | none | none | S P (default) |
 | 33 | Gangeyabhushani | 0 | 0 | 0 | none | none | S P (default) |
-| 34 | Vagadheeswari | 8 | 0 | 0 | none | low | S P (default) |
+| 34 | Vagadheeswari | 18 | 10 | 0 | none | low | S P (default) |
 | 35 | Shulini | 0 | 0 | 0 | none | none | S P (default) |
-| 36 | Chalanata | 0 | 0 | 0 | none | none | S P (default) |
+| 36 | Chalanata | 10 | 10 | 0 | none | low | S P (default) |
 | 37 | Salagam | 0 | 0 | 0 | none | none | S P (default) |
 | 38 | Jalarnavam | 0 | 0 | 0 | none | none | S P (default) |
 | 39 | Jhalavarali | 0 | 0 | 0 | none | none | S P (default) |
@@ -201,35 +205,35 @@ Explicit overrides are explained in the phrase `note`: Chakravakam's Gajananayut
 | 41 | Pavani | 0 | 0 | 0 | none | none | S P (default) |
 | 42 | Raghupriya | 0 | 0 | 0 | none | none | S P (default) |
 | 43 | Gavambhodi | 0 | 0 | 0 | none | none | S P (default) |
-| 44 | Bhavapriya | 0 | 0 | 0 | none | none | S P (default) |
-| 45 | Shubhapantuvarali | 0 | 0 | 0 | none | none | S P (default) |
+| 44 | Bhavapriya | 8 | 8 | 0 | none | medium | S P (default) |
+| 45 | Shubhapantuvarali | 8 | 8 | 0 | none | medium | S P (default) |
 | 46 | Shadvidamargini | 7 | 7 | 0 | low | medium | S' S M P D N (inferred) |
-| 47 | Suvarnangi | 0 | 0 | 0 | none | none | S P (default) |
+| 47 | Suvarnangi | 10 | 10 | 0 | none | low | S P (default) |
 | 48 | Divyamani | 0 | 0 | 0 | none | none | S P (default) |
 | 49 | Dhavalambari | 0 | 0 | 0 | none | none | S P (default) |
-| 50 | Namanarayani | 0 | 0 | 0 | none | none | S P (default) |
+| 50 | Namanarayani | 10 | 10 | 0 | none | low | S P (default) |
 | 51 | Kamavardhini | 17 | 17 | 0 | medium | medium | S R P D (mixed) |
-| 52 | Ramapriya | 0 | 0 | 0 | none | none | S P (default) |
-| 53 | Gamanashrama | 0 | 0 | 0 | none | none | S P (default) |
+| 52 | Ramapriya | 10 | 10 | 0 | none | medium | S P (default) |
+| 53 | Gamanashrama | 10 | 10 | 0 | none | low | S P (default) |
 | 54 | Vishwambari | 0 | 0 | 0 | none | none | S P (default) |
 | 55 | Shamalangi | 0 | 0 | 0 | none | none | S P (default) |
 | 56 | Shanmukhapriya | 26 | 9 | 0 | low | medium | P S (inferred) |
-| 57 | Simhendramadhyamam | 4 | 0 | 0 | none | low | S P (default) |
+| 57 | Simhendramadhyamam | 21 | 17 | 0 | none | high | S P (default) |
 | 58 | Hemavati | 15 | 15 | 0 | medium | high | R D S P (sourced) |
 | 59 | Dharmavati | 12 | 12 | 0 | medium | high | S P R M N (mixed) |
 | 60 | Neetimati | 0 | 0 | 0 | none | none | S P (default) |
-| 61 | Kantamani | 0 | 0 | 0 | none | none | S P (default) |
-| 62 | Rishabhapriya | 0 | 0 | 0 | none | none | S P (default) |
+| 61 | Kantamani | 10 | 10 | 0 | none | low | S P (default) |
+| 62 | Rishabhapriya | 7 | 7 | 0 | none | low | S P (default) |
 | 63 | Latangi | 16 | 16 | 0 | medium | high | G P N S (sourced) |
 | 64 | Vachaspati | 17 | 17 | 0 | medium | high | S P R G D (sourced) |
 | 65 | Mechakalyani | 24 | 24 | 0 | high | high | S R G N P (sourced) |
 | 66 | Chitrambari | 0 | 0 | 0 | none | none | S P (default) |
 | 67 | Sucharitra | 0 | 0 | 0 | none | none | S P (default) |
-| 68 | Jyotiswarupini | 0 | 0 | 0 | none | none | S P (default) |
+| 68 | Jyotiswarupini | 10 | 10 | 0 | none | low | S P (default) |
 | 69 | Dhatuvardhani | 0 | 0 | 0 | none | none | S P (default) |
-| 70 | Nasikabhushani | 0 | 0 | 0 | none | none | S P (default) |
+| 70 | Nasikabhushani | 7 | 7 | 0 | none | medium | S P (default) |
 | 71 | Kosalam | 0 | 0 | 0 | none | none | S P (default) |
-| 72 | Rasikapriya | 0 | 0 | 0 | none | none | S P (default) |
+| 72 | Rasikapriya | 8 | 8 | 0 | none | medium | S P (default) |
 | janya (28) | Mohanam | 16 | 16 | 0 | high | high | G P D S R (sourced) |
 | janya (29) | Hamsadhwani | 23 | 23 | 0 | medium | high | S R G P N (sourced) |
 | janya (20) | Hindolam | 16 | 16 | 0 | medium | high | S G M D N (sourced) |
@@ -244,8 +248,28 @@ Explicit overrides are explained in the phrase `note`: Chakravakam's Gajananayut
 | janya (22) | Abheri | 13 | 5 | 4 | low | low | S P (default) |
 | janya (22) | Sriranjani | 11 | 6 | 0 | low | medium | S M (inferred) |
 | janya (28) | Kambhoji | 13 | 13 | 2 | medium | high | G M P D S (sourced) |
+| janya (28) | Begada | 15 | 15 | 5 | none | high | S P (default) |
+| janya (28) | Sahana | 19 | 19 | 0 | none | high | S P (default) |
+| janya (22) | Sri | 11 | 11 | 0 | none | medium | S P (default) |
+| janya (22) | Darbar | 17 | 17 | 0 | none | high | S P (default) |
+| janya (22) | Nayaki | 13 | 13 | 4 | none | high | S P (default) |
+| janya (22) | Kanada | 19 | 19 | 9 | none | high | S P (default) |
+| janya (20) | Anandabhairavi | 4 | 4 | 1 | none | low | S P (default) |
+| janya (20) | Bhairavi | 13 | 13 | 0 | none | medium | S P (default) |
+| janya (20) | Mukhari | 17 | 17 | 5 | none | high | S P (default) |
+| janya (22) | Kapi | 18 | 18 | 13 | none | high | S P (default) |
+| janya (22) | Huseni | 13 | 13 | 9 | none | high | S P (default) |
+| janya (29) | Devagandhari | 13 | 13 | 7 | none | high | S P (default) |
+| janya (8) | Dhanyasi | 13 | 13 | 5 | none | high | S P (default) |
+| janya (28) | Sama | 19 | 19 | 4 | none | high | S P (default) |
 
-Ragas with phrases only at low weight (Ganamurti, Rupavati, Yagapriya, Vagadheeswari: Dikshitar-school raganga phrasing; Natabhairavi: a generic teaching page; Simhendramadhyamam: Hindustani references) should be treated as having no phrases for default generation.
+A raga with phrases only at low weight (now only Yagapriya: Dikshitar-school raganga phrasing) should be treated as having no phrases for default generation.
+
+### Added in v0.11
+
+The table above was written for the first 86 ragas and has not been redrawn. `node scripts/check-raga-profiles.js` is the authority. New: fourteen janyas from Darbar (Bhairavi from Wikipedia for its scale, and from shivkumar.org notation for its phrases); Darbar phrases for Ganamurti, Dhenuka, Ramapriya, Vakulabharanam, Natabhairavi and Simhendramadhyamam; repeated runs from shivkumar.org notation for Dheerasankarabharanam, Natakapriya, Bhavapriya, Shubhapantuvarali, Nasikabhushani and Rasikapriya, with octaves inferred. No usable phrase was found for: Tanarupi, Senavati, Kokilapriya, Gayakapriya, Suryakantam, Hatakambari, Mararanjani, Yagapriya, Ragavardhini, Gangeyabhushani, Shulini, Salagam, Jalarnavam, Jhalavarali, Navaneetam, Pavani, Raghupriya, Gavambhodi, Divyamani, Dhavalambari, Vishwambari, Shamalangi, Neetimati, Chitrambari, Sucharitra, Dhatuvardhani, Kosalam.
+
+Phrases marked `mined: "repertoire-mined"` come from `scripts/mine-repertoire-phrases.js`: runs of 4 to 8 swaras, not a plain climb or fall, that a composition sings at least twice, from lines the octave checks do not question, in a composition whose printed scale is the mela's own. They weigh 0.45, name their composition, and leave the raga's phrase confidence at `low`, so the generator leans on them less than on a lakshana's. They cover Kanakangi, Ratnangi, Vanaspati, Manavati, Rupavati, Jhankaradhwani, Varunapriya, Sarasangi, Naganandini, Vagadheeswari, Chalanata, Suvarnangi, Namanarayani, Gamanashrama, Kantamani, Rishabhapriya, Jyotiswarupini. This is thin evidence: one or two compositions a raga, repeated figures rather than a lakshana. The script touches only ragas with no phrase of weight 0.4 or more from anywhere else.
 
 ## 6. Caveats
 

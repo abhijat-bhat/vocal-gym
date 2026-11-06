@@ -673,13 +673,13 @@ export function mountThreshold(opts) {
 
   // how the device is keeping up: first a coarser picture, then the plain page
   const LEVELS = [1, .78, .6, .46];
-  let level = 0, count = 0, frames = 0, spent = 0;
+  let level = 0, count = 0, frames = 0, spent = 0, lastTick = 0;
   function governor(dt) {
     if (forced || still) return;
     frames++;
     if (frames < 6) return;                 // the first frames carry the compiling and the baking
     spent += dt; count++;
-    if (count < 40 && spent < 1.5) return;  // a second and a half, or forty frames, whichever comes first
+    if (count < 60 && spent < 2) return;    // two seconds, or sixty frames, whichever comes first
     const avg = spent / count; count = 0; spent = 0;
     if (avg > (level === LEVELS.length - 1 ? .07 : .045)) {
       if (level === LEVELS.length - 1) { fail(); return; }
@@ -692,6 +692,9 @@ export function mountThreshold(opts) {
     raf = requestAnimationFrame(loop);
     if (!ready && !linkDone()) return;
     if (!fig || !visible || !colors.floor) return;
+    // what the device is doing is read from the browser's frames, drawn or skipped: the skipping below is not lateness
+    const tick = (now - lastTick) / 1000; lastTick = now;
+    if (tick < 3) governor(tick);
     const raw = (now - last) / 1000;
     // with nothing moving, half the frames do: the flame is slow and batteries are not endless
     if (!still && !playing && !moving && !drag && raw < .03) return;
@@ -703,7 +706,6 @@ export function mountThreshold(opts) {
     draw(now);
     dirty = false;
     if (!firstDrawn) { firstDrawn = true; requestAnimationFrame(() => { if (alive) th.classList.add('has-3d'); }); }
-    if (raw < 3) governor(raw);   // longer than that, the tab was away
   }
 
   function show(n, seed, o) {

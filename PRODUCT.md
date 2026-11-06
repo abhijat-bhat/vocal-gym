@@ -40,12 +40,14 @@ What backs the claim, and what a neighbouring app could not truthfully copy:
 
 **Works today:**
 
-- Alankaras in all 35 talas and 86 ragas, kalpana swara rounds, the korvai lab, the melakarta explorer, and the jathi judge
+- Alankaras in all 35 talas and 100 ragas, kalpana swara rounds, the korvai lab, the melakarta explorer, and the jathi judge
 - Practice routines, sessions, a log and a streak, with accounts
 - A repertoire of 1,549 compositions on the tala grid, each with sahitya and sung playback with gamaka
 - Notation corrections with a log, octave checks, and geetham meanings
+- Voice Check: a daily sung probe measured on the device, kept as numbers with a short form. It collects and does not judge
+- Routines a teacher assigns by link, and a page where teachers review the raga phrases
 
-**Planned and not built, so never present these as working:** Voice Check, pitch tracking, raga conformance feedback, and the personal voice model. They are specified in `web/research-plan/index.html`.
+**Planned and not built, so never present these as working:** live pitch tracking, raga conformance feedback, a strain estimate from Voice Check, and the personal voice model. They are specified in `web/research-plan/index.html`.
 
 **Technical constraints:**
 

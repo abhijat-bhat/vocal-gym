@@ -23,7 +23,7 @@ export function initGlossary() {
       e.preventDefault();
       if (popFor === b) { close(); return; }
       const t = TERMS[b.dataset.term]; if (!t) return;
-      pop.innerHTML = '<h4>' + esc(t.name) + '</h4><p>' + esc(t.text) + '</p><a class="more" href="#/learn/' + b.dataset.term + '">More in Learn →</a>';
+      pop.innerHTML = '<h4>' + esc(t.name) + '</h4><p>' + esc(t.text) + '</p><a class="more" href="#/learn/' + b.dataset.term + '">More in Learn</a>';
       pop.hidden = false; popFor = b;
       const r = b.getBoundingClientRect(), pw = Math.min(340, window.innerWidth - 24);
       pop.style.maxWidth = pw + 'px';
@@ -53,6 +53,10 @@ export function download(name, text) {
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
+
+/* drawn arrows, in the line of the rest of the icons */
+export const ARROW = '<svg class="ar" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><path d="M2.5 7h9M7.5 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+export const BACK = '<svg class="ar" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><path d="M11.5 7h-9M6.5 3l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 /* ---------- page header ---------- */
 export function pageHead({ title, lead, steps, presets }) {
@@ -104,9 +108,9 @@ export function ragaPicker(el, ragas, value, onChange) {
   const render = () => {
     el.className = 'rpick';
     el.innerHTML = '<button type="button" class="rpick-cur" aria-expanded="' + open + '"><span><b>' + esc(cur.name) + '</b><small>' + esc(sub(cur)) + '</small></span><span class="chev">' + (open ? 'Close<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M3 7.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : 'Change<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</span></button>' +
-      (open ? '<div class="rpick-pop"><input type="search" placeholder="Search 86 ragas by name or mela number" aria-label="Search ragas"><div class="rpick-list" role="listbox"></div></div>' : '') +
+      (open ? '<div class="rpick-pop"><input type="search" placeholder="Search 100 ragas by name or mela number" aria-label="Search ragas"><div class="rpick-list" role="listbox"></div></div>' : '') +
       keysStrip(cur) +
-      '<div class="facts"><div><span class="k">' + term('arohana', 'Arohana') + '</span><span class="scale">' + cur.aro.map(s => esc(s.t)).join(' ') + '</span></div><div><span class="k">' + term('avarohana', 'Avarohana') + '</span><span class="scale">' + cur.avaro.map(s => esc(s.t)).join(' ') + '</span></div></div>';
+      '<div class="facts"><div><span class="k">' + term('arohana', 'Arohana') + '</span><span class="scale">' + (cur.krama ? cur.krama.aro.map(esc) : cur.aro.map(s => esc(s.t))).join(' ') + '</span></div><div><span class="k">' + term('avarohana', 'Avarohana') + '</span><span class="scale">' + (cur.krama ? cur.krama.avaro.map(esc) : cur.avaro.map(s => esc(s.t))).join(' ') + '</span></div></div>';
     $('.rpick-cur', el).onclick = () => { open = !open; render(); if (open) $('input', el).focus(); };
     if (open) { const inp = $('input', el); inp.oninput = () => list(inp.value); inp.onkeydown = e => { if (e.key === 'Escape') { open = false; render(); } if (e.key === 'Enter') { const f = $('.rpick-opt', el); if (f) f.click(); } }; list(''); }
   };

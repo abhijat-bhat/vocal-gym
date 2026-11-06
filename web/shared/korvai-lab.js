@@ -173,7 +173,7 @@
       const snd = audio.sound ? audio.sound() : null;
       el.innerHTML = '<div class="kl-gridbar"><button type="button" class="kl-btn primary kl-play" data-label="Play"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg>Play</button>' +
         '<button type="button" class="kl-btn kl-copy">Copy notation</button>' + (host.check && F && o.check !== false ? '<button type="button" class="kl-btn kl-check">Check it in the judge</button>' : '') +
-        (host.kalpana && F && R.layout ? '<button type="button" class="kl-btn kl-kalpana" title="The kalpana swara generator sings this exact rhythm in a raga: the same phrases, gaps and cadence">Sing it as kalpana swaras →</button>' : '') +
+        (host.kalpana && F && R.layout ? '<button type="button" class="kl-btn kl-kalpana" title="The kalpana swara generator sings this exact rhythm in a raga: the same phrases, gaps and cadence">Sing it as kalpana swaras</button>' : '') +
         '<span class="kl-gridsum">' + esc(o.summary || '') + '</span></div>' +
         (snd ? '<div class="kl-sound" role="group" aria-label="Sound">' +
           '<label>Sa <select class="kl-sa" aria-label="Sa, the pitch the drum and the phrase tones are tuned to">' + SA_NAMES.map((n, i) => '<option value="' + i + '"' + (i === snd.sa ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label>' +
@@ -255,7 +255,7 @@
         '<label class="kl-expos">Variation <input type="number" data-ex="pos" data-fk="ex:pos" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Variation number"> of ' + N.toLocaleString('en') + '</label>' +
         '<button type="button" class="kl-btn" data-ex="next" data-fk="ex:next" aria-label="Next variation"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         (N > 12 ? '<input type="range" class="kl-exjump" data-ex="jump" data-fk="ex:jump" min="1" max="' + N + '" value="' + (pos + 1) + '" aria-label="Jump to a variation">' : '') +
-        '<button type="button" class="kl-btn primary" data-ex="surprise" data-fk="ex:surprise" title="A variation drawn at the creativity setting, one you have not seen yet">🎲 Surprise me</button>' +
+        '<button type="button" class="kl-btn" data-ex="surprise" data-fk="ex:surprise" title="A variation drawn at the creativity setting, one you have not seen yet">Surprise me</button>' +
         '<label class="kl-exT">Creativity <input type="range" data-ex="T" data-fk="ex:T" min="0" max="2" step="0.1" value="' + e.T + '" aria-label="Creativity"><span class="kl-exTw">' + creativityWord(e.T) + '</span></label>' +
         '<label class="kl-exsort">Order <select data-ex="sort" data-fk="ex:sort">' + SORTS.map(([v, l]) => '<option value="' + v + '"' + (v === e.sort ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label></div>';
       const cur = '<div class="kl-excur"><div><b>' + esc(item.label) + '</b><small>' + esc(item.sub) + '</small></div><div class="kl-exmeters" title="how familiar and how unusual this variation is, among these">familiar ' + meter(item.Fn, 'f') + ' unusual ' + meter(item.Nn, 'n') + '</div>' +
@@ -332,9 +332,9 @@
     function drawLearn() {
       const i = Math.max(0, Math.min(LESSONS.length - 1, S.lesson | 0));
       view.innerHTML = '<div class="kl-learn"><nav class="kl-rail" aria-label="Lessons"><ol>' + LESSONS.map((l, k) => '<li><button type="button" data-lesson="' + k + '"' + (k === i ? ' aria-current="step"' : '') + '><span class="n">' + (k + 1) + '</span>' + esc(l.title) + '</button></li>').join('') + '</ol></nav>' +
-        '<article class="kl-lesson" aria-live="polite"><p class="kl-kicker">Lesson ' + (i + 1) + ' of ' + LESSONS.length + '</p><h3>' + esc(LESSONS[i].title) + '</h3><div class="kl-lbody"></div>' +
-        '<div class="kl-lnav"><button type="button" class="kl-btn" data-go="-1"' + (i === 0 ? ' disabled' : '') + '>← Previous</button><span class="kl-dots">' + LESSONS.map((_, k) => '<i' + (k === i ? ' class="on"' : '') + '></i>').join('') + '</span>' +
-        (i < LESSONS.length - 1 ? '<button type="button" class="kl-btn primary" data-go="1">Next: ' + esc(LESSONS[i + 1].title) + ' →</button>' : '<button type="button" class="kl-btn primary" data-build>Build your own →</button>') + '</div></article></div>';
+        '<article class="kl-lesson" aria-live="polite"><h3>' + esc(LESSONS[i].title) + '</h3><div class="kl-lbody"></div>' +
+        '<div class="kl-lnav"><button type="button" class="kl-btn" data-go="-1"' + (i === 0 ? ' disabled' : '') + '>Previous</button><span class="kl-dots">' + LESSONS.map((_, k) => '<i' + (k === i ? ' class="on"' : '') + '></i>').join('') + '</span>' +
+        (i < LESSONS.length - 1 ? '<button type="button" class="kl-btn primary" data-go="1">Next: ' + esc(LESSONS[i + 1].title) + '</button>' : '<button type="button" class="kl-btn primary" data-build>Build your own →</button>') + '</div></article></div>';
       view.querySelectorAll('[data-lesson]').forEach(b => b.addEventListener('click', () => { S.lesson = +b.dataset.lesson; save(); draw(); view.querySelector('.kl-lesson').scrollIntoView && view.querySelector('.kl-lesson').scrollIntoView({ block: 'nearest' }); }));
       view.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { S.lesson = i + Number(b.dataset.go); save(); draw(); }));
       const bb = view.querySelector('[data-build]'); if (bb) bb.addEventListener('click', () => setMode('build'));
@@ -364,7 +364,7 @@
         '<div class="kl-try"><b>Try it</b>' + stepper('P', 'Statement P', st.P, 1, 24) + stepper('G', 'Gap G', st.G, 0, 16) + '</div>' +
         '<div class="kl-big">3 × ' + st.P + ' + 2 × ' + st.G + ' = <b>' + T + '</b> pulses</div>' +
         P('With gaps it is a <i>damdar</i> tihai; with none, a <i>bedam</i> (3P = T, so T must divide by 3). To fill one cycle of ' + c.pulses + ' with P = ' + st.P + ', the gap must be G = (' + c.pulses + ' − 3 × ' + st.P + ') ÷ 2 = <b>' + ((c.pulses - 3 * st.P) / 2) + '</b>' + ((c.pulses - 3 * st.P) < 0 ? ': too long a statement.' : (c.pulses - 3 * st.P) % 2 ? ': half a pulse, because P and the cycle differ in parity (odd and even); it works only if a pulse splits in two (Unit 3 Ex. 8.4).' : '.')) +
-        (R.error ? notice(esc(R.error), 'bad') : notice(land === 0 ? 'Started on sam, it fills ' + plural(cycles, 'cycle') + ' exactly: the closing “tha” lands on sam. ✓' : 'Started on sam, it ends ' + esc(where(c, land)) + ', so it does not land on sam. To land, it would have to start ' + plural(-land, 'pulse') + ' later: that is lesson 3.', land === 0 ? 'ok' : 'warn') + '<div class="kl-gb"></div>');
+        (R.error ? notice(esc(R.error), 'bad') : notice(land === 0 ? 'Started on sam, it fills ' + plural(cycles, 'cycle') + ' exactly: the closing “tha” lands on sam.' : 'Started on sam, it ends ' + esc(where(c, land)) + ', so it does not land on sam. To land, it would have to start ' + plural(-land, 'pulse') + ' later: that is lesson 3.', land === 0 ? 'ok' : 'warn') + '<div class="kl-gb"></div>');
       wireSteppers(el, { P: { min: 1, max: 24, get: () => st.P, set: v => { st.P = v; save(); draw(); } }, G: { min: 0, max: 16, get: () => st.G, set: v => { st.G = v; save(); draw(); } } });
       if (!R.error) gridBlock(el.querySelector('.kl-gb'), c, R, F, { summary: 'from sam', check: false });
     }
@@ -504,7 +504,7 @@
       lens.forEach((l, k) => { parts.push({ role: 'purvanga', syl: fam[k], part: k, label: 'phrase ' + (k + 1) + ': ' + l }); if (gap) parts.push({ role: 'pgap', syl: new Array(gap).fill(','), part: k, label: 'karvai' }); });
       return { F, R: { layout: K.layoutParts(F, parts) }, S, land, cycles };
     }
-    const endsText = (c, p) => p.land === 0 ? 'From sam it fills ' + plural(p.cycles, 'cycle') + ' exactly: the closing “tha” lands on sam. ✓' : 'From sam it ends ' + where(c, p.land) + ', not on sam.';
+    const endsText = (c, p) => p.land === 0 ? 'From sam it fills ' + plural(p.cycles, 'cycle') + ' exactly: the closing “tha” lands on sam.' : 'From sam it ends ' + where(c, p.land) + ', not on sam.';
     const termsHTML = t => '<div class="kl-terms">' + barsHTML(t, 'tall') + '<code>' + esc(t.join(' · ')) + '</code></div>';
 
     function lessonDrift(el, c) {
@@ -653,7 +653,7 @@
       let R = null, G = null;
       if (E2.ok && E2.m <= 8) { G = frame({ cycles: E2.m, land: st.ek }); const o = G.ok ? K.statementOptions(G, { limit: 1 })[0] : null; if (o) R = K.statementKorvai(G, { terms: o.terms, pattern: o }); }
       el.innerHTML = head + '<div class="kl-try"><b>The song starts</b>' + stepper('ae', 'Eduppu k', st.ek, -(C - 1), C - 1, esc(st.ek === 0 ? 'on sam' : where(c, st.ek))) + '</div>' +
-        '<div class="kl-chartwrap"><table class="kl-chart kl-plain"><thead><tr><th>m</th><th>' + C + 'm ' + (st.ek < 0 ? '−' : '+') + ' ' + Math.abs(st.ek) + '</th><th>mod 3</th></tr></thead><tbody>' + E2.table.slice(0, 6).map(r => '<tr' + (E2.ok && r.m === E2.m ? ' class="on"' : '') + '><td>' + r.m + '</td><td>' + r.value + '</td><td>' + r.rem + (r.rem === 0 && r.value > 0 ? ' ✓' : '') + '</td></tr>').join('') + '</tbody></table></div>' +
+        '<div class="kl-chartwrap"><table class="kl-chart kl-plain"><thead><tr><th>m</th><th>' + C + 'm ' + (st.ek < 0 ? '−' : '+') + ' ' + Math.abs(st.ek) + '</th><th>mod 3</th></tr></thead><tbody>' + E2.table.slice(0, 6).map(r => '<tr' + (E2.ok && r.m === E2.m ? ' class="on"' : '') + '><td>' + r.m + '</td><td>' + r.value + '</td><td>' + r.rem + (r.rem === 0 && r.value > 0 ? ' <svg class="kl-tick" viewBox="0 0 14 14" width="12" height="12" aria-label="exact"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</td></tr>').join('') + '</tbody></table></div>' +
         notice(esc(E2.text), E2.ok ? 'ok' : 'warn') +
         (R ? '<p class="kl-solhead"><b>The korvai:</b> three equal statements of ' + E2.third + ', ending on the eduppu.</p>' + stepsHTML(R.steps.filter(x => ['statement', 'purvanga', 'uttaranga'].includes(x.id))) + '<div class="kl-gb"></div>' + checksHTML(R) : E2.ok ? notice('The span needs ' + plural(E2.m, 'cycle') + '; the lab draws up to 8.', 'warn') : '');
       wireSteppers(el, { ae: { min: -(C - 1), max: C - 1, get: () => st.ek, set: v => { st.ek = v; save(); draw(); } } });

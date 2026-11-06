@@ -448,6 +448,44 @@ try {
     await until('document.querySelector(".rp-line .rp-sw i") && /Sri Gananatha/.test(document.querySelector(".rp-head h1").textContent)', 'the gathered post, leading to its first lesson', 10000);
   });
 
+  console.log('voice check, phrase review, a routine assigned');
+  await step('Voice Check: no recording without consent, then the whole probe on a test signal, and the numbers kept', async () => {
+    await js('await fetch("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "phase_one", displayName: "Phase One", password: "sa ri ga ma pa 1" }), credentials: "include" }); localStorage.setItem("vg-vc-fast", "0.4"); location.reload();');
+    await sleep(1500);
+    await go('#/voice'); await until('document.getElementById("vc-start")', 'the consent', 10000);
+    await js('document.getElementById("vc-start").click();');
+    await until('/Tick the box/.test(document.getElementById("vc-err").textContent)', 'consent is asked for');
+    await js('const ac = new AudioContext(); await ac.resume(); const dest = ac.createMediaStreamDestination(), o = ac.createOscillator(), g = ac.createGain(); g.gain.value = 0.25; o.type = "sawtooth"; o.frequency.value = 220; o.connect(g).connect(dest); o.start(); navigator.mediaDevices.getUserMedia = async () => dest.stream; document.getElementById("vc-agree").checked = true; document.getElementById("vc-start").click();');
+    await until('document.getElementById("vc-title")', 'the first step', 10000);
+    await until('document.getElementById("vc-form")', 'the short form', 70000);
+    await js('document.querySelector("[data-q=tired][data-v=\'1\']").click(); document.getElementById("vc-pain").checked = true; document.getElementById("vc-form").requestSubmit();');
+    await until('document.querySelector(".vc-today") && document.querySelector(".vc-refer")', 'the numbers, and the referral', 15000);
+    await js('localStorage.removeItem("vg-vc-fast");');
+  });
+  await step('phrase review: hear a phrase, give a verdict, and a suggestion is read as the file reads it', async () => {
+    await go('#/review/begada'); await until('document.querySelector(".rv-ph")', 'the phrases', 15000);
+    await js('document.querySelector(".rv-ph [data-v=right]").click();');
+    await until('document.querySelector(".rv-ph [data-v=right][aria-pressed=true]")', 'the verdict kept');
+    await js('document.getElementById("rv-sw").value = "S X"; document.getElementById("rv-sug").requestSubmit();');
+    await until('/is not a swara/.test(document.getElementById("rv-se").textContent)', 'the mistake named');
+    await js('document.getElementById("rv-sw").value = "S G R G M"; document.getElementById("rv-sug").requestSubmit();');
+    await until('document.querySelector(".rv-mine")', 'the suggestion kept', 10000);
+  });
+  await step('a teacher assigns a routine by link, and a student adds their own copy', async () => {
+    const id = await js('const r = await fetch("/api/practice/routines/save", { method: "POST", headers: { "content-type": "application/json" }, credentials: "include", body: JSON.stringify({ name: "Week one", items: [{ kind: "alankara", title: "Sheet alankaras", minutes: 10 }] }) }); return (await r.json()).routine.id;');
+    await go('#/practice'); await until('document.querySelector("[data-assign=\'' + id + '\']")', 'Assign to students', 10000);
+    await js('document.querySelector("[data-assign=\'' + id + '\']").click();');
+    await until('document.querySelector(".pr-assign input")', 'the link');
+    const link = await js('return document.querySelector(".pr-assign input").value;'), code = link.split('/').pop();
+    await js('await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); await fetch("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "phase_student", displayName: "Student", password: "sa ri ga ma pa 1" }), credentials: "include" }); location.hash = "#/practice/take/' + code + '"; location.reload();');
+    await sleep(1500);
+    await until('document.getElementById("pr-take") && /Phase One/.test(document.getElementById("main").textContent)', 'the routine and who sent it', 15000);
+    await js('document.getElementById("pr-take").click();');
+    await until('location.hash === "#/practice" && /Week one, from Phase One/.test(document.getElementById("main").textContent)', 'their own copy', 15000);
+    await js('await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); location.hash = "#/"; location.reload();');
+    await sleep(1500);
+  });
+
   console.log('learn');
   await step('deep link to a term', async () => { await go('#/learn/teermanam'); await until('document.getElementById("t-teermanam")', 'the teermanam entry'); });
 

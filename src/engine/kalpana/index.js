@@ -13,7 +13,8 @@ import { planPhrases, focusPlan, expectedPos, focalCandidates } from './phrases.
    opts.eduppuPitch      the swara the composition resumes on (not part of the round). The round ends
                          on lo(e) or hi(e), so the step into the eduppu is legal. Wins over targetPitch.
    opts.targetPitch      deprecated: the last swara of the round itself (v0.2 meaning).
-   opts.allowExceptions  also offer the profile's documented direction-rule exceptions, whole.
+   opts.allowExceptions  also offer the profile's documented direction-rule exceptions, whole. 'documented' (v0.11) offers only
+                         the well-sourced ones (weight 0.4 and up): this is how an anya swara enters, inside its own phrase.
    opts.moraStyle        'auto' (default: shift, gopuccha, srotovaha, expand or contract by score), or one of them, or 'identical'.
    opts.ending           'auto', 'mora', 'free', or 'korvai' (v0.4: three descending units, each a run with
                          shrinking rests and a mora; falls back to a mora, then a free ending, when it does not fit).
@@ -154,7 +155,7 @@ function build(raga, o, level, planned) {
     return !!loose && s <= 7 && s !== 6;
   };
 
-  const tables = cachedTables(raga, profile, level + (D.T >= 1 ? 'i' : '') + (o.allowExceptions ? 'x' : ''), makeTables);
+  const tables = cachedTables(raga, profile, level + (D.T >= 1 ? 'i' : '') + (o.allowExceptions === 'documented' ? 'd' : o.allowExceptions ? 'x' : ''), makeTables);
   const { app, appS, phr, G, gen, genS, moraCache, idiom, idiomKey } = tables;
   // familiarity of one move under the raga's idiom: unattested leaps cost the most
   // and, in every raga, a cost for size: 0.15 per semitone a leap spans beyond a major third (the octave excepted)
@@ -190,7 +191,7 @@ function build(raga, o, level, planned) {
   const app = cellRows(false), appS = cellRows(true);
 
   // anchored phrase devices: fixed notes, so only the entry depends on the current swara
-  const phr = phraseDevices(profile || { phrases: [] }, notes, Pj.valid, { inversions: D.T >= 1, exceptions: !!o.allowExceptions });
+  const phr = phraseDevices(profile || { phrases: [] }, notes, Pj.valid, { inversions: D.T >= 1, exceptions: o.allowExceptions === 'documented' ? 'documented' : !!o.allowExceptions });
   const anch = [];
   phr.forEach(dv => {
     const js = dv.pitches.map(pos), n = js.length;

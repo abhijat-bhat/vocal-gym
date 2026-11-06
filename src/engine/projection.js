@@ -1,5 +1,7 @@
 /* Vocal Gym engine · raga direction rules and contour-preserving projection
    valid(a, b): a step up must land on an arohana swara, a step down on an avarohana swara.
+   v0.11: for a vakra or bhashanga raga, also its krama, its denied moves and its one-way variants (ragas.js). This is the one
+   place the rule lives, so the feasibility tables of every generator carry it.
    repair(): the closest legal line to a naive mapping, found by dynamic programming. */
 
 const mod12 = p => ((p % 12) + 12) % 12;
@@ -9,7 +11,20 @@ function makeProjector(raga) {
   const unionPC = Array.from(new Set(aro.concat(av).map(mod12))).sort((a, b) => a - b);
   const aroExt = i => aro[((i % nA) + nA) % nA] + 12 * Math.floor(i / nA);
   const avExt = i => av[((i % nD) + nD) % nD] - 12 * Math.floor(i / nD);
-  const valid = (a, b) => b > a ? aroPC.has(mod12(b)) : b < a ? avPC.has(mod12(b)) : true;
+  const moveKey = (a, b) => mod12(a) * 24 + mod12(b) * 2 + (b > a ? 1 : 0);
+  const walked = new Set(), denied = new Set();
+  if (raga.krama) [raga.krama.aro, raga.krama.avaro].forEach(l => { for (let i = 1; i < l.length; i++) if (l[i] !== l[i - 1]) walked.add(moveKey(l[i - 1], l[i])); });
+  (raga.deny || []).forEach(([a, b]) => denied.add(moveKey(a, b)));
+  const graded = walked.size > 0 || denied.size > 0 || !!raga.oneWay;
+  const direct = (a, b) => b > a ? aroPC.has(mod12(b)) : b < a ? avPC.has(mod12(b)) : true;
+  const valid = !graded ? direct : (a, b) => {
+    if (b === a) return true;
+    const k = moveKey(a, b);
+    if (walked.has(k)) return true;
+    if (denied.has(k)) return false;
+    if (raga.oneWay) { const pc = mod12(a); if (b > a ? !aroPC.has(pc) : !avPC.has(pc)) return false; }
+    return direct(a, b);
+  };
   function candidates(lo, hi) {
     const out = [];
     for (let o = Math.floor(lo / 12) - 1; o <= Math.floor(hi / 12) + 1; o++)

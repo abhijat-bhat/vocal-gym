@@ -9,12 +9,13 @@ import { liveKolam, kolamSvg, bleedKolam, dayDots, daySeed } from '../kolam-view
 import { getUser, refreshUser, userKnown, onUser, getRun, startRun, localDate, routeOf, KIND } from '../session.js';
 
 const ROOMS = [
-  ['#/alankara', 'Alankaras', 'The classic patterns in all 35 talas and 86 ragas, starting from the traditional sheet.'],
+  ['#/alankara', 'Alankaras', 'The classic patterns in all 35 talas and 100 ragas, starting from the traditional sheet.'],
   ['#/kalpana', 'Kalpana swaras', 'Model improvised rounds that fit the beat and land where you choose, from recognisable to adventurous.'],
   ['#/repertoire', 'Repertoire', 'Over 1,500 compositions on the tala grid, each sung with its gamaka. Correct a line, and your copy keeps it.'],
   ['#/korvai', 'Korvai lab', 'How moras, tihais and korvais are counted to land, in fifteen short lessons, then a builder.'],
   ['#/melakarta', 'Melakartas', 'The 72 parent ragas as a system, and how the katapayadi rule hides the number in the name.'],
-  ['#/judge', 'Jathi judge', 'Write a jathi and have its arithmetic checked exactly, with the fix for any line that fails.']
+  ['#/judge', 'Jathi judge', 'Write a jathi and have its arithmetic checked exactly, with the fix for any line that fails.'],
+  ['#/voice', 'Voice Check', 'A daily 90-second record of your voice, measured on your device, so you can compare yourself with yourself.']
 ];
 const minutes = r => r.items.reduce((s, it) => s + it.minutes, 0);
 
@@ -35,14 +36,14 @@ export async function mount(root) {
     '<section class="rooms"><h2>The rooms</h2><div class="reg">' + ROOMS.map(([href, name, text]) => '<a class="reg-row" href="' + href + '"><b>' + esc(name) + '</b><span>' + esc(text) + '</span></a>').join('') + '</div></section>' +
 
     '<section class="truth"><div><h2>Working today</h2><ul>' +
-      '<li>Every generated exercise keeps the raga’s direction rules and fills its tala exactly. Phrase grammar and gamaka are not checked yet.</li>' +
-      '<li>86 ragas: all 72 melakartas and 14 janyas. 35 talas, and the chapu talas in the jathi tools.</li>' +
+      '<li>Every generated exercise keeps the raga’s direction rules, including the zig-zags of vakra ragas, and fills its tala exactly. An anya swara enters only inside a sourced phrase. Gamaka is not checked yet.</li>' +
+      '<li>100 ragas: all 72 melakartas and 28 janyas. 35 talas, and the chapu talas in the jathi tools.</li>' +
       '<li>New patterns avoid what you have already seen on this visit.</li>' +
-      '<li>Routines with timers, a session log, a daily goal and a streak.</li>' +
+      '<li>Routines with timers, a session log, a daily goal and a streak.</li><li>Voice Check: a daily sung probe, measured on your device, with your numbers kept to compare with yourself.</li>' +
       '<li>Install it as an app. The repertoire and your log work offline; new exercises need a connection.</li>' +
     '</ul></div><div><h2>Not built yet</h2><ul>' +
-      '<li>Listening to your voice through the microphone.</li><li>Pitch tracking, and spotting where you leave the raga.</li><li>A daily voice check and a personal warm-up plan.</li><li>A kalpana tutor that responds to what you sing.</li>' +
-    '</ul><p>Today, Vocal Gym plays to you; it does not listen.</p></div></section></div>';
+      '<li>Listening while you practise: pitch tracking, and spotting where you leave the raga.</li><li>Reading your Voice Check history: a strain estimate and a personal warm-up plan.</li><li>A kalpana tutor that responds to what you sing.</li>' +
+    '</ul><p>Today, Vocal Gym plays to you. Voice Check keeps a daily record of your voice, but nothing judges it yet.</p></div></section></div>';
 
   const stage = $('#th-kolam', root), th = $('.th', root);
   // the floor in three dimensions, over the drawn figure, which stays beneath for anyone it cannot reach

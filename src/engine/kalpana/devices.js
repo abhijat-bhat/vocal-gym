@@ -109,6 +109,7 @@ function phraseDevices(profile, notes, valid, opts) {
   });
   // documented direction-rule exceptions: whole phrases only, checked at entry and exit only (plan 2.6)
   if (o.exceptions) (profile.exceptions || []).forEach(ph => {
+    if (o.exceptions === 'documented' && ph.weight < 0.4) return;
     const first = ph.pitches[0], last = ph.pitches[ph.pitches.length - 1];
     if (!ix.has(first) || !ix.has(last) || !ph.pitches.every(p => p >= notes[0] && p <= notes[notes.length - 1])) return;
     const whole = 2.0 * ph.weight * (TYPE_FACTOR[ph.type] || 0.6) * conf;

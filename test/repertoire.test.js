@@ -28,7 +28,7 @@ test('ragas from printed scales: engine twins, and the variant by direction', ()
   assert.equal(kalyani.id, 'mela65');   // so the raga's sourced gamaka applies
   // Bhairavi: D2 going up, D1 coming down
   const bhairavi = E.ragaOf({ name: 'Bhairavi', aro: ['S', 'R2', 'G2', 'M1', 'P', 'D2', 'N2', "S'"], avaro: ["S'", 'N2', 'D1', 'P', 'M1', 'G2', 'R2', 'S'] });
-  assert.equal(bhairavi.twin, null);
+  assert.equal(bhairavi.twin, 'bhairavi');
   assert.deepEqual(E.linePitches(bhairavi, ["P D N S'"]).map(n => n.p), [7, 9, 10, 12]);
   assert.deepEqual(E.linePitches(bhairavi, ["S' N D P"]).map(n => n.p), [12, 10, 8, 7]);
   // a karvai lengthens the swara before it; at the start of a line it is a rest
