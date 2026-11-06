@@ -3,7 +3,8 @@
    install). The file is var/vocal-gym.db, or VG_DB to put it elsewhere (VG_DB=:memory: keeps nothing).
    It opens on first use, so the rest of the server runs on older Node versions with accounts unavailable.
    Tables: users, sessions (login tokens, stored hashed), routines (a user's practice routines) and logs
-   (finished practice sessions). Foreign keys cascade, so deleting a user deletes everything of theirs. */
+   (finished practice sessions); v0.9.1: notation_edits (a singer's corrections to the repertoire, server/edits.js).
+   Foreign keys cascade, so deleting a user deletes everything of theirs. */
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,6 +55,23 @@ CREATE TABLE IF NOT EXISTS logs (
   UNIQUE (user_id, client_id)
 );
 CREATE INDEX IF NOT EXISTS logs_user_date ON logs(user_id, local_date);
+CREATE TABLE IF NOT EXISTS notation_edits (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  comp TEXT NOT NULL,
+  line_key TEXT NOT NULL,
+  action TEXT NOT NULL,
+  section INTEGER NOT NULL,
+  line INTEGER,
+  anchor TEXT,
+  base TEXT,
+  before TEXT,
+  after TEXT,
+  note TEXT NOT NULL DEFAULT '',
+  revert_of INTEGER,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS notation_edits_comp ON notation_edits(user_id, comp, line_key, id);
 INSERT OR IGNORE INTO meta (key, value) VALUES ('schema', '1');
 `;
 

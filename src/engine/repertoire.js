@@ -57,6 +57,72 @@ export function parseCell(text) {
 export const cellUnits = text => parseCell(text).reduce((a, t) => a + t.d, 0);
 export const lineUnits = cells => (cells || []).reduce((a, c) => a + cellUnits(c), 0);
 
+/* ---------- sustains as a singer writes them (v0.9.2) ----------
+   The stored text has one comma a unit. On the page, , holds for one unit and ; for two: P , , , is written P, ; .
+   In a stretch of karvais an odd one comes first, and the first mark stands against its swara. */
+const sustainMarks = n => (n % 2 ? [','] : []).concat(Array.from({ length: Math.floor(n / 2) }, () => ';'));
+/* a cell's compact text with its sustains so: "P , , , [S , , R]" → "P, ; [S; R]". cleanCell reads it back. */
+export function sustainText(cell) {
+  const toks = String(cell || '').match(/\[|\]|,|[^\s[\],]+/g) || [];
+  let out = '', i = 0;
+  const put = (t, tight) => { out += !out || out.endsWith('[') || tight || t === ']' ? t : ' ' + t; };
+  while (i < toks.length) {
+    if (toks[i] !== ',') { put(toks[i]); i++; continue; }
+    let n = 0;
+    while (toks[i + n] === ',') n++;
+    const before = toks[i - 1];
+    sustainMarks(n).forEach((m, k) => put(m, k === 0 && before && before !== '[' && before !== ']'));
+    i += n;
+  }
+  return out;
+}
+/* the columns of a cell on the grid: toks from parseCell, start its unit, breakAt(unit) true where a new column must
+   begin (a beat line, or a syllable). → [{ from, units, fast, parts: [{ toks: [indices], text? }] }]. A part is what
+   lights as one: a swara (text is left to the page, which draws it), or a sustain mark, whose toks are the commas it
+   stands for. A ; never crosses a break, so it never hides a beat line or a syllable. */
+export function sustainLayout(toks, start, breakAt) {
+  const cols = [], cut = breakAt || (() => false);
+  let k = 0, u = start || 0;
+  while (k < toks.length) {
+    const t = toks[k];
+    if (t.d < 1 - 1e-9) {
+      // a group sharing its unit: its karvais pair up inside it
+      const group = [];
+      let d = 0;
+      do { group.push(k); d += toks[k].d; k++; } while (k < toks.length && d < 1 - 1e-9);
+      const parts = [];
+      for (let g = 0; g < group.length;) {
+        if (toks[group[g]].s !== ',') { parts.push({ toks: [group[g]] }); g++; continue; }
+        let n = 0;
+        while (g + n < group.length && toks[group[g + n]].s === ',') n++;
+        let at = g;
+        sustainMarks(n).forEach(m => { const w = m === ';' ? 2 : 1; parts.push({ toks: group.slice(at, at + w), text: m }); at += w; });
+        g += n;
+      }
+      cols.push({ from: u, units: d, fast: group.length, parts });
+      u += d;
+      continue;
+    }
+    if (t.s !== ',') { cols.push({ from: u, units: t.d, fast: 1, parts: [{ toks: [k] }] }); u += t.d; k++; continue; }
+    // a stretch of karvais, cut at each break
+    let first = true;
+    while (k < toks.length && toks[k].s === ',' && toks[k].d >= 1 - 1e-9) {
+      let n = 1;
+      while (k + n < toks.length && toks[k + n].s === ',' && toks[k + n].d >= 1 - 1e-9 && !cut(u + n * toks[k].d)) n++;
+      const last = cols[cols.length - 1];
+      let attach = first && !cut(u) && last && last.fast === 1 && last.parts.length === 1 && toks[last.parts[0].toks[0]].s !== ',';
+      sustainMarks(n).forEach(m => {
+        const w = m === ';' ? 2 : 1, part = { toks: Array.from({ length: w }, (_, x) => k + x), text: m }, units = w * toks[k].d;
+        if (attach) { last.parts.push(part); last.units += units; attach = false; }
+        else cols.push({ from: u, units, fast: 1, parts: [part] });
+        u += units; k += w;
+      });
+      first = false;
+    }
+  }
+  return cols;
+}
+
 /* ---------- ragas from the printed scale ---------- */
 const tokenPitch = t => {   // "R2", "S'", "N3." → semitones from Sa
   const m = /^([SRGMPDN])([1-3]?)('*)(\.*)$/.exec(t);
@@ -241,6 +307,32 @@ export function rowFits(tl, upb, cellsUnits) {
   }
   return a % lens.length === 0;
 }
+/* How far a line is from filling whole cycles: null if it fills them (or there is no tala), else
+   { units, cycle, over, short, cell }. One of over and short is set, whichever is nearer (a line under one cycle
+   is always short). cell: the index of the first cell that ends off an anga line, the likely place of a slip, or
+   null if every cell ends on one. A line of 12+13+12+12 in cycles of 12 is 1 over, at cell 1. */
+export function cycleGap(cells, tl, upb) {
+  if (!tl) return null;
+  const us = (cells || []).map(cellUnits), units = us.reduce((a, b) => a + b, 0), cycle = tl.total * upb;
+  const m = ((units % cycle) + cycle) % cycle;
+  if (!units || Math.min(m, cycle - m) < 1e-9) return null;
+  const lens = tl.angas.map(g => g.len);
+  let a = 0, acc = 0, cell = null;
+  us.forEach((w, i) => {
+    let need = w;
+    while (need > 1e-9) { const g = lens[a % lens.length] * upb - acc; if (need + 1e-9 >= g) { need -= g; acc = 0; a++; } else { acc += need; need = 0; } }
+    if (cell === null && acc > 1e-9) cell = i;
+  });
+  const over = units >= cycle && m <= cycle / 2;
+  return { units, cycle, over: over ? m : 0, short: over ? 0 : cycle - m, cell };
+}
+/* the same for line i of a section, null for the lines that are short or long on purpose: a link, a lead-in, a
+   line with an overlap cell, and both rows of a line split in two */
+export function offCycle(lines, i, tl, upb) {
+  const l = lines[i], next = lines[i + 1];
+  if (!l || l.link || l.at || l.tail || l.join || (next && next.join)) return null;
+  return cycleGap(l.cells, tl, upb);
+}
 export const UNITS_PER_BEAT = [1, 2, 3, 4, 6, 8, 12, 16];
 /* units per beat for a set of rows: the largest that makes the most rows fit (rowFits); the count with it */
 export function unitsPerBeat(tl, rows) {
@@ -256,4 +348,162 @@ export function bestUnits(tl, rows) {
   return { upb, n: Math.max(0, n) };
 }
 
-export const REPERTOIRE_NOTE = 'Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.';
+/* ---------- a singer's corrections (v0.9.1) ----------
+   A singer can correct the notation for their own account. The imported files never change: the corrections are
+   a log of changes (server/edits.js), and applyEdits lays them over a composition when it is read, so they
+   outlast a re-import. A line is named by a key: b:<section>:<line> for a line of the import, n:<id> for one
+   the singer added. */
+const MARK_LOW = /[‘`“]/, MARK_UP = /[’'”]/;
+/* a cell as typed, in the compact text or the site's own marks (S’ ‘N ; and lower case) →
+   { text: the compact text, units, errors: [what is wrong, in words] } */
+export function cleanCell(typed) {
+  const s = String(typed == null ? '' : typed), errors = [];
+  let text = '', depth = 0, units = 0, k = 0, low = 0;
+  const sep = () => (text && !text.endsWith('[') ? ' ' : '');
+  const put = t => { text += sep() + t; };
+  while (k < s.length) {
+    const c = s[k];
+    if (/\s/.test(c)) { k++; continue; }
+    if (c === '[') { if (++depth > 2) errors.push('Groups go no deeper than [[ ]] (four times the speed).'); text += sep() + '['; k++; continue; }
+    if (c === ']') {
+      if (!depth) errors.push('A ] with no [ before it.');
+      else { if (text.endsWith('[')) errors.push('An empty [ ] group.'); depth--; text += ']'; }
+      k++; continue;
+    }
+    if (c === ',' || c === ';') {
+      if (low) { errors.push('A lower-octave mark needs a swara after it, not a karvai.'); low = 0; }
+      for (let n = c === ';' ? 2 : 1; n > 0; n--) { put(','); units += 1 / 2 ** Math.min(depth, 2); }
+      k++; continue;
+    }
+    if (MARK_LOW.test(c)) { low++; k++; continue; }
+    const L = c.toUpperCase();
+    if (LETTERS.includes(L)) {
+      let v = '', up = 0, down = low;
+      k++;
+      if (/[1-3]/.test(s[k] || '')) v = s[k++];
+      while (MARK_UP.test(s[k] || '')) { up++; k++; }
+      while (s[k] === '.') { down++; k++; }
+      if (up && down) errors.push(L + ' cannot be in both the upper and the lower octave.');
+      put(L + v + "'".repeat(up) + '.'.repeat(up ? 0 : down));
+      units += 1 / 2 ** Math.min(depth, 2);
+      low = 0;
+      continue;
+    }
+    errors.push('“' + c + '” is not part of the notation.');
+    k++;
+  }
+  if (low) errors.push('A lower-octave mark needs a swara after it.');
+  if (depth) errors.push('A [ with no ] after it.');
+  return { text, units, errors: Array.from(new Set(errors)) };
+}
+export const lineText = cells => (cells || []).join(' | ');
+/* a line as sent or typed → { line: { cells, syl, label }, units, errors }; empty cells are dropped */
+export function cleanLine(raw) {
+  const r = raw && typeof raw === 'object' ? raw : {}, errors = [];
+  if (!Array.isArray(r.cells)) return { line: null, units: 0, errors: ['A line needs its swaras.'] };
+  if (r.cells.length > 32) errors.push('A line has at most 32 cells.');
+  const cells = [];
+  let units = 0;
+  r.cells.forEach((typed, i) => {
+    if (typed != null && typeof typed !== 'string') { errors.push('Cell ' + (i + 1) + ' must be text.'); return; }
+    if (String(typed || '').length > 800) { errors.push('Cell ' + (i + 1) + ' is too long.'); return; }
+    const c = cleanCell(typed);
+    c.errors.forEach(e => errors.push('Cell ' + (i + 1) + ': ' + e));
+    if (c.text) { cells.push(c.text); units += c.units; }
+  });
+  if (!cells.length && !errors.length) errors.push('A line needs at least one swara or karvai.');
+  const label = typeof r.label === 'string' ? r.label.trim() : '';
+  if (label.length > 80) errors.push('The label is too long.');
+  const syl = [];
+  if (r.syl != null && !Array.isArray(r.syl)) errors.push('The sahitya is not valid.');
+  (Array.isArray(r.syl) ? r.syl : []).slice(0, 2000).forEach(x => {
+    const u = Array.isArray(x) ? x[0] : null, t = Array.isArray(x) && typeof x[1] === 'string' ? x[1].trim() : '';
+    if (!t) return;
+    if (!(typeof u === 'number' && u >= 0 && u <= units + 1e-9)) errors.push('The syllable “' + t.slice(0, 20) + '” falls outside the line.');
+    else if (t.length > 60) errors.push('The syllable “' + t.slice(0, 20) + '…” is too long.');
+    else syl.push([u, t]);
+  });
+  return { line: { cells, syl: syl.map((x, i) => [x, i]).sort((a, b) => a[0][0] - b[0][0] || a[1] - b[1]).map(x => x[0]), label }, units, errors: Array.from(new Set(errors)) };
+}
+export const sameLine = (a, b) => !!a && !!b && lineText(a.cells) === lineText(b.cells) && JSON.stringify(a.syl || []) === JSON.stringify(b.syl || []) && (a.label || '') === (b.label || '');
+const unitsOfLine = l => (l.cells || []).reduce((n, c) => n + cellUnits(c), 0);
+
+/* comp, edits (the log of one singer for this composition, oldest first: { id, key, section, anchor, base, after })
+   → { comp: a copy with the edits applied, lost: [the latest entry of each edit whose line is gone] }.
+   Each line gets its key; a changed or added line gets edited: <the log id>. A line of the import is looked for
+   where it was, then by its text anywhere in the piece (a re-import can move it); an edit whose line has gone
+   is reported, not guessed at. An edited line keeps its place in the time of the piece while its length stays
+   the same; otherwise it is laid out as a line of its own. */
+export function applyEdits(comp, edits) {
+  const last = new Map();
+  (edits || []).forEach(e => { last.set(e.key, e); });
+  const secs = comp.sections.map((s, si) => Object.assign({}, s, { lines: s.lines.map((l, li) => Object.assign({ key: 'b:' + si + ':' + li }, l)) }));
+  const tl = comp.tala ? talaOf(comp.tala.name) : null;
+  const cycleOf = s => tl ? tl.tala.total * (s.unitsPerBeat || comp.tala.unitsPerBeat || 1) : 0;
+  const lost = [], at = new Map();   // a line of the import → the entry that changes it
+  const baseEntries = Array.from(last.values()).filter(e => e.key.startsWith('b:'));
+  const placeOf = key => { const m = /^b:(\d+):(\d+)$/.exec(key); return m ? (secs[+m[1]] || { lines: [] }).lines[+m[2]] : null; };
+  // where each edit was made, if that line still reads the same; then the nearest line with its text
+  const later = baseEntries.filter(e => {
+    const l = placeOf(e.key);
+    if (l && lineText(l.cells) === e.base) { at.set(l, e); return false; }
+    return true;
+  });
+  const near = (text, si, li, free) => {
+    let best = null, gap = Infinity;
+    secs.forEach((s, i) => s.lines.forEach((l, j) => {
+      if (lineText(l.cells) !== text || !free(l)) return;
+      const d = Math.abs(i - si) * 1000 + Math.abs(j - li);
+      if (d < gap) { gap = d; best = l; }
+    }));
+    return best;
+  };
+  later.forEach(e => {
+    const m = /^b:(\d+):(\d+)$/.exec(e.key), l = near(e.base, +m[1], +m[2], x => !at.has(x));
+    if (l) at.set(l, e); else lost.push(e);
+  });
+  // added lines, under the line they follow ('s': the start of their section)
+  const under = new Map();
+  const put = (anchor, e) => { if (!under.has(anchor)) under.set(anchor, []); under.get(anchor).push(e); };
+  Array.from(last.values()).filter(e => e.key.startsWith('n:')).forEach(e => {
+    if (!secs[e.section]) { if (e.after) lost.push(e); return; }
+    let anchor = e.anchor === 's' ? 's:' + e.section : e.anchor;
+    if (anchor.startsWith('b:')) {
+      const l = placeOf(anchor), m = /^b:(\d+):(\d+)$/.exec(anchor);
+      if (!(l && lineText(l.cells) === e.base)) { const x = e.base ? near(e.base, +m[1], +m[2], () => true) : null; anchor = x ? x.key : 'end:' + e.section; }
+    }
+    put(anchor, e);
+  });
+  const retime = (line, base, s) => {
+    const out = Object.assign({}, base || {}, line), cyc = cycleOf(s), u = unitsOfLine(out);
+    delete out.fixed;
+    if (base && Math.abs(unitsOfLine(base) - u) < 1e-9) return out;
+    ['at', 'join', 'tail', 'link'].forEach(k => { delete out[k]; });
+    if (cyc && u < cyc && Math.abs(u / cyc - Math.round(u / cyc)) > 1e-9) out.link = true;
+    return out;
+  };
+  const content = a => ({ cells: a.cells, syl: a.syl && a.syl.length ? a.syl : undefined, label: a.label || undefined });
+  const sections = secs.map((s, si) => {
+    const out = [], seen = new Set();
+    const walk = anchor => {
+      if (seen.has(anchor)) return;
+      seen.add(anchor);
+      (under.get(anchor) || []).forEach(e => { if (e.after) out.push(Object.assign(retime(content(e.after), null, s), { key: e.key, edited: e.id })); walk(e.key); });
+    };
+    walk('s:' + si);
+    s.lines.forEach(l => {
+      const e = at.get(l);
+      if (!e) out.push(l);
+      else if (e.after) {
+        const same = sameLine(e.after, l);
+        out.push(same ? Object.assign({}, l, { key: e.key }) : Object.assign(retime(content(e.after), l, s), { key: e.key, edited: e.id }));
+      }
+      walk(l.key); if (e) walk(e.key);
+    });
+    walk('end:' + si);
+    return Object.assign({}, s, { lines: out });
+  });
+  return { comp: Object.assign({}, comp, { sections }), lost };
+}
+
+export const REPERTOIRE_NOTE ='Notations from carnaticnotations.blogspot.com (Balaji J.), free to download and use; each composition links to its page there.';

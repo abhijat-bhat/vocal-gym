@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import * as api from './api.js';
 import * as auth from './auth.js';
 import * as practice from './practice.js';
+import * as edits from './edits.js';
 import { Unavailable as DbUnavailable } from './db.js';
 
 const ROOT = fileURLToPath(new URL('../app/', import.meta.url));
@@ -48,7 +49,9 @@ const ACCOUNT = {
   'POST /api/practice/routines': ['user', practice.routines], 'POST /api/practice/routines/save': ['user', practice.saveRoutine],
   'POST /api/practice/routines/delete': ['user', practice.deleteRoutine], 'POST /api/practice/log': ['user', practice.saveLog],
   'POST /api/practice/logs': ['user', practice.logs], 'POST /api/practice/logs/delete': ['user', practice.deleteLog],
-  'POST /api/practice/summary': ['user', practice.summary]
+  'POST /api/practice/summary': ['user', practice.summary],
+  'POST /api/repertoire/edits': ['user', edits.edits], 'POST /api/repertoire/edits/save': ['user', edits.save],
+  'POST /api/repertoire/edits/restore': ['user', edits.restore], 'POST /api/repertoire/changes': ['user', edits.changes]
 };
 const MAX_BODY = 256 * 1024;
 

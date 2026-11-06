@@ -4,7 +4,7 @@
    score from conventional to unconventional choices and widens sampling, but it only ever
    chooses among moves that can still finish legally. */
 
-export const VERSION = '0.9.0';
+export const VERSION = '0.9.4';
 export { rng, pick, soft, dial } from './random.js';
 export { SEMI, CHAKRA, MELA_NAMES, melaLabels, defineRaga, melakarta, JANYA, allRagas } from './ragas.js';
 // v0.8.7: the melakarta and katapayadi explorer
@@ -31,4 +31,4 @@ export { JATHI_EXAMPLES } from './jathi/examples.js';
 export * as korvai from './korvai/index.js';
 export { korvaiFrame, moraSolutions, korvaiPlans, chakradarSolutions, trikaala } from './korvai/index.js';
 // v0.9: the repertoire (compositions imported from carnaticnotations.blogspot.com into data/repertoire/)
-export { parseCell, cellUnits, lineUnits, ragaOf, talaOf, lineTokens, linePitches, playPlan, rowFits, unitsPerBeat, bestUnits, UNITS_PER_BEAT, REPERTOIRE_NOTE } from './repertoire.js';
+export { parseCell, cellUnits, lineUnits, ragaOf, talaOf, lineTokens, linePitches, playPlan, rowFits, unitsPerBeat, bestUnits, UNITS_PER_BEAT, REPERTOIRE_NOTE, cleanCell, cleanLine, lineText, sameLine, applyEdits, cycleGap, offCycle, sustainText, sustainLayout } from './repertoire.js';
